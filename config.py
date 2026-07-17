@@ -18,27 +18,32 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "PON_AQUI_TU_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "PON_AQUI_TU_CHAT_ID")
 
 # --- Exchange (fuente de precios, no necesita API key para datos públicos) ---
-EXCHANGE_ID = "binance"   # otras opciones válidas de ccxt: "kraken", "coinbase", "kucoin", etc.
+EXCHANGE_ID = "bitget"   # otras opciones válidas de ccxt: "kraken", "coinbase", "kucoin", etc.
+# EXCHANGE_ID = "binance"   # otras opciones válidas de ccxt: "kraken", "coinbase", "kucoin", etc.
 
 # --- Lista de criptos a vigilar ---
 # Usa el formato de ccxt: "BASE/QUOTE", ej. "BTC/USDT", "ETH/USDT"
 SYMBOLS = [
-    "BTC/USDT",
+   "BTC/USDT",
     "ETH/USDT",
     # añade aquí tus monedas, ej:
-    # "SOL/USDT",
-    # "ADA/USDT",
+     "SOL/USDT",
+     "XRP/USDT",
+     "BCH/USDT",
+     "XLM/USDT",
+     "HBAR/USDT",
+     "ADA/USDT",
 ]
 
 # --- Timeframe ---
 # Valores típicos de ccxt: "5m", "15m", "1h", "4h", "1d"
-TIMEFRAME = "4h"
+TIMEFRAME = "15m"
 
 # --- Parámetros de los indicadores ---
 EMA_FAST = 13
 EMA_SLOW = 200
 
-STOCH_K_PERIOD = 14      # periodo para %K
+STOCH_K_PERIOD = 8      # periodo para %K
 STOCH_D_PERIOD = 3       # suavizado de %D (media móvil de %K)
 STOCH_SMOOTH = 3         # suavizado adicional de %K (estocástico "lento")
 STOCH_OVERSOLD = 20
