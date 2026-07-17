@@ -110,16 +110,3 @@ def detect_signals(df: pd.DataFrame, ema_fast: int, ema_slow: int,
         signals.append(("BAJISTA", msg))
 
     return signals
-
-# Sin filtro multi-timeframe
-   if stoch_cross_up_oversold and price_above_ema200:
-        signals.append(("ALCISTA",
-                         f"Estocástico cruza al alza en sobreventa (<{oversold}) "
-                         f"y precio por ENCIMA de EMA{ema_slow}"))
-
-    if stoch_cross_down_overbought and price_below_ema200:
-        signals.append(("BAJISTA",
-                         f"Estocástico cruza a la baja en sobrecompra (>{overbought}) "
-                         f"y precio por DEBAJO de EMA{ema_slow}"))
-
-    return signals
