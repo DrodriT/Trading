@@ -16,7 +16,7 @@ import pandas as pd
 import requests
 
 import config
-from indicators import compute_indicators, detect_signals
+from indicators import compute_indicators, detect_signals, add_ema, get_trend_vs_ema200
 
 
 def load_state():
@@ -64,10 +64,21 @@ def check_symbol(exchange, symbol, state):
         config.STOCH_K_PERIOD, config.STOCH_SMOOTH, config.STOCH_D_PERIOD
     )
 
+    # --- Confirmación multi-timeframe (ej. 1h): tendencia según precio vs EMA200 ---
+    mtf_bullish, mtf_bearish, mtf_label = None, None, ""
+    if config.ENABLE_MTF_CONFIRMATION:
+        mtf_label = config.CONFIRM_TIMEFRAME
+        df_mtf = fetch_ohlcv(exchange, symbol, config.CONFIRM_TIMEFRAME, config.EMA_SLOW + 50)
+        df_mtf = add_ema(df_mtf, config.EMA_SLOW, f"EMA{config.EMA_SLOW}")
+        mtf_bullish, mtf_bearish = get_trend_vs_ema200(df_mtf, config.EMA_SLOW)
+
     signals = detect_signals(
         df, config.EMA_FAST, config.EMA_SLOW,
         config.STOCH_OVERSOLD, config.STOCH_OVERBOUGHT,
-        config.REQUIRE_CONFLUENCE
+        config.REQUIRE_CONFLUENCE,
+        mtf_confirm_bullish=mtf_bullish,
+        mtf_confirm_bearish=mtf_bearish,
+        mtf_label=mtf_label
     )
 
     if not signals:
@@ -99,9 +110,6 @@ def run_once():
     exchange = exchange_class({"enableRateLimit": True})
     state = load_state()
 
-    # --- TEST TEMPORAL: BORRAR ESTA LÍNEA CUANDO CONFIRMES QUE FUNCIONA ---
-    send_telegram(f"✅ Bot ejecutado correctamente ({config.EXCHANGE_ID}, {config.TIMEFRAME}) — {datetime.now(timezone.utc).isoformat()}")
-    
     for symbol in config.SYMBOLS:
         try:
             check_symbol(exchange, symbol, state)
