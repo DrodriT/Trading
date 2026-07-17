@@ -5,7 +5,7 @@ on:
     # Se ejecuta cada 15 minutos. GitHub no garantiza el minuto exacto
     # (puede retrasarse unos minutos en horas de mucha carga), pero es
     # suficiente para no perderse el cierre de una vela.
-    - cron: "*/15 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch: {}   # también puedes lanzarlo a mano desde la pestaña "Actions"
 
 permissions:
