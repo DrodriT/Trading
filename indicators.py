@@ -27,19 +27,45 @@ def compute_indicators(df: pd.DataFrame, ema_fast: int, ema_slow: int,
     return df
 
 
+def get_trend_vs_ema200(df: pd.DataFrame, ema_slow: int):
+    """
+    Dado un DataFrame OHLCV ya con EMA{ema_slow} calculada, devuelve
+    (is_above, is_below) según la última vela cerrada. Se usa para el
+    timeframe de confirmación (ej. 1h) independientemente del timeframe
+    principal de la señal.
+    """
+    if len(df) < ema_slow + 2:
+        return None, None
+    last = df.iloc[-1]
+    slow_col = f"EMA{ema_slow}"
+    return last["close"] > last[slow_col], last["close"] < last[slow_col]
+
+
 def detect_signals(df: pd.DataFrame, ema_fast: int, ema_slow: int,
-                    oversold: int, overbought: int, require_confluence: bool = False):
+                    oversold: int, overbought: int, require_confluence: bool = False,
+                    mtf_confirm_bullish=None, mtf_confirm_bearish=None,
+                    mtf_label: str = ""):
     """
     Analiza las DOS últimas velas cerradas para detectar la señal:
 
       - ALCISTA: el Estocástico cruza (%K sobre %D) estando en zona de SOBREVENTA
-                 (%K < oversold) Y el precio de cierre está por ENCIMA de la EMA200.
+                 (%K < oversold) Y el precio de cierre está por ENCIMA de la EMA200
+                 (en el timeframe principal).
       - BAJISTA: el Estocástico cruza (%K bajo %D) estando en zona de SOBRECOMPRA
-                 (%K > overbought) Y el precio de cierre está por DEBAJO de la EMA200.
+                 (%K > overbought) Y el precio de cierre está por DEBAJO de la EMA200
+                 (en el timeframe principal).
 
     La EMA200 actúa como filtro de tendencia; el cruce del Estocástico en la zona
     correspondiente es el disparador. EMA{ema_fast} se calcula igualmente y se
     incluye en el mensaje como referencia, pero no forma parte de la condición.
+
+    Confirmación multi-timeframe (opcional):
+        Si mtf_confirm_bullish / mtf_confirm_bearish se pasan (no None), la señal
+        ALCISTA solo se valida si mtf_confirm_bullish es True (precio por encima de
+        su EMA200 en el timeframe de confirmación, ej. 1h), y la señal BAJISTA solo
+        se valida si mtf_confirm_bearish es True (precio por debajo de su EMA200 en
+        ese mismo timeframe). Si se pasa None, no se aplica ningún filtro adicional
+        (comportamiento igual que antes).
 
     Devuelve una lista de tuplas (tipo, mensaje) con las señales activas en la
     última vela cerrada.
@@ -60,14 +86,27 @@ def detect_signals(df: pd.DataFrame, ema_fast: int, ema_slow: int,
 
     signals = []
 
-    if stoch_cross_up_oversold and price_above_ema200:
-        signals.append(("ALCISTA",
-                         f"Estocástico cruza al alza en sobreventa (<{oversold}) "
-                         f"y precio por ENCIMA de EMA{ema_slow}"))
+    bullish_ok = stoch_cross_up_oversold and price_above_ema200
+    bearish_ok = stoch_cross_down_overbought and price_below_ema200
 
-    if stoch_cross_down_overbought and price_below_ema200:
-        signals.append(("BAJISTA",
-                         f"Estocástico cruza a la baja en sobrecompra (>{overbought}) "
-                         f"y precio por DEBAJO de EMA{ema_slow}"))
+    # Filtro multi-timeframe: si se ha pedido confirmación y no se cumple, se descarta la señal
+    if bullish_ok and mtf_confirm_bullish is not None and not mtf_confirm_bullish:
+        bullish_ok = False
+    if bearish_ok and mtf_confirm_bearish is not None and not mtf_confirm_bearish:
+        bearish_ok = False
+
+    if bullish_ok:
+        msg = (f"Estocástico cruza al alza en sobreventa (<{oversold}) "
+               f"y precio por ENCIMA de EMA{ema_slow}")
+        if mtf_confirm_bullish is not None:
+            msg += f" | confirmado: precio también por ENCIMA de EMA{ema_slow} en {mtf_label}"
+        signals.append(("ALCISTA", msg))
+
+    if bearish_ok:
+        msg = (f"Estocástico cruza a la baja en sobrecompra (>{overbought}) "
+               f"y precio por DEBAJO de EMA{ema_slow}")
+        if mtf_confirm_bearish is not None:
+            msg += f" | confirmado: precio también por DEBAJO de EMA{ema_slow} en {mtf_label}"
+        signals.append(("BAJISTA", msg))
 
     return signals
