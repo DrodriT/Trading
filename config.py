@@ -39,23 +39,32 @@ SYMBOLS = [
 # Valores típicos de ccxt: "5m", "15m", "1h", "4h", "1d"
 TIMEFRAME = "15m"
 
+
+# --- Confirmación multi-timeframe ---
+# Si está activado, además de cumplirse la señal en TIMEFRAME, se exige que en
+# CONFIRM_TIMEFRAME el precio esté también por encima (señal ALCISTA) o por
+# debajo (señal BAJISTA) de su propia EMA200. Si TIMEFRAME ya es igual a
+# CONFIRM_TIMEFRAME, la confirmación no aporta nada extra (son los mismos datos).
+ENABLE_MTF_CONFIRMATION = True
+CONFIRM_TIMEFRAME = "1h"
+ 
 # --- Parámetros de los indicadores ---
 EMA_FAST = 13
 EMA_SLOW = 200
-
+ 
 STOCH_K_PERIOD = 8      # periodo para %K
 STOCH_D_PERIOD = 3       # suavizado de %D (media móvil de %K)
 STOCH_SMOOTH = 3         # suavizado adicional de %K (estocástico "lento")
 STOCH_OVERSOLD = 20
 STOCH_OVERBOUGHT = 80
-
+ 
 # --- Lógica de la señal (fija) ---
 # ALCISTA: Estocástico cruza al alza en sobreventa (%K < STOCH_OVERSOLD) Y precio > EMA200
 # BAJISTA: Estocástico cruza a la baja en sobrecompra (%K > STOCH_OVERBOUGHT) Y precio < EMA200
 REQUIRE_CONFLUENCE = False  # se mantiene por compatibilidad, ya no afecta a la lógica
-
+ 
 # --- Frecuencia de revisión (segundos) ---
 CHECK_INTERVAL_SECONDS = 300  # cada 5 minutos revisa si hay una vela nueva cerrada
-
+ 
 # --- Persistencia de estado (para no repetir el mismo aviso) ---
 STATE_FILE = "state.json"
