@@ -1,12 +1,7 @@
 name: Crypto Alert Bot
 
 on:
-  schedule:
-    # Se ejecuta cada 15 minutos. GitHub no garantiza el minuto exacto
-    # (puede retrasarse unos minutos en horas de mucha carga), pero es
-    # suficiente para no perderse el cierre de una vela.
-    - cron: "*/10 * * * *"
-  workflow_dispatch: {}   # también puedes lanzarlo a mano desde la pestaña "Actions"
+  workflow_dispatch: {}   # se dispara externamente (cron-job.org) o a mano desde "Actions"
 
 permissions:
   contents: write   # necesario para poder guardar state.json de vuelta en el repo
