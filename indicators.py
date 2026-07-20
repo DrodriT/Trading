@@ -41,6 +41,67 @@ def get_trend_vs_ema200(df: pd.DataFrame, ema_slow: int):
     return last["close"] > last[slow_col], last["close"] < last[slow_col]
 
 
+def build_limit_entries(df: pd.DataFrame, ema_fast: int, ema_slow: int,
+                         signal_type: str, swing_lookback: int = 50):
+    """
+    Calcula de 2 a 4 niveles de entrada escalonados (limit orders), cada uno
+    basado en un criterio técnico distinto, en vez de un solo precio de mercado:
+
+      Entry 1 -> precio actual (entrada inmediata)
+      Entry 2 -> retest de EMA{ema_fast} (pullback menor)
+      Entry 3 -> nivel Fibonacci 0.618 del swing reciente (soporte/resistencia fuerte)
+      Entry 4 -> EMA{ema_slow} (zona de invalidación / soporte-resistencia mayor)
+
+    Solo se incluyen los niveles que tengan sentido direccional (ej. para un LONG,
+    solo se muestran niveles por DEBAJO del precio actual; para un SHORT, solo
+    los que están por ENCIMA). Si un nivel no cumple esa condición, se omite en
+    vez de forzarlo, para no dar una entrada inválida.
+
+    Devuelve una lista de dicts: {"label": ..., "price": ..., "basis": ...}
+    ordenada desde la más cercana al precio actual hasta la más alejada.
+    """
+    last = df.iloc[-1]
+    price = last["close"]
+    ema_fast_val = last[f"EMA{ema_fast}"]
+    ema_slow_val = last[f"EMA{ema_slow}"]
+
+    window = df.tail(swing_lookback)
+    swing_high = window["high"].max()
+    swing_low = window["low"].min()
+    diff = swing_high - swing_low
+
+    entries = []
+    is_long = signal_type == "ALCISTA"
+
+    # Entry 1: precio actual
+    entries.append({"label": "Entry 1 (precio actual)", "price": price, "basis": "Precio de mercado"})
+
+    if is_long:
+        fib_618 = swing_high - diff * 0.618  # soporte de retroceso (golden pocket)
+        candidates = [
+            ("Entry 2 (retest EMA{})".format(ema_fast), ema_fast_val, f"Retest EMA{ema_fast}"),
+            ("Entry 3 (Fibonacci 0.618)", fib_618, "Fibonacci 0.618 del swing reciente"),
+            ("Entry 4 (EMA{}, invalidación)".format(ema_slow), ema_slow_val, f"Soporte mayor EMA{ema_slow}"),
+        ]
+        # Para un LONG, cada nivel siguiente debe estar por debajo del anterior y del precio
+        for label, lvl, basis in candidates:
+            if lvl < entries[-1]["price"]:
+                entries.append({"label": label, "price": lvl, "basis": basis})
+    else:
+        fib_618 = swing_low + diff * 0.618  # resistencia de retroceso
+        candidates = [
+            ("Entry 2 (retest EMA{})".format(ema_fast), ema_fast_val, f"Retest EMA{ema_fast}"),
+            ("Entry 3 (Fibonacci 0.618)", fib_618, "Fibonacci 0.618 del swing reciente"),
+            ("Entry 4 (EMA{}, invalidación)".format(ema_slow), ema_slow_val, f"Resistencia mayor EMA{ema_slow}"),
+        ]
+        # Para un SHORT, cada nivel siguiente debe estar por encima del anterior y del precio
+        for label, lvl, basis in candidates:
+            if lvl > entries[-1]["price"]:
+                entries.append({"label": label, "price": lvl, "basis": basis})
+
+    return entries
+
+
 def detect_signals(df: pd.DataFrame, ema_fast: int, ema_slow: int,
                     oversold: int, overbought: int, require_confluence: bool = False,
                     mtf_confirm_bullish=None, mtf_confirm_bearish=None,
