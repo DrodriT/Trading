@@ -16,7 +16,7 @@ import pandas as pd
 import requests
 
 import config
-from indicators import compute_indicators, detect_signals, add_ema, get_trend_vs_ema200
+from indicators import compute_indicators, detect_signals, add_ema, get_trend_vs_ema200, build_limit_entries
 
 
 def load_state():
@@ -93,12 +93,19 @@ def check_symbol(exchange, symbol, state):
             continue  # ya avisado para esta vela
 
         emoji = "🟢" if "ALCISTA" in signal_type else "🔴"
+
+        entries = build_limit_entries(df, config.EMA_FAST, config.EMA_SLOW, signal_type)
+        entries_text = "\n".join(
+            f"  • {e['label']}: `{e['price']:.4f}` — {e['basis']}" for e in entries
+        )
+
         msg = (
             f"{emoji} *{symbol}* — señal *{signal_type}*\n"
             f"{detail}\n"
             f"Precio: `{last_price:.4f}`\n"
             f"Timeframe: `{config.TIMEFRAME}`\n"
-            f"Vela: `{last_candle_time}`"
+            f"Vela: `{last_candle_time}`\n\n"
+            f"*Entradas escalonadas sugeridas:*\n{entries_text}"
         )
         send_telegram(msg)
         print(msg.replace("*", "").replace("`", ""))
@@ -107,7 +114,10 @@ def check_symbol(exchange, symbol, state):
 
 def run_once():
     exchange_class = getattr(ccxt, config.EXCHANGE_ID)
-    exchange = exchange_class({"enableRateLimit": True})
+    exchange = exchange_class({
+        "enableRateLimit": True,
+        "options": {"defaultType": config.MARKET_TYPE},
+    })
     state = load_state()
 
     # --- TEST TEMPORAL: BORRAR ESTA LÍNEA CUANDO CONFIRMES QUE FUNCIONA ---
