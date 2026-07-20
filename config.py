@@ -3,7 +3,6 @@
 #  Rellena estos valores antes de ejecutar bot.py
 # ============================================================
 import os
-
 # --- Telegram ---
 # 1. Habla con @BotFather en Telegram, crea un bot con /newbot y copia el TOKEN.
 # 2. Escríbele algo a tu bot (o añádelo a un grupo) y luego visita:
@@ -16,30 +15,33 @@ import os
 # tienen prioridad sobre lo que pongas en este archivo.
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "PON_AQUI_TU_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "PON_AQUI_TU_CHAT_ID")
-
 # --- Exchange (fuente de precios, no necesita API key para datos públicos) ---
 EXCHANGE_ID = "bitget"   # otras opciones válidas de ccxt: "kraken", "coinbase", "kucoin", etc.
 # EXCHANGE_ID = "binance"   # otras opciones válidas de ccxt: "kraken", "coinbase", "kucoin", etc.
 
-# --- Lista de criptos a vigilar ---
-# Usa el formato de ccxt: "BASE/QUOTE", ej. "BTC/USDT", "ETH/USDT"
-SYMBOLS = [
-   "BTC/USDT",
-    "ETH/USDT",
-    # añade aquí tus monedas, ej:
-     "SOL/USDT",
-     "XRP/USDT",
-     "BCH/USDT",
-     "XLM/USDT",
-     "HBAR/USDT",
-     "ADA/USDT",
-]
+# --- Tipo de mercado ---
+# "spot" -> mercado al contado (compra/venta real del activo)
+# "swap" -> futuros perpetuos (perpetuals) con margen USDT
+MARKET_TYPE = "swap"
 
+# --- Lista de criptos a vigilar ---
+# Formato ccxt para PERPETUOS con margen USDT: "BASE/USDT:USDT"
+# (el ":USDT" final indica a ccxt que es el contrato perpetuo, no el par spot).
+# Si algún día quieres volver a spot, sería "BASE/USDT" y MARKET_TYPE = "spot".
+SYMBOLS = [
+   "BTC/USDT:USDT",
+    "ETH/USDT:USDT",
+    # añade aquí tus monedas, ej:
+     "SOL/USDT:USDT",
+     "XRP/USDT:USDT",
+     "BCH/USDT:USDT",
+     "XLM/USDT:USDT",
+     "HBAR/USDT:USDT",
+     "ADA/USDT:USDT",
+]
 # --- Timeframe ---
 # Valores típicos de ccxt: "5m", "15m", "1h", "4h", "1d"
 TIMEFRAME = "15m"
-
-
 # --- Confirmación multi-timeframe ---
 # Si está activado, además de cumplirse la señal en TIMEFRAME, se exige que en
 # CONFIRM_TIMEFRAME el precio esté también por encima (señal ALCISTA) o por
