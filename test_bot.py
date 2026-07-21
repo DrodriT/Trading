@@ -167,7 +167,7 @@ def run_once():
     state = load_state()
 
     # --- TEST TEMPORAL: BORRAR ESTA LÍNEA CUANDO CONFIRMES QUE FUNCIONA ---
-    # send_telegram(f"✅ Bot ejecutado correctamente ({config.EXCHANGE_ID}, {config.TIMEFRAME}) — {datetime.now(timezone.utc).isoformat()}")
+    send_telegram(f"✅ Bot ejecutado correctamente ({config.EXCHANGE_ID}, {config.TIMEFRAME}) — {datetime.now(timezone.utc).isoformat()}")
 
     for symbol in config.SYMBOLS:
         try:
