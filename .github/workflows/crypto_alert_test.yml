@@ -1,10 +1,10 @@
-name: Crypto Alert Bot
+name: Crypto Alert Bot TEST
 
 on:
-  workflow_dispatch: {}   # se dispara externamente (cron-job.org) o a mano desde "Actions"
+  workflow_dispatch: {}
 
 permissions:
-  contents: write   # necesario para poder guardar state.json de vuelta en el repo
+  contents: write
 
 jobs:
   check-signals:
@@ -21,16 +21,17 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r requirements.txt
 
-      - name: Ejecutar el bot (una sola pasada)
+      - name: Ejecutar bot_test (una sola pasada)
+        working-directory: bot_test
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python bot.py --once
 
-      - name: Guardar el estado actualizado (state.json)
+      - name: Guardar el estado actualizado (bot_test/state.json)
         run: |
           git config user.name "crypto-alert-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add state.json
-          git diff --quiet --cached || git commit -m "Actualizar estado de señales [skip ci]"
+          git add bot_test/state.json
+          git diff --quiet --cached || git commit -m "Actualizar estado bot_test [skip ci]"
           git push

@@ -32,17 +32,17 @@ SYMBOLS = [
     "BTC/USDT:USDT",
     "ETH/USDT:USDT",
     # añade aquí tus monedas, ej:
-     "SOL/USDT:USDT",
-     "XRP/USDT:USDT",
-     "BCH/USDT:USDT",
-     "SUI/USDT:USDT",
-     "XLM/USDT:USDT",
-     "INJ/USDT:USDT",
-     "HBAR/USDT:USDT",
-     "ADA/USDT:USDT",
-     "AVAX/USDT:USDT",
-     "LTC/USDT:USDT",
-     "AAVE/USDT:USDDT",
+    "SOL/USDT:USDT",
+    "XRP/USDT:USDT",
+    "BCH/USDT:USDT",
+    "SUI/USDT:USDT",
+    "XLM/USDT:USDT",
+    "INJ/USDT:USDT",
+    "HBAR/USDT:USDT",
+    "ADA/USDT:USDT",
+    "AVAX/USDT:USDT",
+    "LTC/USDT:USDT",
+    "AAVE/USDT:USDDT",
 ]
 # --- Timeframe ---
 # Valores típicos de ccxt: "5m", "15m", "1h", "4h", "1d"
