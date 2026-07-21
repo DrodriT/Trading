@@ -35,14 +35,9 @@ SYMBOLS = [
      "SOL/USDT:USDT",
      "XRP/USDT:USDT",
      "BCH/USDT:USDT",
-     "SUI/USDT:USDT",
      "XLM/USDT:USDT",
-     "INJ/USDT:USDT",
      "HBAR/USDT:USDT",
      "ADA/USDT:USDT",
-     "AVAX/USDT:USDT",
-     "LTC/USDT:USDT",
-     "AAVE/USDT:USDDT",
 ]
 # --- Timeframe ---
 # Valores típicos de ccxt: "5m", "15m", "1h", "4h", "1d"
@@ -75,3 +70,15 @@ CHECK_INTERVAL_SECONDS = 300  # cada 5 minutos revisa si hay una vela nueva cerr
  
 # --- Persistencia de estado (para no repetir el mismo aviso) ---
 STATE_FILE = "state.json"
+
+# --- Gestión de riesgo (SL / TP / apalancamiento sugerido) ---
+ATR_PERIOD = 14           # periodo para calcular el ATR (volatilidad reciente)
+SL_ATR_MULT = 1.5         # el SL se coloca a 1.5x el ATR de distancia de la entrada
+RISK_TARGET_PCT = 10.0    # % de riesgo objetivo sobre el margen para sugerir apalancamiento
+TP_RR_RATIOS = [1.0, 1.7, 2.5]   # ratios riesgo/recompensa para TP1, TP2, TP3
+MAX_LEVERAGE = 20.0       # tope de apalancamiento sugerido, por seguridad
+
+# --- Cooldown por activo/dirección ---
+# Evita recibir avisos del mismo símbolo+dirección demasiado seguido, aunque
+# cada vela nueva cumpla técnicamente la condición otra vez.
+COOLDOWN_HOURS = 4

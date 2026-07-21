@@ -41,6 +41,112 @@ def get_trend_vs_ema200(df: pd.DataFrame, ema_slow: int):
     return last["close"] > last[slow_col], last["close"] < last[slow_col]
 
 
+def add_atr(df: pd.DataFrame, period: int = 14, col_name: str = "ATR") -> pd.DataFrame:
+    """
+    Average True Range: mide la volatilidad reciente en unidades de precio.
+    Se usa como base para calcular SL/TP proporcionales a cómo de "movida"
+    está la cripto ahora mismo, en vez de un % fijo igual para todas.
+    """
+    prev_close = df["close"].shift(1)
+    tr = pd.concat([
+        df["high"] - df["low"],
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
+    ], axis=1).max(axis=1)
+    df[col_name] = tr.rolling(window=period).mean()
+    return df
+
+
+def build_risk_management(df: pd.DataFrame, signal_type: str, entry_price: float,
+                           atr_col: str = "ATR", sl_atr_mult: float = 1.5,
+                           risk_target_pct: float = 10.0,
+                           rr_ratios=(1.0, 1.7, 2.5),
+                           max_leverage: float = 20.0):
+    """
+    Calcula Stop Loss, Take Profits escalonados (con ratio riesgo/recompensa)
+    y un apalancamiento sugerido, todo a partir del ATR (volatilidad real
+    reciente) en vez de porcentajes fijos.
+
+      SL = entry -/+ (sl_atr_mult * ATR)   (por debajo si LONG, por encima si SHORT)
+      TP_n = entry +/- (rr_ratios[n] * distancia_al_SL)
+      Leverage sugerido = risk_target_pct / SL%  (con tope en max_leverage)
+        -> ej. si el SL implica un 1.13% de movimiento y el riesgo objetivo por
+           operación es del 10% del margen, el apalancamiento sugerido es ~8.9x
+           (10 / 1.13 ≈ 8.85, redondeado). Con apalancamientos muy altos se
+           limita a max_leverage para evitar sugerencias poco realistas.
+
+    Devuelve un dict con sl, sl_pct, leverage_suggested, y una lista de TPs
+    [{"label", "price", "pct", "rr"}].
+    """
+    last_atr = df.iloc[-1][atr_col]
+    is_long = signal_type == "ALCISTA"
+
+    if is_long:
+        sl = entry_price - sl_atr_mult * last_atr
+    else:
+        sl = entry_price + sl_atr_mult * last_atr
+
+    risk_distance = abs(entry_price - sl)
+    sl_pct = (risk_distance / entry_price) * 100
+
+    leverage_suggested = min(risk_target_pct / sl_pct, max_leverage) if sl_pct > 0 else None
+
+    tps = []
+    for i, rr in enumerate(rr_ratios, start=1):
+        tp_price = entry_price + rr * risk_distance if is_long else entry_price - rr * risk_distance
+        tp_pct = (abs(tp_price - entry_price) / entry_price) * 100
+        tps.append({"label": f"TP{i}", "price": tp_price, "pct": tp_pct, "rr": rr})
+
+    return {
+        "sl": sl,
+        "sl_pct": sl_pct,
+        "leverage_suggested": leverage_suggested,
+        "tps": tps,
+    }
+
+
+def build_confluence_score(mtf_confirm: bool, stoch_k: float, oversold: int, overbought: int,
+                            price: float, ema_slow_val: float, signal_type: str):
+    """
+    Score simple de 0 a 100 según cuántas condiciones técnicas coinciden.
+    No es un sistema de múltiples estrategias independientes (eso requeriría
+    detección de patrones de price action mucho más compleja); es una medida
+    de cuánto refuerzan entre sí los indicadores YA calculados por este bot:
+
+      - Confirmación multi-timeframe (1h) alineada: +40 pts
+      - Profundidad del Estocástico en la zona (más extremo = más fuerte): hasta 35 pts
+      - Distancia del precio a la EMA200 (tendencia más consolidada): hasta 25 pts
+
+    Devuelve (score, semaforo) donde semaforo es "🟢 VERDE" (>=70),
+    "🟡 AMARILLO" (40-69) o "🔴 ROJO" (<40).
+    """
+    score = 0
+
+    if mtf_confirm:
+        score += 40
+
+    if signal_type == "ALCISTA":
+        depth = max(0, oversold - stoch_k)  # cuánto más bajo que el umbral, mejor
+        score += min(35, depth * 2.5)
+    else:
+        depth = max(0, stoch_k - overbought)
+        score += min(35, depth * 2.5)
+
+    distance_pct = abs(price - ema_slow_val) / ema_slow_val * 100
+    score += min(25, distance_pct * 5)
+
+    score = round(min(100, score))
+
+    if score >= 70:
+        semaforo = "🟢 VERDE"
+    elif score >= 40:
+        semaforo = "🟡 AMARILLO"
+    else:
+        semaforo = "🔴 ROJO"
+
+    return score, semaforo
+
+
 def build_limit_entries(df: pd.DataFrame, ema_fast: int, ema_slow: int,
                          signal_type: str, swing_lookback: int = 50):
     """
@@ -73,31 +179,36 @@ def build_limit_entries(df: pd.DataFrame, ema_fast: int, ema_slow: int,
     entries = []
     is_long = signal_type == "ALCISTA"
 
-    # Entry 1: precio actual
-    entries.append({"label": "Entry 1 (precio actual)", "price": price, "basis": "Precio de mercado"})
+    # Entry 1: precio actual (siempre se incluye)
+    entries.append({"price": price, "basis": "precio actual"})
 
     if is_long:
         fib_618 = swing_high - diff * 0.618  # soporte de retroceso (golden pocket)
         candidates = [
-            ("Entry 2 (retest EMA{})".format(ema_fast), ema_fast_val, f"Retest EMA{ema_fast}"),
-            ("Entry 3 (Fibonacci 0.618)", fib_618, "Fibonacci 0.618 del swing reciente"),
-            ("Entry 4 (EMA{}, invalidación)".format(ema_slow), ema_slow_val, f"Soporte mayor EMA{ema_slow}"),
+            (ema_fast_val, f"retest EMA{ema_fast}"),
+            (fib_618, "Fibonacci 0.618 del swing reciente"),
+            (ema_slow_val, f"soporte mayor EMA{ema_slow}, invalidación"),
         ]
-        # Para un LONG, cada nivel siguiente debe estar por debajo del anterior y del precio
-        for label, lvl, basis in candidates:
+        # Para un LONG, cada nivel siguiente debe estar por debajo del anterior aceptado
+        for lvl, basis in candidates:
             if lvl < entries[-1]["price"]:
-                entries.append({"label": label, "price": lvl, "basis": basis})
+                entries.append({"price": lvl, "basis": basis})
     else:
         fib_618 = swing_low + diff * 0.618  # resistencia de retroceso
         candidates = [
-            ("Entry 2 (retest EMA{})".format(ema_fast), ema_fast_val, f"Retest EMA{ema_fast}"),
-            ("Entry 3 (Fibonacci 0.618)", fib_618, "Fibonacci 0.618 del swing reciente"),
-            ("Entry 4 (EMA{}, invalidación)".format(ema_slow), ema_slow_val, f"Resistencia mayor EMA{ema_slow}"),
+            (ema_fast_val, f"retest EMA{ema_fast}"),
+            (fib_618, "Fibonacci 0.618 del swing reciente"),
+            (ema_slow_val, f"resistencia mayor EMA{ema_slow}, invalidación"),
         ]
-        # Para un SHORT, cada nivel siguiente debe estar por encima del anterior y del precio
-        for label, lvl, basis in candidates:
+        # Para un SHORT, cada nivel siguiente debe estar por encima del anterior aceptado
+        for lvl, basis in candidates:
             if lvl > entries[-1]["price"]:
-                entries.append({"label": label, "price": lvl, "basis": basis})
+                entries.append({"price": lvl, "basis": basis})
+
+    # Renumerar de forma correlativa (1, 2, 3...) según lo que realmente se muestra,
+    # sin huecos aunque algún nivel intermedio se haya descartado.
+    for i, e in enumerate(entries, start=1):
+        e["label"] = f"Entry {i} ({e['basis']})"
 
     return entries
 

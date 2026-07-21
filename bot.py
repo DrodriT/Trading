@@ -16,7 +16,10 @@ import pandas as pd
 import requests
 
 import config
-from indicators import compute_indicators, detect_signals, add_ema, get_trend_vs_ema200, build_limit_entries
+from indicators import (
+    compute_indicators, detect_signals, add_ema, get_trend_vs_ema200,
+    build_limit_entries, add_atr, build_risk_management, build_confluence_score
+)
 
 
 def load_state():
@@ -63,6 +66,7 @@ def check_symbol(exchange, symbol, state):
         df, config.EMA_FAST, config.EMA_SLOW,
         config.STOCH_K_PERIOD, config.STOCH_SMOOTH, config.STOCH_D_PERIOD
     )
+    df = add_atr(df, config.ATR_PERIOD)
 
     # --- Confirmación multi-timeframe (ej. 1h): tendencia según precio vs EMA200 ---
     mtf_bullish, mtf_bearish, mtf_label = None, None, ""
@@ -92,11 +96,46 @@ def check_symbol(exchange, symbol, state):
         if state.get(key) == last_candle_time:
             continue  # ya avisado para esta vela
 
+        # --- Cooldown: no repetir el mismo símbolo+dirección demasiado seguido ---
+        cooldown_key = f"{symbol}_{signal_type}_last_alert_ts"
+        last_alert_ts = state.get(cooldown_key)
+        if last_alert_ts:
+            hours_since = (datetime.now(timezone.utc) - datetime.fromisoformat(last_alert_ts)).total_seconds() / 3600
+            if hours_since < config.COOLDOWN_HOURS:
+                state[key] = last_candle_time  # marcar la vela como vista, aunque no se avise
+                continue
+
         emoji = "🟢" if "ALCISTA" in signal_type else "🔴"
 
         entries = build_limit_entries(df, config.EMA_FAST, config.EMA_SLOW, signal_type)
         entries_text = "\n".join(
             f"  • {e['label']}: `{e['price']:.4f}` — {e['basis']}" for e in entries
+        )
+
+        # --- Gestión de riesgo: SL / TP escalonados / apalancamiento sugerido ---
+        risk = build_risk_management(
+            df, signal_type, last_price,
+            sl_atr_mult=config.SL_ATR_MULT,
+            risk_target_pct=config.RISK_TARGET_PCT,
+            rr_ratios=config.TP_RR_RATIOS,
+            max_leverage=config.MAX_LEVERAGE
+        )
+        tps_text = "\n".join(
+            f"  • {tp['label']}: `{tp['price']:.4f}` | {tp['pct']:.2f}% | RR {tp['rr']:.2f}"
+            for tp in risk["tps"]
+        )
+        leverage_text = f"{risk['leverage_suggested']:.1f}x" if risk["leverage_suggested"] else "N/D"
+
+        # --- Score de confluencia y semáforo ---
+        mtf_confirm = mtf_bullish if signal_type == "ALCISTA" else mtf_bearish
+        score, semaforo = build_confluence_score(
+            mtf_confirm=bool(mtf_confirm),
+            stoch_k=df.iloc[-1]["%K"],
+            oversold=config.STOCH_OVERSOLD,
+            overbought=config.STOCH_OVERBOUGHT,
+            price=last_price,
+            ema_slow_val=df.iloc[-1][f"EMA{config.EMA_SLOW}"],
+            signal_type=signal_type
         )
 
         msg = (
@@ -105,11 +144,17 @@ def check_symbol(exchange, symbol, state):
             f"Precio: `{last_price:.4f}`\n"
             f"Timeframe: `{config.TIMEFRAME}`\n"
             f"Vela: `{last_candle_time}`\n\n"
-            f"*Entradas escalonadas sugeridas:*\n{entries_text}"
+            f"Score: {score}/100 | Semáforo: {semaforo}\n\n"
+            f"*Entradas escalonadas sugeridas:*\n{entries_text}\n\n"
+            f"*Gestión de riesgo (ATR):*\n"
+            f"  • SL: `{risk['sl']:.4f}` ({risk['sl_pct']:.2f}%)\n"
+            f"  • Apalancamiento sugerido (riesgo {config.RISK_TARGET_PCT:.0f}%): `{leverage_text}`\n"
+            f"{tps_text}"
         )
         send_telegram(msg)
         print(msg.replace("*", "").replace("`", ""))
         state[key] = last_candle_time
+        state[cooldown_key] = datetime.now(timezone.utc).isoformat()
 
 
 def run_once():
@@ -121,7 +166,7 @@ def run_once():
     state = load_state()
 
     # --- TEST TEMPORAL: BORRAR ESTA LÍNEA CUANDO CONFIRMES QUE FUNCIONA ---
-    # send_telegram(f"✅ Bot ejecutado correctamente ({config.EXCHANGE_ID}, {config.TIMEFRAME}) — {datetime.now(timezone.utc).isoformat()}")
+    send_telegram(f"✅ Bot ejecutado correctamente ({config.EXCHANGE_ID}, {config.TIMEFRAME}) — {datetime.now(timezone.utc).isoformat()}")
 
     for symbol in config.SYMBOLS:
         try:
