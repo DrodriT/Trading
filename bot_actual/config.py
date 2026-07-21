@@ -89,4 +89,4 @@ MAX_LEVERAGE = 20.0       # tope de apalancamiento sugerido, por seguridad
 COOLDOWN_HOURS = 4
 
 # --- Etiqueta para identificar los mensajes de Telegram de esta versión ---
-STRATEGY_LABEL = "ACTUAL (score+riesgo+cooldown)"
+STRATEGY_LABEL = "ACTUAL (stochastico+ema200)"

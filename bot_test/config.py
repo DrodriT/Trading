@@ -87,3 +87,6 @@ MAX_LEVERAGE = 20.0       # tope de apalancamiento sugerido, por seguridad
 # Evita recibir avisos del mismo símbolo+dirección demasiado seguido, aunque
 # cada vela nueva cumpla técnicamente la condición otra vez.
 COOLDOWN_HOURS = 4
+
+# --- Etiqueta para identificar los mensajes de Telegram de esta versión ---
+STRATEGY_LABEL = "TEST (score+riesgo+cooldown)"
