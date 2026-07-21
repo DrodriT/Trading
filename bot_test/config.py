@@ -42,7 +42,8 @@ SYMBOLS = [
     "ADA/USDT:USDT",
     "AVAX/USDT:USDT",
     "LTC/USDT:USDT",
-    "AAVE/USDT:USDDT",
+    "AAVE/USDT:USDT",
+     "ICP/USDT:USDT",
 ]
 # --- Timeframe ---
 # Valores típicos de ccxt: "5m", "15m", "1h", "4h", "1d"
