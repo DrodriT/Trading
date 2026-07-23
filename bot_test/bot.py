@@ -16,9 +16,10 @@ import pandas as pd
 import requests
 
 import config
-from indicators import (
-    compute_indicators, detect_signals, add_ema, get_trend_vs_ema200,
-    build_limit_entries, add_atr, build_risk_management, build_confluence_score
+from indicators import add_ema, add_atr, get_trend_vs_ema200
+from strategy import (
+    compute_indicators, detect_signals, build_limit_entries,
+    build_risk_management, build_score
 )
 
 
@@ -64,22 +65,28 @@ def check_symbol(exchange, symbol, state):
     df = fetch_ohlcv(exchange, symbol, config.TIMEFRAME, limit)
     df = compute_indicators(
         df, config.EMA_FAST, config.EMA_SLOW,
-        config.STOCH_K_PERIOD, config.STOCH_SMOOTH, config.STOCH_D_PERIOD
+        config.STOCH_K_PERIOD, config.STOCH_SMOOTH, config.STOCH_D_PERIOD,
+        adx_period=config.ADX_PERIOD, macd_fast=config.MACD_FAST, macd_slow=config.MACD_SLOW,
+        macd_signal=config.MACD_SIGNAL, rsi_period=config.RSI_PERIOD,
+        volume_ma_period=config.VOLUME_MA_PERIOD, ssl_period=config.SSL_PERIOD
     )
     df = add_atr(df, config.ATR_PERIOD)
 
-    # --- Confirmación multi-timeframe (ej. 1h): tendencia según precio vs EMA200 ---
+    # --- Confirmación multi-timeframe (1h): tendencia y fuerza según precio vs EMA200 ---
     mtf_bullish, mtf_bearish, mtf_label = None, None, ""
+    trend_strength_1h_pct = 0.0
     if config.ENABLE_MTF_CONFIRMATION:
         mtf_label = config.CONFIRM_TIMEFRAME
         df_mtf = fetch_ohlcv(exchange, symbol, config.CONFIRM_TIMEFRAME, config.EMA_SLOW + 50)
         df_mtf = add_ema(df_mtf, config.EMA_SLOW, f"EMA{config.EMA_SLOW}")
         mtf_bullish, mtf_bearish = get_trend_vs_ema200(df_mtf, config.EMA_SLOW)
 
+        last_mtf = df_mtf.iloc[-1]
+        ema_1h_val = last_mtf[f"EMA{config.EMA_SLOW}"]
+        trend_strength_1h_pct = abs(last_mtf["close"] - ema_1h_val) / ema_1h_val * 100
+
     signals = detect_signals(
-        df, config.EMA_FAST, config.EMA_SLOW,
-        config.STOCH_OVERSOLD, config.STOCH_OVERBOUGHT,
-        config.REQUIRE_CONFLUENCE,
+        df, config.EMA_SLOW, config.STOCH_OVERSOLD, config.STOCH_OVERBOUGHT,
         mtf_confirm_bullish=mtf_bullish,
         mtf_confirm_bearish=mtf_bearish,
         mtf_label=mtf_label
@@ -126,16 +133,31 @@ def check_symbol(exchange, symbol, state):
         )
         leverage_text = f"{risk['leverage_suggested']:.1f}x" if risk["leverage_suggested"] else "N/D"
 
-        # --- Score de confluencia y semáforo ---
-        mtf_confirm = mtf_bullish if signal_type == "ALCISTA" else mtf_bearish
-        score, semaforo = build_confluence_score(
-            mtf_confirm=bool(mtf_confirm),
-            stoch_k=df.iloc[-1]["%K"],
-            oversold=config.STOCH_OVERSOLD,
-            overbought=config.STOCH_OVERBOUGHT,
-            price=last_price,
-            ema_slow_val=df.iloc[-1][f"EMA{config.EMA_SLOW}"],
-            signal_type=signal_type
+        # --- Score ponderado (ADX, MACD, RSI, Volumen, Tendencia 1H, SSL) ---
+        score, breakdown, semaforo = build_score(
+            df, signal_type, trend_strength_1h_pct, weights=config.SCORE_WEIGHTS
+        )
+        breakdown_text = "\n".join(
+            f"  • {name}: {pts}/{config.SCORE_WEIGHTS[key]} pts"
+            for name, pts, key in [
+                ("ADX", breakdown["ADX"], "adx"),
+                ("MACD", breakdown["MACD"], "macd"),
+                ("RSI", breakdown["RSI"], "rsi"),
+                ("Volumen", breakdown["Volumen"], "volumen"),
+                ("Tendencia 1H", breakdown["Tendencia 1H"], "tendencia_1h"),
+                ("SSL", breakdown["SSL"], "ssl"),
+            ]
+        )
+
+        # --- Indicadores en crudo (valores actuales, informativos) ---
+        last_row = df.iloc[-1]
+        indicators_text = (
+            f"  • SSL Up: `{last_row['SSL_up']:.4f}` | SSL Down: `{last_row['SSL_down']:.4f}`\n"
+            f"  • RSI: `{last_row['RSI']:.1f}`\n"
+            f"  • MACD: `{last_row['MACD']:.4f}` | Señal: `{last_row['MACD_signal']:.4f}` | Hist: `{last_row['MACD_hist']:.4f}`\n"
+            f"  • ADX: `{last_row['ADX']:.1f}` (+DI: `{last_row['ADX_plusDI']:.1f}` / -DI: `{last_row['ADX_minusDI']:.1f}`)\n"
+            f"  • ATR: `{last_row['ATR']:.4f}`\n"
+            f"  • Volumen medio: `{last_row['VOL_MA']:.2f}` | Volumen relativo: `{last_row['VOL_RATIO']:.2f}x`"
         )
 
         msg = (
@@ -145,7 +167,9 @@ def check_symbol(exchange, symbol, state):
             f"Precio: `{last_price:.4f}`\n"
             f"Timeframe: `{config.TIMEFRAME}`\n"
             f"Vela: `{last_candle_time}`\n\n"
-            f"Score: {score}/100 | Semáforo: {semaforo}\n\n"
+            f"Score: {score}/100 | Semáforo: {semaforo}\n"
+            f"{breakdown_text}\n\n"
+            f"*Indicadores:*\n{indicators_text}\n\n"
             f"*Entradas escalonadas sugeridas:*\n{entries_text}\n\n"
             f"*Gestión de riesgo (ATR):*\n"
             f"  • SL: `{risk['sl']:.4f}` ({risk['sl_pct']:.2f}%)\n"
@@ -167,7 +191,7 @@ def run_once():
     state = load_state()
 
     # --- TEST TEMPORAL: BORRAR ESTA LÍNEA CUANDO CONFIRMES QUE FUNCIONA ---
-    # send_telegram(f"✅ Bot ejecutado correctamente ({config.EXCHANGE_ID}, {config.TIMEFRAME}) — {datetime.now(timezone.utc).isoformat()}")
+    send_telegram(f"✅ Bot ejecutado correctamente ({config.EXCHANGE_ID}, {config.TIMEFRAME}) — {datetime.now(timezone.utc).isoformat()}")
 
     for symbol in config.SYMBOLS:
         try:

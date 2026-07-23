@@ -44,6 +44,7 @@ SYMBOLS = [
    "LTC/USDT:USDT",
    "AAVE/USDT:USDT",
    "ICP/USDT:USDT",
+   "OP/USDT:USDT",
 ]
 # --- Timeframe ---
 # Valores típicos de ccxt: "5m", "15m", "1h", "4h", "1d"

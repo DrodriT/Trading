@@ -31,7 +31,6 @@ MARKET_TYPE = "swap"
 SYMBOLS = [
     "BTC/USDT:USDT",
     "ETH/USDT:USDT",
-    # añade aquí tus monedas, ej:
     "SOL/USDT:USDT",
     "XRP/USDT:USDT",
     "BCH/USDT:USDT",
@@ -43,7 +42,8 @@ SYMBOLS = [
     "AVAX/USDT:USDT",
     "LTC/USDT:USDT",
     "AAVE/USDT:USDT",
-     "ICP/USDT:USDT",
+    "ICP/USDT:USDT",
+    "OP/USDT:USDT",
 ]
 # --- Timeframe ---
 # Valores típicos de ccxt: "5m", "15m", "1h", "4h", "1d"
@@ -67,9 +67,31 @@ STOCH_OVERSOLD = 20
 STOCH_OVERBOUGHT = 80
  
 # --- Lógica de la señal (fija) ---
-# ALCISTA: Estocástico cruza al alza en sobreventa (%K < STOCH_OVERSOLD) Y precio > EMA200
-# BAJISTA: Estocástico cruza a la baja en sobrecompra (%K > STOCH_OVERBOUGHT) Y precio < EMA200
+# ALCISTA: cierre(15m) > EMA200(15m) [tendencia alcista] Y %K cruza por ENCIMA de %D dentro de SOBREVENTA (ambos < STOCH_OVERSOLD) Y cierre(1h) > EMA200(1h)
+# BAJISTA: cierre(15m) < EMA200(15m) [tendencia bajista] Y %K cruza por DEBAJO de %D dentro de SOBRECOMPRA (ambos > STOCH_OVERBOUGHT) Y cierre(1h) < EMA200(1h)
+# Es una estrategia de "comprar el pullback en tendencia": la EMA200 marca la
+# tendencia de fondo, y el cruce del Estocástico en la zona OPUESTA a la
+# dirección de la señal marca el punto de rebote dentro de esa tendencia.
 REQUIRE_CONFLUENCE = False  # se mantiene por compatibilidad, ya no afecta a la lógica
+
+# --- Parámetros para el score ponderado (ADX, MACD, RSI, Volumen, Tendencia 1H, SSL) ---
+ADX_PERIOD = 14
+MACD_FAST = 12
+MACD_SLOW = 26
+MACD_SIGNAL = 9
+RSI_PERIOD = 14
+VOLUME_MA_PERIOD = 20
+SSL_PERIOD = 10
+
+# Pesos del score (deben sumar 100)
+SCORE_WEIGHTS = {
+    "adx": 20,
+    "macd": 15,
+    "rsi": 15,
+    "volumen": 10,
+    "tendencia_1h": 15,
+    "ssl": 25,
+}
  
 # --- Frecuencia de revisión (segundos) ---
 CHECK_INTERVAL_SECONDS = 300  # cada 5 minutos revisa si hay una vela nueva cerrada
@@ -87,7 +109,7 @@ MAX_LEVERAGE = 20.0       # tope de apalancamiento sugerido, por seguridad
 # --- Cooldown por activo/dirección ---
 # Evita recibir avisos del mismo símbolo+dirección demasiado seguido, aunque
 # cada vela nueva cumpla técnicamente la condición otra vez.
-COOLDOWN_HOURS = 4
+COOLDOWN_HOURS = 1
 
 # --- Etiqueta para identificar los mensajes de Telegram de esta versión ---
 STRATEGY_LABEL = "TEST (con ATR, score y cooldown)"
