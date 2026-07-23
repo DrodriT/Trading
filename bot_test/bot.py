@@ -86,13 +86,7 @@ def check_symbol(exchange, symbol, state):
         trend_strength_1h_pct = abs(last_mtf["close"] - ema_1h_val) / ema_1h_val * 100
 
     signals = detect_signals(
-        df, 
-        ema_fast=config.EMA_FAST,
-        ema_slow=config.EMA_SLOW,
-        rsi_min_long=config.RSI_MIN_LONG,
-        rsi_max_short=config.RSI_MAX_SHORT,
-        volume_threshold=config.VOLUME_THRESHOLD,
-        adx_threshold=config.ADX_THRESHOLD,
+        df, config.EMA_SLOW, config.STOCH_OVERSOLD, config.STOCH_OVERBOUGHT,
         mtf_confirm_bullish=mtf_bullish,
         mtf_confirm_bearish=mtf_bearish,
         mtf_label=mtf_label

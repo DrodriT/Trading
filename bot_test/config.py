@@ -65,14 +65,7 @@ STOCH_D_PERIOD = 3       # suavizado de %D (media móvil de %K)
 STOCH_SMOOTH = 3         # suavizado adicional de %K (estocástico "lento")
 STOCH_OVERSOLD = 20
 STOCH_OVERBOUGHT = 80
-
-RSI_MIN_LONG = 55        # RSI mínimo para señal alcista
-RSI_MAX_SHORT = 45       # RSI máximo para señal bajista
-
-VOLUME_THRESHOLD = 1.5   # Volumen mínimo (x veces la media)
-
-ADX_THRESHOLD = 25       # ADX mínimo para considerar tendencia fuerte
-
+ 
 # --- Lógica de la señal (fija) ---
 # ALCISTA: cierre(15m) > EMA200(15m) [tendencia alcista] Y %K cruza por ENCIMA de %D dentro de SOBREVENTA (ambos < STOCH_OVERSOLD) Y cierre(1h) > EMA200(1h)
 # BAJISTA: cierre(15m) < EMA200(15m) [tendencia bajista] Y %K cruza por DEBAJO de %D dentro de SOBRECOMPRA (ambos > STOCH_OVERBOUGHT) Y cierre(1h) < EMA200(1h)
@@ -92,14 +85,13 @@ SSL_PERIOD = 10
 
 # Pesos del score (deben sumar 100)
 SCORE_WEIGHTS = {
-    "adx": 25,          # Fuerza de la tendencia
-    "macd": 20,         # Momentum
-    "rsi": 15,          # Momento del precio
-    "volumen": 20,      # Participación real
-    "tendencia_1h": 10, # Confirmación mayor timeframe
-    "ssl": 10,          # Estructura
+    "adx": 20,
+    "macd": 15,
+    "rsi": 15,
+    "volumen": 10,
+    "tendencia_1h": 15,
+    "ssl": 25,
 }
-
  
 # --- Frecuencia de revisión (segundos) ---
 CHECK_INTERVAL_SECONDS = 300  # cada 5 minutos revisa si hay una vela nueva cerrada
@@ -109,8 +101,8 @@ STATE_FILE = "state.json"
 
 # --- Gestión de riesgo (SL / TP / apalancamiento sugerido) ---
 ATR_PERIOD = 14           # periodo para calcular el ATR (volatilidad reciente)
-SL_ATR_MULT = 1.8         # el SL se coloca a 1.5x el ATR de distancia de la entrada
-RISK_TARGET_PCT = 15.0    # % de riesgo objetivo sobre el margen para sugerir apalancamiento
+SL_ATR_MULT = 1.5         # el SL se coloca a 1.5x el ATR de distancia de la entrada
+RISK_TARGET_PCT = 10.0    # % de riesgo objetivo sobre el margen para sugerir apalancamiento
 TP_RR_RATIOS = [1.0, 1.7, 2.5]   # ratios riesgo/recompensa para TP1, TP2, TP3
 MAX_LEVERAGE = 20.0       # tope de apalancamiento sugerido, por seguridad
 
@@ -120,4 +112,4 @@ MAX_LEVERAGE = 20.0       # tope de apalancamiento sugerido, por seguridad
 COOLDOWN_HOURS = 1
 
 # --- Etiqueta para identificar los mensajes de Telegram de esta versión ---
-STRATEGY_LABEL = "TEST (BREAKOUT CON CONFIRMACIÓN DE FUERZA v2.0)"
+STRATEGY_LABEL = "TEST (con ATR, score y cooldown)"
