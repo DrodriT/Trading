@@ -235,7 +235,7 @@ class SignalEngine:
         grade = grade_from_score(quality)
 
         if quality < cfg.MIN_QUALITY_SCORE:
-            logger.info(f"{symbol}: {grade} ({quality:.0f}) < {cfg.MIN_QUALITY_SCORE}")
+            logger.info(f"⏭️ {symbol}: señal {grade} ({quality:.0f}) ignorada — mínimo {cfg.MIN_QUALITY_SCORE}")
             return None
 
         atr_val = atr.iloc[-1] if not np.isnan(atr.iloc[-1]) else close * 0.01
@@ -468,6 +468,12 @@ class SynapseBot:
                 htf_df = self.data.fetch_ohlcv(symbol, cfg.CONFIRM_TIMEFRAME, limit=200)
 
             signal = self.engine.get_signal(symbol, df, htf_df)
+
+            # Log de diagnóstico para cada símbolo
+            if signal:
+                logger.info(f"✅ {symbol}: {signal['direction']} Grade={signal['grade']} Q={signal['quality']:.0f}")
+            else:
+                logger.info(f"⚪ {symbol}: sin señal en esta vela")
 
             if signal:
                 # Verificar si hay flip (señal contraria con posición activa)
