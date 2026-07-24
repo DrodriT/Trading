@@ -67,18 +67,18 @@
     },
     "ICP/USDT:USDT": {
       "dir": -1,
-      "upper": 2.154374755931856,
-      "lower": 2.131355237003491
+      "upper": 2.1541856008184874,
+      "lower": 2.129657339111768
     },
     "OP/USDT:USDT": {
       "dir": -1,
-      "upper": 0.09259766856212988,
-      "lower": 0.09149248269038428
+      "upper": 0.09250790503099225,
+      "lower": 0.09136248040623075
     },
     "NEAR/USDT:USDT": {
       "dir": -1,
-      "upper": 1.8689022847442276,
-      "lower": 1.8363815721175127
+      "upper": 1.8657482789960138,
+      "lower": 1.8349345661322989
     }
   },
   "last_candle_ts": {
@@ -95,13 +95,13 @@
     "AVAX/USDT:USDT": 1784901000,
     "LTC/USDT:USDT": 1784901000,
     "AAVE/USDT:USDT": 1784901000,
-    "ICP/USDT:USDT": 1784901000,
-    "OP/USDT:USDT": 1784901000,
-    "NEAR/USDT:USDT": 1784901000
+    "ICP/USDT:USDT": 1784901300,
+    "OP/USDT:USDT": 1784901300,
+    "NEAR/USDT:USDT": 1784901300
   },
   "last_signal": {
     "ICP/USDT:USDT": "ICP/USDT:USDT_2026-07-24 13:00:00"
   },
   "active_positions": {},
-  "updated_at": "2026-07-24T13:53:57.360139"
+  "updated_at": "2026-07-24T13:55:04.728024"
 }
