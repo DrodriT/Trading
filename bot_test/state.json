@@ -42,8 +42,8 @@
     },
     "HBAR/USDT:USDT": {
       "dir": 0,
-      "upper": 0.07068224851648723,
-      "lower": 0.07037413694047427
+      "upper": 0.070662705413209,
+      "lower": 0.0703748350827489
     },
     "ADA/USDT:USDT": {
       "dir": -1,
@@ -53,32 +53,32 @@
     "AVAX/USDT:USDT": {
       "dir": -1,
       "upper": 6.24959430650734,
-      "lower": 6.188708351917361
+      "lower": 6.188073122108519
     },
     "LTC/USDT:USDT": {
       "dir": -1,
       "upper": 46.37398517662708,
-      "lower": 46.13884874032692
+      "lower": 46.15188674267839
     },
     "AAVE/USDT:USDT": {
       "dir": -1,
-      "upper": 95.714973928604,
-      "lower": 94.30381563633034
+      "upper": 95.59955048492981,
+      "lower": 94.27281216819176
     },
     "ICP/USDT:USDT": {
       "dir": -1,
-      "upper": 2.160858053423722,
-      "lower": 2.1366104852277124
+      "upper": 2.1583306706695446,
+      "lower": 2.1364993344069627
     },
     "OP/USDT:USDT": {
       "dir": -1,
       "upper": 0.09293110564902363,
-      "lower": 0.09174595434698496
+      "lower": 0.09171735294744925
     },
     "NEAR/USDT:USDT": {
       "dir": -1,
-      "upper": 1.8838676368467018,
-      "lower": 1.8470389996374847
+      "upper": 1.8801857857472972,
+      "lower": 1.845542760081125
     }
   },
   "last_candle_ts": {
@@ -90,18 +90,18 @@
     "SUI/USDT:USDT": 1784898600,
     "XLM/USDT:USDT": 1784898600,
     "INJ/USDT:USDT": 1784898600,
-    "HBAR/USDT:USDT": 1784898600,
+    "HBAR/USDT:USDT": 1784898900,
     "ADA/USDT:USDT": 1784898600,
-    "AVAX/USDT:USDT": 1784898600,
-    "LTC/USDT:USDT": 1784898600,
-    "AAVE/USDT:USDT": 1784898600,
-    "ICP/USDT:USDT": 1784898600,
-    "OP/USDT:USDT": 1784898600,
-    "NEAR/USDT:USDT": 1784898600
+    "AVAX/USDT:USDT": 1784898900,
+    "LTC/USDT:USDT": 1784898900,
+    "AAVE/USDT:USDT": 1784898900,
+    "ICP/USDT:USDT": 1784898900,
+    "OP/USDT:USDT": 1784898900,
+    "NEAR/USDT:USDT": 1784898900
   },
   "last_signal": {
     "ICP/USDT:USDT": "ICP/USDT:USDT_2026-07-24 13:00:00"
   },
   "active_positions": {},
-  "updated_at": "2026-07-24T13:13:58.406532"
+  "updated_at": "2026-07-24T13:15:11.108751"
 }
