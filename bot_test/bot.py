@@ -1,9 +1,15 @@
 """
-Bot de alertas cripto: EMA13 / EMA200 + Estocástico -> Telegram
+Bot de alertas cripto — VERSIÓN "Synapse" (basada en Synapse Trail Pro)
+
+A diferencia de versiones anteriores (aviso puntual y ya está), este bot
+RECUERDA la posición abierta por símbolo entre ejecuciones (guardada en
+state.json): sabe si hay un LONG/SHORT activo, mueve el SL a break-even
+tras TP1, seguí TP2/TP3, y avisa también cuando la posición se CIERRA
+(por SL, por TP3, o por un flip de la señal).
 
 Uso:
-    python3 bot.py            # corre en bucle, revisando cada CHECK_INTERVAL_SECONDS
-    python3 bot.py --once     # ejecuta una sola pasada y termina (útil para cron)
+    python3 bot.py            # corre en bucle
+    python3 bot.py --once     # ejecuta una sola pasada (usado por GitHub Actions)
 """
 import json
 import os
@@ -16,24 +22,46 @@ import pandas as pd
 import requests
 
 import config
-from indicators import add_ema, add_atr, get_trend_vs_ema200
+from indicators import add_ema, get_trend_vs_ema200
 from strategy import (
-    compute_indicators, detect_signals, build_limit_entries,
-    build_risk_management, build_score
+    compute_indicators, compute_synapse_trail, compute_regime,
+    detect_raw_signal, compute_quality_score, build_risk_levels,
+    build_limit_entries, RISK_PRESETS
 )
 
+
+# ══════════════════════════════════════════════════════════
+# Persistencia de estado
+# ══════════════════════════════════════════════════════════
 
 def load_state():
     if os.path.exists(config.STATE_FILE):
         with open(config.STATE_FILE, "r") as f:
             return json.load(f)
-    return {}
+    return {"positions": {}, "stats": {}}
 
 
 def save_state(state):
     with open(config.STATE_FILE, "w") as f:
         json.dump(state, f, indent=2)
 
+
+def get_stats(state):
+    stats = state.setdefault("stats", {})
+    defaults = {
+        "total_signals": 0, "buy_signals": 0, "sell_signals": 0,
+        "grade_a": 0, "grade_b": 0, "grade_c": 0,
+        "sl_hits": 0, "tp1_hits": 0, "tp2_hits": 0, "tp3_hits": 0,
+        "flips": 0, "wins": 0, "losses": 0, "be_saves": 0, "r_sum": 0.0,
+    }
+    for k, v in defaults.items():
+        stats.setdefault(k, v)
+    return stats
+
+
+# ══════════════════════════════════════════════════════════
+# Telegram / datos
+# ══════════════════════════════════════════════════════════
 
 def send_telegram(message: str):
     if "PON_AQUI" in config.TELEGRAM_TOKEN or "PON_AQUI" in config.TELEGRAM_CHAT_ID:
@@ -60,127 +88,224 @@ def fetch_ohlcv(exchange, symbol, timeframe, limit):
     return df
 
 
+# ══════════════════════════════════════════════════════════
+# Clasificación de una operación cerrada (igual criterio que Synapse Trail)
+# ══════════════════════════════════════════════════════════
+
+def classify_closed_position(pos, close_reason, was_be_at_start):
+    """
+    tp1_reached = True  -> GANADORA (1/3 en cada TP alcanzado, resto 0R)
+    tp1_reached = False -> PERDEDORA (-1R)
+    BE save: ganadora que cerró por el SL porque el break-even ya estaba activo.
+    """
+    if pos.get("tp1_reached"):
+        r1 = (1 / 3) * pos["tp_rr"][0]
+        r2 = (1 / 3) * pos["tp_rr"][1] if pos.get("tp2_reached") else 0.0
+        r3 = (1 / 3) * pos["tp_rr"][2] if pos.get("tp3_reached") else 0.0
+        r_total = r1 + r2 + r3
+        is_win = True
+        is_be_save = close_reason == "sl" and was_be_at_start
+    else:
+        r_total = -1.0
+        is_win = False
+        is_be_save = False
+    return is_win, is_be_save, r_total
+
+
+# ══════════════════════════════════════════════════════════
+# Lógica principal por símbolo
+# ══════════════════════════════════════════════════════════
+
 def check_symbol(exchange, symbol, state):
-    limit = config.EMA_SLOW + 50  # suficientes velas para que EMA200 sea fiable
+    limit = max(config.REGIME_LEN, config.TRAIL_LEN) + 100
     df = fetch_ohlcv(exchange, symbol, config.TIMEFRAME, limit)
     df = compute_indicators(
-        df, config.EMA_FAST, config.EMA_SLOW,
-        config.STOCH_K_PERIOD, config.STOCH_SMOOTH, config.STOCH_D_PERIOD,
-        adx_period=config.ADX_PERIOD, macd_fast=config.MACD_FAST, macd_slow=config.MACD_SLOW,
-        macd_signal=config.MACD_SIGNAL, rsi_period=config.RSI_PERIOD,
-        volume_ma_period=config.VOLUME_MA_PERIOD, ssl_period=config.SSL_PERIOD
+        df, config.ATR_LEN, config.TRAIL_LEN, config.ADX_PERIOD,
+        config.CHOPPINESS_LEN, config.REGIME_LEN, config.RSI_PERIOD,
+        config.VOLUME_MA_PERIOD
     )
-    df = add_atr(df, config.ATR_PERIOD)
-
-    # --- Confirmación multi-timeframe (1h): tendencia y fuerza según precio vs EMA200 ---
-    mtf_bullish, mtf_bearish, mtf_label = None, None, ""
-    trend_strength_1h_pct = 0.0
-    if config.ENABLE_MTF_CONFIRMATION:
-        mtf_label = config.CONFIRM_TIMEFRAME
-        df_mtf = fetch_ohlcv(exchange, symbol, config.CONFIRM_TIMEFRAME, config.EMA_SLOW + 50)
-        df_mtf = add_ema(df_mtf, config.EMA_SLOW, f"EMA{config.EMA_SLOW}")
-        mtf_bullish, mtf_bearish = get_trend_vs_ema200(df_mtf, config.EMA_SLOW)
-
-        last_mtf = df_mtf.iloc[-1]
-        ema_1h_val = last_mtf[f"EMA{config.EMA_SLOW}"]
-        trend_strength_1h_pct = abs(last_mtf["close"] - ema_1h_val) / ema_1h_val * 100
-
-    signals = detect_signals(
-        df, config.EMA_SLOW, config.STOCH_OVERSOLD, config.STOCH_OVERBOUGHT,
-        mtf_confirm_bullish=mtf_bullish,
-        mtf_confirm_bearish=mtf_bearish,
-        mtf_label=mtf_label
+    df = compute_synapse_trail(
+        df, config.ATR_LEN, config.TRAIL_LEN, config.BASE_MULT,
+        config.USE_ADAPTIVE_MULT, config.USE_RATCHET
     )
+    df = compute_regime(df)
 
-    if not signals:
-        return
+    # --- HTF bias (timeframe de confirmación, ej. 1h, EMA de HTF_EMA_PERIOD) ---
+    htf_bull, htf_bear = None, None
+    if config.USE_HTF_FILTER:
+        df_htf = fetch_ohlcv(exchange, symbol, config.CONFIRM_TIMEFRAME, config.HTF_EMA_PERIOD + 50)
+        df_htf = add_ema(df_htf, config.HTF_EMA_PERIOD, f"EMA{config.HTF_EMA_PERIOD}")
+        htf_bull, htf_bear = get_trend_vs_ema200(df_htf, config.HTF_EMA_PERIOD)
+
+    has_volume = df["volume"].tail(20).sum() > 0
 
     last_candle_time = df.iloc[-1]["datetime"].isoformat()
     last_price = df.iloc[-1]["close"]
+    last_high = df.iloc[-1]["high"]
+    last_low = df.iloc[-1]["low"]
 
-    for signal_type, detail in signals:
-        key = f"{symbol}_{signal_type}"
-        if state.get(key) == last_candle_time:
-            continue  # ya avisado para esta vela
+    positions = state.setdefault("positions", {})
+    stats = get_stats(state)
+    pos = positions.get(symbol)
 
-        # --- Cooldown: no repetir el mismo símbolo+dirección demasiado seguido ---
-        cooldown_key = f"{symbol}_{signal_type}_last_alert_ts"
-        last_alert_ts = state.get(cooldown_key)
-        if last_alert_ts:
-            hours_since = (datetime.now(timezone.utc) - datetime.fromisoformat(last_alert_ts)).total_seconds() / 3600
-            if hours_since < config.COOLDOWN_HOURS:
-                state[key] = last_candle_time  # marcar la vela como vista, aunque no se avise
-                continue
+    # --- Evitar reprocesar la misma vela dos veces ---
+    last_processed_key = f"{symbol}_last_processed_candle"
+    already_processed_this_candle = state.get(last_processed_key) == last_candle_time
 
-        emoji = "🟢" if "ALCISTA" in signal_type else "🔴"
+    # ── 1. Detectar señal (flip) en la última vela cerrada ──
+    raw_signal = None if already_processed_this_candle else detect_raw_signal(df)
 
-        entries = build_limit_entries(df, config.EMA_FAST, config.EMA_SLOW, signal_type)
-        entries_text = "\n".join(
-            f"  • {e['label']}: `{e['price']:.4f}` — {e['basis']}" for e in entries
+    new_signal_passes = False
+    score, grade, breakdown = None, None, None
+
+    if raw_signal:
+        is_choppy = bool(df.iloc[-1]["REGIME_is_choppy"])
+        score, grade, breakdown = compute_quality_score(
+            df, raw_signal, htf_bull, htf_bear, config.USE_HTF_FILTER,
+            config.USE_VOLUME_FILTER, config.VOLUME_THRESHOLD, has_volume
         )
+        passes_min_quality = score >= config.MIN_QUALITY_SCORE
+        passes_choppy = not (config.SKIP_CHOPPY_SIGNALS and is_choppy)
+        new_signal_passes = passes_min_quality and passes_choppy
 
-        # --- Gestión de riesgo: SL / TP escalonados / apalancamiento sugerido ---
-        risk = build_risk_management(
-            df, signal_type, last_price,
-            sl_atr_mult=config.SL_ATR_MULT,
-            risk_target_pct=config.RISK_TARGET_PCT,
-            rr_ratios=config.TP_RR_RATIOS,
-            max_leverage=config.MAX_LEVERAGE
-        )
-        tps_text = "\n".join(
-            f"  • {tp['label']}: `{tp['price']:.4f}` | {tp['pct']:.2f}% | RR {tp['rr']:.2f}"
-            for tp in risk["tps"]
-        )
-        leverage_text = f"{risk['leverage_suggested']:.1f}x" if risk["leverage_suggested"] else "N/D"
+    # ── 2. Si hay señal válida y ya había posición contraria -> FLIP (cerrar antes) ──
+    if new_signal_passes and pos and pos["dir"] != raw_signal:
+        was_be = pos.get("be_active", False)
+        is_win, is_be_save, r_total = classify_closed_position(pos, "flip", was_be)
+        stats["wins" if is_win else "losses"] += 1
+        stats["be_saves"] += 1 if is_be_save else 0
+        stats["r_sum"] += r_total
+        stats["flips"] += 1
 
-        # --- Score ponderado (ADX, MACD, RSI, Volumen, Tendencia 1H, SSL) ---
-        score, breakdown, semaforo = build_score(
-            df, signal_type, trend_strength_1h_pct, weights=config.SCORE_WEIGHTS
+        send_telegram(
+            f"[{config.STRATEGY_LABEL}]\n"
+            f"🔄 *{symbol}* — FLIP {pos['dir']} → {raw_signal}\n"
+            f"Entrada anterior: `{pos['entry']:.4f}` | Cierre por flip a: `{last_price:.4f}`\n"
+            f"Resultado: {'GANADORA' if is_win else 'PERDEDORA'} ({r_total:+.2f}R)"
         )
-        breakdown_text = "\n".join(
-            f"  • {name}: {pts}/{config.SCORE_WEIGHTS[key]} pts"
-            for name, pts, key in [
-                ("ADX", breakdown["ADX"], "adx"),
-                ("MACD", breakdown["MACD"], "macd"),
-                ("RSI", breakdown["RSI"], "rsi"),
-                ("Volumen", breakdown["Volumen"], "volumen"),
-                ("Tendencia 1H", breakdown["Tendencia 1H"], "tendencia_1h"),
-                ("SSL", breakdown["SSL"], "ssl"),
-            ]
-        )
+        pos = None
+        positions.pop(symbol, None)
 
-        # --- Indicadores en crudo (valores actuales, informativos) ---
-        last_row = df.iloc[-1]
-        indicators_text = (
-            f"  • SSL Up: `{last_row['SSL_up']:.4f}` | SSL Down: `{last_row['SSL_down']:.4f}`\n"
-            f"  • RSI: `{last_row['RSI']:.1f}`\n"
-            f"  • MACD: `{last_row['MACD']:.4f}` | Señal: `{last_row['MACD_signal']:.4f}` | Hist: `{last_row['MACD_hist']:.4f}`\n"
-            f"  • ADX: `{last_row['ADX']:.1f}` (+DI: `{last_row['ADX_plusDI']:.1f}` / -DI: `{last_row['ADX_minusDI']:.1f}`)\n"
-            f"  • ATR: `{last_row['ATR']:.4f}`\n"
-            f"  • Volumen medio: `{last_row['VOL_MA']:.2f}` | Volumen relativo: `{last_row['VOL_RATIO']:.2f}x`"
-        )
+    # ── 3. Si hay señal válida y no hay posición abierta -> ABRIR ──
+    if new_signal_passes and not pos:
+        preset = RISK_PRESETS[config.RISK_PRESET]
+        risk = build_risk_levels(last_price, df.iloc[-1]["ATR"], raw_signal, config.RISK_PRESET)
+
+        new_pos = {
+            "dir": raw_signal,
+            "entry": last_price,
+            "entry_candle": last_candle_time,
+            "sl": risk["sl"],
+            "tp1": risk["tps"][0]["price"], "tp2": risk["tps"][1]["price"], "tp3": risk["tps"][2]["price"],
+            "tp_rr": [tp["rr"] for tp in risk["tps"]],
+            "tp1_reached": False, "tp2_reached": False, "tp3_reached": False,
+            "be_active": False,
+            "grade": grade, "score": score,
+        }
+        positions[symbol] = new_pos
+        pos = new_pos
+
+        stats["total_signals"] += 1
+        stats["buy_signals" if raw_signal == "ALCISTA" else "sell_signals"] += 1
+        stats[f"grade_{grade.lower()}"] += 1
+
+        emoji = "🟢" if raw_signal == "ALCISTA" else "🔴"
+        breakdown_text = "\n".join(f"  • {k}: {v} pts" for k, v in breakdown.items())
+        entries = build_limit_entries(df, "TRAIL_EMA", config.HTF_EMA_PERIOD, raw_signal)
+        entries_text = "\n".join(f"  • {e['label']}: `{e['price']:.4f}` — {e['basis']}" for e in entries)
+        regime_label = "Trending" if df.iloc[-1]["REGIME_is_trending"] else (
+            "Choppy" if df.iloc[-1]["REGIME_is_choppy"] else "Mixed")
 
         msg = (
             f"[{config.STRATEGY_LABEL}]\n"
-            f"{emoji} *{symbol}* — señal *{signal_type}*\n"
-            f"{detail}\n"
-            f"Precio: `{last_price:.4f}`\n"
-            f"Timeframe: `{config.TIMEFRAME}`\n"
-            f"Vela: `{last_candle_time}`\n\n"
-            f"Score: {score}/100 | Semáforo: {semaforo}\n"
-            f"{breakdown_text}\n\n"
-            f"*Indicadores:*\n{indicators_text}\n\n"
+            f"{emoji} *{symbol}* — señal *{raw_signal}* (Synapse Trail flip)\n"
+            f"Precio: `{last_price:.4f}` | Timeframe: `{config.TIMEFRAME}` | Vela: `{last_candle_time}`\n\n"
+            f"Quality Score: {score}/100 | Grado: *{grade}*\n"
+            f"{breakdown_text}\n"
+            f"Régimen: {regime_label} ({df.iloc[-1]['REGIME_score']:.0f}/100)\n\n"
             f"*Entradas escalonadas sugeridas:*\n{entries_text}\n\n"
-            f"*Gestión de riesgo (ATR):*\n"
-            f"  • SL: `{risk['sl']:.4f}` ({risk['sl_pct']:.2f}%)\n"
-            f"  • Apalancamiento sugerido (riesgo {config.RISK_TARGET_PCT:.0f}%): `{leverage_text}`\n"
-            f"{tps_text}"
+            f"*Gestión de riesgo (preset {config.RISK_PRESET}):*\n"
+            f"  • SL: `{pos['sl']:.4f}`\n"
+            f"  • TP1: `{pos['tp1']:.4f}` (RR {pos['tp_rr'][0]}) | "
+            f"TP2: `{pos['tp2']:.4f}` (RR {pos['tp_rr'][1]}) | "
+            f"TP3: `{pos['tp3']:.4f}` (RR {pos['tp_rr'][2]})"
         )
         send_telegram(msg)
         print(msg.replace("*", "").replace("`", ""))
-        state[key] = last_candle_time
-        state[cooldown_key] = datetime.now(timezone.utc).isoformat()
 
+    # ── 4. Si hay posición abierta (nueva o de antes), comprobar hits en la última vela ──
+    if pos:
+        is_long = pos["dir"] == "ALCISTA"
+        is_entry_candle = pos["entry_candle"] == last_candle_time
+        can_hit = not is_entry_candle  # igual que ENTRY_BAR_HOLD del Pine: no evaluar en la propia vela de entrada
+
+        if can_hit:
+            effective_sl = pos["sl"]
+            sl_hit = (last_low <= effective_sl) if is_long else (last_high >= effective_sl)
+            tp1_hit = (last_high >= pos["tp1"]) if is_long else (last_low <= pos["tp1"])
+            tp2_hit = (last_high >= pos["tp2"]) if is_long else (last_low <= pos["tp2"])
+            tp3_hit = (last_high >= pos["tp3"]) if is_long else (last_low <= pos["tp3"])
+
+            tp1_first = tp1_hit and not pos["tp1_reached"] and not sl_hit
+            tp2_first = tp2_hit and not pos["tp2_reached"] and not sl_hit
+            tp3_first = tp3_hit and not pos["tp3_reached"] and not sl_hit
+
+            if tp1_first:
+                pos["tp1_reached"] = True
+                stats["tp1_hits"] += 1
+                if config.USE_BREAK_EVEN and not pos["be_active"]:
+                    pos["sl"] = pos["entry"]
+                    pos["be_active"] = True
+                    send_telegram(
+                        f"[{config.STRATEGY_LABEL}]\n🎯 *{symbol}* — TP1 alcanzado (`{pos['tp1']:.4f}`)\n"
+                        f"🛡️ Break-even activado: SL movido a la entrada (`{pos['entry']:.4f}`)"
+                    )
+                else:
+                    send_telegram(f"[{config.STRATEGY_LABEL}]\n🎯 *{symbol}* — TP1 alcanzado (`{pos['tp1']:.4f}`)")
+
+            if tp2_first:
+                pos["tp2_reached"] = True
+                stats["tp2_hits"] += 1
+                send_telegram(f"[{config.STRATEGY_LABEL}]\n🎯🎯 *{symbol}* — TP2 alcanzado (`{pos['tp2']:.4f}`)")
+
+            was_be_at_start = pos["be_active"]
+
+            if sl_hit or tp3_first:
+                if tp3_first:
+                    pos["tp3_reached"] = True
+                    stats["tp3_hits"] += 1
+                else:
+                    stats["sl_hits"] += 1
+
+                close_reason = "sl" if sl_hit else "tp3"
+                is_win, is_be_save, r_total = classify_closed_position(pos, close_reason, was_be_at_start)
+                stats["wins" if is_win else "losses"] += 1
+                stats["be_saves"] += 1 if is_be_save else 0
+                stats["r_sum"] += r_total
+
+                closed_trades = stats["wins"] + stats["losses"]
+                win_rate = stats["wins"] / closed_trades * 100 if closed_trades else 0
+                avg_r = stats["r_sum"] / closed_trades if closed_trades else 0
+
+                icon = "🛑" if sl_hit else "🏆"
+                reason_text = ("Break-even" if was_be_at_start and sl_hit else "Stop Loss") if sl_hit else "TP3 (objetivo completo)"
+                send_telegram(
+                    f"[{config.STRATEGY_LABEL}]\n"
+                    f"{icon} *{symbol}* — posición CERRADA ({reason_text})\n"
+                    f"Entrada: `{pos['entry']:.4f}` | Cierre: `{last_price:.4f}`\n"
+                    f"Resultado: {'GANADORA' if is_win else 'PERDEDORA'} ({r_total:+.2f}R)\n\n"
+                    f"*Estadísticas de sesión:*\n"
+                    f"  • Cerradas: {closed_trades} | Win rate: {win_rate:.1f}%\n"
+                    f"  • R medio: {avg_r:+.2f} | BE saves: {stats['be_saves']} | Flips: {stats['flips']}"
+                )
+                positions.pop(symbol, None)
+
+    state[last_processed_key] = last_candle_time
+
+
+# ══════════════════════════════════════════════════════════
+# Bucle principal
+# ══════════════════════════════════════════════════════════
 
 def run_once():
     exchange_class = getattr(ccxt, config.EXCHANGE_ID)
@@ -189,9 +314,6 @@ def run_once():
         "options": {"defaultType": config.MARKET_TYPE},
     })
     state = load_state()
-
-    # --- TEST TEMPORAL: BORRAR ESTA LÍNEA CUANDO CONFIRMES QUE FUNCIONA ---
-    # send_telegram(f"✅ Bot ejecutado correctamente ({config.EXCHANGE_ID}, {config.TIMEFRAME}) — {datetime.now(timezone.utc).isoformat()}")
 
     for symbol in config.SYMBOLS:
         try:
@@ -203,7 +325,7 @@ def run_once():
 
 
 def main():
-    print(f"Bot iniciado {datetime.now(timezone.utc).isoformat()} | "
+    print(f"[{config.STRATEGY_LABEL}] Bot iniciado {datetime.now(timezone.utc).isoformat()} | "
           f"Símbolos: {config.SYMBOLS} | Timeframe: {config.TIMEFRAME}")
 
     if "--once" in sys.argv:

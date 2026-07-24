@@ -1,284 +1,282 @@
 """
-Lógica ESPECÍFICA de la estrategia: qué combinación de indicadores dispara
-una señal, y cómo se calcula el score de confluencia ponderado.
+Lógica ESPECÍFICA de la estrategia — inspirada en "Synapse Trail Pro"
+(WillyAlgoTrader), adaptada a un bot de alertas de Telegram (sin las partes
+puramente visuales: líneas, colores, dashboard en el gráfico).
 
-Usa las funciones genéricas de indicators.py, pero decide la parte de
-"cuándo es una señal válida" y "cómo de buena es", que indicators.py no
-sabe ni debe saber.
+=== RESUMEN DE LA ESTRATEGIA ===
 
-=== ESTRATEGIA (continuación de tendencia, no rebote) ===
-LONG:  cierre(15m) > EMA200(15m)  Y  Estocástico en SOBRECOMPRA  Y  cierre(1h) > EMA200(1h)
-SHORT: cierre(15m) < EMA200(15m)  Y  Estocástico en SOBREVENTA   Y  cierre(1h) < EMA200(1h)
+1. SEÑAL (Synapse Trail): banda de tendencia tipo SuperTrend
+   trail_center = EMA(close, TRAIL_LEN)
+   banda = trail_center ± ATR(ATR_LEN) × multiplicador
+   Con "ratchet": la banda solo se aprieta a favor de la posición (nunca
+   se afloja) hasta que la dirección cambia.
+   Señal = cambio de dirección (flip) de la banda.
 
-A diferencia de la versión anterior, esto NO exige un cruce del Estocástico:
-basta con que esté en la zona, en el momento de la vela cerrada. Es una
-estrategia de "comprar fuerza" (el precio ya está por encima de la media
-larga y el momentum está fuerte), no de "comprar el rebote".
+2. MARKET REGIME (0-100): ADX(40%) + Choppiness Index invertido(35%) + R²(25%)
+   Trending si >=60, Choppy si <35.
+
+3. QUALITY SCORE (0-100) una vez detectada la señal:
+   HTF bias 30 | Volumen 20 | RSI 20 | Régimen 20 | Fuerza de ruptura 10
+   Grado: A (>=75), B (>=55), C (resto)
+
+4. GESTIÓN DE POSICIÓN VIVA: el bot recuerda la posición abierta (entry,
+   SL, TP1/TP2/TP3) entre ejecuciones. Al tocar TP1 activa break-even
+   (SL -> entrada). Se cierra al tocar el SL o el TP3. Un flip (señal
+   contraria mientras hay posición abierta) cierra la posición actual y
+   abre la nueva.
+
+5. PRESETS DE RIESGO: SL en múltiplos de ATR, TP1/TP2/TP3 en múltiplos-R
+   (relativos a la distancia del SL).
 """
 import pandas as pd
+import numpy as np
 
-from indicators import add_ema, add_stochastic, add_adx, add_macd, add_rsi, add_volume_ratio, add_ssl_channel
+from indicators import (
+    add_ema, add_atr, add_adx, add_rsi, add_volume_ratio,
+    add_choppiness_index, add_r_squared
+)
+
+# ── Presets de riesgo (SL en xATR, TP1/TP2/TP3 en múltiplos-R) ──
+RISK_PRESETS = {
+    "Conservative": {"sl_mult": 2.5, "tp_mults": [1.0, 2.0, 4.0]},
+    "Balanced":     {"sl_mult": 1.5, "tp_mults": [1.0, 2.0, 3.0]},
+    "Aggressive":   {"sl_mult": 1.0, "tp_mults": [1.5, 2.5, 4.0]},
+    "Scalping":     {"sl_mult": 0.8, "tp_mults": [0.8, 1.5, 2.0]},
+}
+
+GRADE_A_THRESHOLD = 75
+GRADE_B_THRESHOLD = 55
+REGIME_TRENDING = 60
+REGIME_CHOPPY = 35
 
 
-def compute_indicators(df: pd.DataFrame, ema_fast: int, ema_slow: int,
-                        k_period: int, smooth: int, d_period: int,
-                        adx_period: int = 14, macd_fast: int = 12, macd_slow: int = 26,
-                        macd_signal: int = 9, rsi_period: int = 14,
-                        volume_ma_period: int = 20, ssl_period: int = 10) -> pd.DataFrame:
-    """
-    Calcula todos los indicadores que esta estrategia necesita:
-    EMA rápida (referencia para entradas), EMA lenta (filtro de tendencia),
-    Estocástico (disparador), y ADX/MACD/RSI/Volumen/SSL (para el score).
-    """
-    df = add_ema(df, ema_fast, f"EMA{ema_fast}")
-    df = add_ema(df, ema_slow, f"EMA{ema_slow}")
-    df = add_stochastic(df, k_period, smooth, d_period)
+def compute_indicators(df: pd.DataFrame, atr_len: int, trail_len: int,
+                        adx_period: int, chop_period: int, regime_len: int,
+                        rsi_period: int, volume_ma_period: int) -> pd.DataFrame:
+    """Calcula todos los indicadores base necesarios para esta estrategia."""
+    df = add_atr(df, atr_len, col_name="ATR")
+    df = add_ema(df, trail_len, col_name="TRAIL_EMA")
     df = add_adx(df, adx_period)
-    df = add_macd(df, macd_fast, macd_slow, macd_signal)
+    df = add_choppiness_index(df, chop_period)
+    df = add_r_squared(df, regime_len)
     df = add_rsi(df, rsi_period)
     df = add_volume_ratio(df, volume_ma_period)
-    df = add_ssl_channel(df, ssl_period)
     return df
 
 
-def detect_signals(df: pd.DataFrame, ema_slow: int, oversold: int, overbought: int,
-                    mtf_confirm_bullish=None, mtf_confirm_bearish=None, mtf_label: str = ""):
+def compute_synapse_trail(df: pd.DataFrame, atr_len: int, trail_len: int,
+                           base_mult: float = 1.618, use_adaptive_mult: bool = False,
+                           use_ratchet: bool = True) -> pd.DataFrame:
     """
-    Analiza las DOS últimas velas cerradas (estrategia de "comprar el pullback
-    en tendencia", no de continuación por ruptura):
+    Calcula la banda de tendencia (Synapse Trail) bar a bar, con ratchet
+    opcional. Necesita recorrer el DataFrame en orden porque cada banda
+    depende de su propio valor en la vela anterior (igual que un SuperTrend).
 
-      - ALCISTA: cierre > EMA{ema_slow} (tendencia alcista)  Y  %K cruza por
-                 ENCIMA de %D estando AMBOS en zona de SOBREVENTA (%K y %D <
-                 oversold) — es decir, el precio hace un pullback dentro de
-                 una tendencia alcista y el Estocástico rebota desde abajo.
-      - BAJISTA: cierre < EMA{ema_slow} (tendencia bajista)  Y  %K cruza por
-                 DEBAJO de %D estando AMBOS en zona de SOBRECOMPRA (%K y %D >
-                 overbought) — el precio hace un rebote dentro de una
-                 tendencia bajista y el Estocástico gira desde arriba.
-
-    La EMA{ema_slow} marca la tendencia de fondo; el cruce del Estocástico en
-    la zona opuesta a la dirección de la señal es el disparador del pullback.
-
-    Con confirmación multi-timeframe obligatoria si se pasa (mtf_confirm_bullish/
-    bearish): la tendencia en el timeframe de confirmación (ej. 1h) debe ir en
-    la misma dirección.
-
-    Devuelve una lista de tuplas (tipo, mensaje).
+    Añade columnas: TRAIL_upper, TRAIL_lower, TRAIL_dir (1/-1/0), TRAIL_line.
     """
-    if len(df) < ema_slow + 2:
-        return []
+    if use_adaptive_mult:
+        vol_rank = df["ATR"].rank(pct=True) * 100
+    else:
+        vol_rank = pd.Series(50.0, index=df.index)
 
-    prev, last = df.iloc[-2], df.iloc[-1]
-    slow_col = f"EMA{ema_slow}"
+    mult_adjust = vol_rank.apply(lambda r: 0.8 if r < 30 else (1.25 if r > 70 else 1.0))
+    effective_mult = base_mult * mult_adjust
 
-    price_above = last["close"] > last[slow_col]
-    price_below = last["close"] < last[slow_col]
+    raw_upper = df["TRAIL_EMA"] + df["ATR"] * effective_mult
+    raw_lower = df["TRAIL_EMA"] - df["ATR"] * effective_mult
 
-    cross_up_in_oversold = (
-        prev["%K"] <= prev["%D"] and last["%K"] > last["%D"]
-        and last["%K"] < oversold and last["%D"] < oversold
-    )
-    cross_down_in_overbought = (
-        prev["%K"] >= prev["%D"] and last["%K"] < last["%D"]
-        and last["%K"] > overbought and last["%D"] > overbought
-    )
+    dirs, uppers, lowers = [], [], []
+    dir_state = 0
+    upper_state, lower_state = np.nan, np.nan
 
-    bullish_ok = price_above and cross_up_in_oversold
-    bearish_ok = price_below and cross_down_in_overbought
+    closes = df["close"].values
+    ru = raw_upper.values
+    rl = raw_lower.values
 
-    if bullish_ok and mtf_confirm_bullish is not None and not mtf_confirm_bullish:
-        bullish_ok = False
-    if bearish_ok and mtf_confirm_bearish is not None and not mtf_confirm_bearish:
-        bearish_ok = False
+    for i in range(len(df)):
+        prev_upper = upper_state
+        prev_lower = lower_state
+        prev_dir = dir_state
 
-    signals = []
+        if not np.isnan(prev_upper) and closes[i] > prev_upper:
+            dir_state = 1
+        elif not np.isnan(prev_lower) and closes[i] < prev_lower:
+            dir_state = -1
+        # si no se cumple ninguna, dir_state se mantiene igual (persiste)
 
-    if bullish_ok:
-        msg = (f"Cierre por ENCIMA de EMA{ema_slow} (tendencia alcista) y %K cruza por "
-               f"ENCIMA de %D dentro de SOBREVENTA (%K={last['%K']:.1f}, %D={last['%D']:.1f}, "
-               f"umbral={oversold}) — pullback en tendencia")
-        if mtf_confirm_bullish is not None:
-            msg += f" | confirmado: precio también por ENCIMA de EMA{ema_slow} en {mtf_label}"
-        signals.append(("ALCISTA", msg))
+        flipped = dir_state != prev_dir
 
-    if bearish_ok:
-        msg = (f"Cierre por DEBAJO de EMA{ema_slow} (tendencia bajista) y %K cruza por "
-               f"DEBAJO de %D dentro de SOBRECOMPRA (%K={last['%K']:.1f}, %D={last['%D']:.1f}, "
-               f"umbral={overbought}) — rebote en tendencia")
-        if mtf_confirm_bearish is not None:
-            msg += f" | confirmado: precio también por DEBAJO de EMA{ema_slow} en {mtf_label}"
-        signals.append(("BAJISTA", msg))
+        if use_ratchet:
+            if dir_state == 1:
+                lower_state = rl[i] if flipped else (max(rl[i], prev_lower) if not np.isnan(prev_lower) else rl[i])
+                upper_state = ru[i]
+            elif dir_state == -1:
+                upper_state = ru[i] if flipped else (min(ru[i], prev_upper) if not np.isnan(prev_upper) else ru[i])
+                lower_state = rl[i]
+            else:
+                upper_state = ru[i]
+                lower_state = rl[i]
+        else:
+            upper_state = ru[i]
+            lower_state = rl[i]
 
-    return signals
+        dirs.append(dir_state)
+        uppers.append(upper_state)
+        lowers.append(lower_state)
+
+    df["TRAIL_dir"] = dirs
+    df["TRAIL_upper"] = uppers
+    df["TRAIL_lower"] = lowers
+    df["TRAIL_line"] = [
+        lowers[i] if dirs[i] == 1 else (uppers[i] if dirs[i] == -1 else np.nan)
+        for i in range(len(df))
+    ]
+    return df
 
 
-def build_score(df: pd.DataFrame, signal_type: str, trend_strength_1h_pct: float,
-                weights: dict = None):
+def compute_regime(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Score de 0 a 100 según 6 indicadores ponderados:
-
-        ADX                       20 pts  (fuerza de la tendencia + dirección +DI/-DI)
-        MACD                      15 pts  (¿confirma la dirección de la señal?)
-        RSI                       15 pts  (momentum a favor de la dirección)
-        Volumen                   10 pts  (¿hay más participación de lo normal?)
-        Fuerza tendencia 1H       15 pts  (cuánto se aleja el precio de su EMA200 en 1h)
-        SSL                       25 pts  (canal SSL alineado con la dirección de la señal)
-        ------------------------------
-        Total                    100 pts
-
-    Cada componente aporta 0 si NO confirma la dirección de la señal, y una
-    puntuación proporcional (hasta el máximo de su peso) cuanto más fuerte
-    sea la confirmación. Devuelve (score, desglose, semaforo).
+    Market Regime Score (0-100): ADX(40%) + Choppiness invertido(35%) + R²(25%).
+    Añade columnas: REGIME_score, REGIME_is_trending, REGIME_is_choppy.
+    Requiere que ya se hayan calculado ADX, CHOP y R2 (ver compute_indicators).
     """
-    w = weights or {"adx": 20, "macd": 15, "rsi": 15, "volumen": 10, "tendencia_1h": 15, "ssl": 25}
+    adx_score = (df["ADX"] / 50 * 100).clip(upper=100)
+    chop_score = (100 - df["CHOP"]).clip(lower=0, upper=100)
+    r2_score = (df["R2"] * 100).clip(lower=0, upper=100)
+
+    regime_score = adx_score * 0.40 + chop_score * 0.35 + r2_score * 0.25
+    df["REGIME_score"] = regime_score
+    df["REGIME_is_trending"] = regime_score >= REGIME_TRENDING
+    df["REGIME_is_choppy"] = regime_score < REGIME_CHOPPY
+    return df
+
+
+def detect_raw_signal(df: pd.DataFrame):
+    """
+    Detecta si en la ÚLTIMA vela cerrada se ha producido un flip de dirección
+    del Synapse Trail. Devuelve "ALCISTA", "BAJISTA" o None.
+    """
+    if len(df) < 3:
+        return None
+    prev_dir = df.iloc[-2]["TRAIL_dir"]
+    last_dir = df.iloc[-1]["TRAIL_dir"]
+    if last_dir == 1 and prev_dir == -1:
+        return "ALCISTA"
+    if last_dir == -1 and prev_dir == 1:
+        return "BAJISTA"
+    return None
+
+
+def compute_quality_score(df: pd.DataFrame, signal_type: str,
+                           htf_bull, htf_bear, use_htf_filter: bool,
+                           use_volume_filter: bool, volume_threshold: float,
+                           has_volume: bool):
+    """
+    Quality Score (0-100):
+      HTF bias        30 pts (alineado) / 15 (plano o filtro apagado) / 0 (en contra)
+      Volumen         20 pts (si hay confirmación, o si el filtro está apagado / sin datos)
+      RSI momentum    20 pts (RSI>50 para LONG, <50 para SHORT)
+      Régimen         20 pts (REGIME_score × 0.20)
+      Fuerza ruptura  10 pts (cuánto ha perforado el precio la banda, hasta 3×ATR)
+
+    Devuelve (score, grade, breakdown).
+    """
     last = df.iloc[-1]
     is_long = signal_type == "ALCISTA"
     breakdown = {}
 
-    # --- ADX (fuerza + dirección) ---
-    adx_val = last["ADX"]
-    plus_di, minus_di = last["ADX_plusDI"], last["ADX_minusDI"]
-    direction_aligned = (plus_di > minus_di) if is_long else (minus_di > plus_di)
-    if direction_aligned and pd.notna(adx_val):
-        pts = min(w["adx"], (adx_val / 50) * w["adx"])
-    else:
-        pts = 0
-    breakdown["ADX"] = round(pts, 1)
+    # --- HTF bias ---
+    htf_data_valid = use_htf_filter and htf_bull is not None and htf_bear is not None
+    htf_matches = htf_data_valid and ((is_long and htf_bull) or (not is_long and htf_bear))
+    htf_against = htf_data_valid and ((is_long and htf_bear) or (not is_long and htf_bull))
+    htf_pts = 30.0 if htf_matches else (0.0 if htf_against else 15.0)
+    breakdown["HTF"] = round(htf_pts, 1)
 
-    # --- MACD (¿confirma dirección?) ---
-    macd_aligned = (last["MACD"] > last["MACD_signal"]) if is_long else (last["MACD"] < last["MACD_signal"])
-    if macd_aligned:
-        hist_pct = abs(last["MACD_hist"]) / last["close"] * 100
-        pts = min(w["macd"], (hist_pct / 0.5) * w["macd"])
+    # --- Volumen ---
+    if (not use_volume_filter) or (not has_volume):
+        vol_pts = 20.0
     else:
-        pts = 0
-    breakdown["MACD"] = round(pts, 1)
+        vol_confirm = last["VOL_RATIO"] > volume_threshold if pd.notna(last["VOL_RATIO"]) else False
+        vol_pts = 20.0 if vol_confirm else 0.0
+    breakdown["Volumen"] = round(vol_pts, 1)
 
-    # --- RSI (momentum a favor) ---
-    rsi_val = last["RSI"]
+    # --- RSI ---
+    rsi_ok = (last["RSI"] > 50) if is_long else (last["RSI"] < 50)
+    rsi_pts = 20.0 if rsi_ok else 0.0
+    breakdown["RSI"] = round(rsi_pts, 1)
+
+    # --- Régimen ---
+    regime_pts = last["REGIME_score"] * 0.20
+    breakdown["Régimen"] = round(regime_pts, 1)
+
+    # --- Fuerza de ruptura ---
+    prev = df.iloc[-2]
     if is_long:
-        pts = min(w["rsi"], max(0, (rsi_val - 50) / 30 * w["rsi"]))
+        break_dist = last["close"] - prev["TRAIL_upper"]
     else:
-        pts = min(w["rsi"], max(0, (50 - rsi_val) / 30 * w["rsi"]))
-    breakdown["RSI"] = round(pts, 1)
-
-    # --- Volumen (participación por encima de lo normal) ---
-    vol_ratio = last["VOL_RATIO"]
-    if pd.notna(vol_ratio):
-        pts = min(w["volumen"], max(0, (vol_ratio - 1) * w["volumen"]))
-    else:
-        pts = 0
-    breakdown["Volumen"] = round(pts, 1)
-
-    # --- Fuerza de la tendencia en 1H ---
-    pts = min(w["tendencia_1h"], max(0, trend_strength_1h_pct / 4 * w["tendencia_1h"]))
-    breakdown["Tendencia 1H"] = round(pts, 1)
-
-    # --- SSL Channel (alineación de tendencia) ---
-    ssl_up, ssl_down = last["SSL_up"], last["SSL_down"]
-    ssl_aligned = (ssl_up > ssl_down) if is_long else (ssl_up < ssl_down)
-    if ssl_aligned and pd.notna(ssl_up) and pd.notna(ssl_down):
-        ssl_distance_pct = abs(ssl_up - ssl_down) / last["close"] * 100
-        pts = min(w["ssl"], (ssl_distance_pct / 2) * w["ssl"])
-    else:
-        pts = 0
-    breakdown["SSL"] = round(pts, 1)
+        break_dist = prev["TRAIL_lower"] - last["close"]
+    atr_val = last["ATR"]
+    break_strength = min(abs(break_dist) / atr_val, 3.0) / 3.0 * 100.0 if atr_val else 0.0
+    break_pts = break_strength * 0.10
+    breakdown["Ruptura"] = round(break_pts, 1)
 
     score = round(min(100, sum(breakdown.values())))
+    grade = "A" if score >= GRADE_A_THRESHOLD else ("B" if score >= GRADE_B_THRESHOLD else "C")
 
-    if score >= 70:
-        semaforo = "🟢 VERDE"
-    elif score >= 40:
-        semaforo = "🟡 AMARILLO"
-    else:
-        semaforo = "🔴 ROJO"
-
-    return score, breakdown, semaforo
+    return score, grade, breakdown
 
 
-def build_risk_management(df: pd.DataFrame, signal_type: str, entry_price: float,
-                           atr_col: str = "ATR", sl_atr_mult: float = 1.5,
-                           risk_target_pct: float = 10.0,
-                           rr_ratios=(1.0, 1.7, 2.5),
-                           max_leverage: float = 20.0):
+def build_risk_levels(entry_price: float, atr_val: float, signal_type: str, preset: str):
     """
-    Calcula Stop Loss, Take Profits escalonados (con ratio riesgo/recompensa)
-    y un apalancamiento sugerido, a partir del ATR (volatilidad real reciente).
+    Calcula SL y TP1/TP2/TP3 según el preset de riesgo elegido.
+    SL = entry -/+ (sl_mult × ATR). TP_n = entry +/- (tp_mult_n × distancia_SL).
     """
-    last_atr = df.iloc[-1][atr_col]
+    cfg = RISK_PRESETS[preset]
     is_long = signal_type == "ALCISTA"
+    sl_distance = atr_val * cfg["sl_mult"]
 
-    if is_long:
-        sl = entry_price - sl_atr_mult * last_atr
-    else:
-        sl = entry_price + sl_atr_mult * last_atr
-
-    risk_distance = abs(entry_price - sl)
-    sl_pct = (risk_distance / entry_price) * 100
-
-    leverage_suggested = min(risk_target_pct / sl_pct, max_leverage) if sl_pct > 0 else None
-
+    sl = entry_price - sl_distance if is_long else entry_price + sl_distance
     tps = []
-    for i, rr in enumerate(rr_ratios, start=1):
-        tp_price = entry_price + rr * risk_distance if is_long else entry_price - rr * risk_distance
-        tp_pct = (abs(tp_price - entry_price) / entry_price) * 100
-        tps.append({"label": f"TP{i}", "price": tp_price, "pct": tp_pct, "rr": rr})
+    for i, mult in enumerate(cfg["tp_mults"], start=1):
+        tp_price = entry_price + sl_distance * mult if is_long else entry_price - sl_distance * mult
+        tps.append({"label": f"TP{i}", "price": tp_price, "rr": mult})
 
-    return {
-        "sl": sl,
-        "sl_pct": sl_pct,
-        "leverage_suggested": leverage_suggested,
-        "tps": tps,
-    }
+    return {"sl": sl, "sl_distance": sl_distance, "tps": tps}
 
 
-def build_limit_entries(df: pd.DataFrame, ema_fast: int, ema_slow: int,
+def build_limit_entries(df: pd.DataFrame, ema_fast_col: str, ema_slow: int,
                          signal_type: str, swing_lookback: int = 50):
     """
-    Calcula de 2 a 4 niveles de entrada escalonados (limit orders):
-      Entry 1 -> precio actual
-      Entry 2 -> retest de EMA{ema_fast}
-      Entry 3 -> Fibonacci 0.618 del swing reciente
-      Entry 4 -> EMA{ema_slow} (invalidación)
-
-    Solo se incluyen los niveles con sentido direccional; se renumeran sin
-    huecos según lo que realmente se muestra.
+    Calcula de 2 a 4 niveles de entrada escalonados (limit orders), igual
+    que en versiones anteriores del bot: precio actual, retest EMA rápida,
+    Fibonacci 0.618 del swing reciente, y EMA lenta (invalidación).
     """
     last = df.iloc[-1]
     price = last["close"]
-    ema_fast_val = last[f"EMA{ema_fast}"]
-    ema_slow_val = last[f"EMA{ema_slow}"]
+    ema_fast_val = last[ema_fast_col] if ema_fast_col in df.columns else None
+    ema_slow_val = last[f"EMA{ema_slow}"] if f"EMA{ema_slow}" in df.columns else None
 
     window = df.tail(swing_lookback)
     swing_high = window["high"].max()
     swing_low = window["low"].min()
     diff = swing_high - swing_low
 
-    entries = []
+    entries = [{"price": price, "basis": "precio actual"}]
     is_long = signal_type == "ALCISTA"
 
-    entries.append({"price": price, "basis": "precio actual"})
+    candidates = []
+    if ema_fast_val is not None:
+        candidates.append((ema_fast_val, "retest EMA rápida"))
+    fib = (swing_high - diff * 0.618) if is_long else (swing_low + diff * 0.618)
+    candidates.append((fib, "Fibonacci 0.618 del swing reciente"))
+    if ema_slow_val is not None:
+        candidates.append((ema_slow_val, f"EMA{ema_slow}, invalidación"))
 
-    if is_long:
-        fib_618 = swing_high - diff * 0.618
-        candidates = [
-            (ema_fast_val, f"retest EMA{ema_fast}"),
-            (fib_618, "Fibonacci 0.618 del swing reciente"),
-            (ema_slow_val, f"soporte mayor EMA{ema_slow}, invalidación"),
-        ]
-        for lvl, basis in candidates:
-            if lvl < entries[-1]["price"]:
-                entries.append({"price": lvl, "basis": basis})
-    else:
-        fib_618 = swing_low + diff * 0.618
-        candidates = [
-            (ema_fast_val, f"retest EMA{ema_fast}"),
-            (fib_618, "Fibonacci 0.618 del swing reciente"),
-            (ema_slow_val, f"resistencia mayor EMA{ema_slow}, invalidación"),
-        ]
-        for lvl, basis in candidates:
-            if lvl > entries[-1]["price"]:
-                entries.append({"price": lvl, "basis": basis})
+    for lvl, basis in candidates:
+        if is_long and lvl < entries[-1]["price"]:
+            entries.append({"price": lvl, "basis": basis})
+        elif not is_long and lvl > entries[-1]["price"]:
+            entries.append({"price": lvl, "basis": basis})
 
     for i, e in enumerate(entries, start=1):
         e["label"] = f"Entry {i} ({e['basis']})"

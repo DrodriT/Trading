@@ -157,6 +157,48 @@ def add_volume_ratio(df: pd.DataFrame, period: int = 20, col_name: str = "VOL_RA
     return df
 
 
+def add_choppiness_index(df: pd.DataFrame, period: int = 14, col_name: str = "CHOP") -> pd.DataFrame:
+    """
+    Choppiness Index: mide si el mercado está en tendencia (valores bajos)
+    o "lateral/picado" (valores altos), 0-100. NO indica dirección, solo si
+    el precio se mueve de forma ordenada o errática.
+    """
+    import numpy as np
+
+    prev_close = df["close"].shift(1)
+    tr = pd.concat([
+        df["high"] - df["low"],
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
+    ], axis=1).max(axis=1)
+
+    tr_sum = tr.rolling(window=period).sum()
+    highest_high = df["high"].rolling(window=period).max()
+    lowest_low = df["low"].rolling(window=period).min()
+    rng = highest_high - lowest_low
+
+    log_n = np.log10(max(period, 2))
+
+    ratio = tr_sum / rng.replace(0, pd.NA)
+    chop = 100 * np.log10(ratio.astype("float64")) / log_n
+    chop = chop.where(rng > 0, 100.0)    # rango plano (extremo) -> máxima choppiness
+    chop = chop.where(tr_sum > 0, 50.0)  # sin datos de TR -> valor neutro
+    df[col_name] = chop
+    return df
+
+
+def add_r_squared(df: pd.DataFrame, period: int = 50, col_name: str = "R2") -> pd.DataFrame:
+    """
+    R² de la regresión lineal del precio de cierre frente al tiempo, sobre
+    una ventana de 'period' velas. Mide linealidad (0-1): valores altos =
+    movimiento de precio muy direccional/lineal; valores bajos = errático.
+    """
+    bar_index = pd.Series(range(len(df)), index=df.index, dtype="float64")
+    corr = df["close"].rolling(window=period).corr(bar_index)
+    df[col_name] = corr.pow(2)
+    return df
+
+
 def get_trend_vs_ma(df: pd.DataFrame, ma_col: str, min_periods: int = 0):
     """
     Dado un DataFrame ya con una media móvil calculada en ma_col, devuelve
