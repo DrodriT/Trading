@@ -1,341 +1,419 @@
-"""
-Bot de alertas cripto — VERSIÓN "Synapse" (basada en Synapse Trail Pro)
-
-A diferencia de versiones anteriores (aviso puntual y ya está), este bot
-RECUERDA la posición abierta por símbolo entre ejecuciones (guardada en
-state.json): sabe si hay un LONG/SHORT activo, mueve el SL a break-even
-tras TP1, seguí TP2/TP3, y avisa también cuando la posición se CIERRA
-(por SL, por TP3, o por un flip de la señal).
-
-Uso:
-    python3 bot.py            # corre en bucle
-    python3 bot.py --once     # ejecuta una sola pasada (usado por GitHub Actions)
-"""
-import json
-import os
+# ============================================================
+# BOT PRINCIPAL — Rodri bot
+# Loop: fetch data → compute signals → manage positions → execute
+# ============================================================
 import sys
 import time
-from datetime import datetime, timezone
+import logging
+import traceback
+from datetime import datetime, timedelta
+from typing import Dict, Optional
 
 import ccxt
 import pandas as pd
-import requests
+import numpy as np
 
-import config
-from indicators import add_ema, get_trend_vs_ema200
-from strategy import (
-    compute_indicators, compute_synapse_trail, compute_regime,
-    detect_raw_signal, compute_quality_score, build_risk_levels,
-    build_limit_entries, RISK_PRESETS
+import config as cfg
+from strategy import SynapseStrategy, StateManager, PositionState
+
+# ============================================================
+# LOGGING
+# ============================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("synapse_bot.log", encoding="utf-8")
+    ]
 )
+logger = logging.getLogger("synapse_bot")
 
 
-# ══════════════════════════════════════════════════════════
-# Persistencia de estado
-# ══════════════════════════════════════════════════════════
+# ============================================================
+# TELEGRAM
+# ============================================================
+class TelegramNotifier:
+    """Envía mensajes por Telegram."""
 
-def load_state():
-    if os.path.exists(config.STATE_FILE):
-        with open(config.STATE_FILE, "r") as f:
-            return json.load(f)
-    return {"positions": {}, "stats": {}}
+    def __init__(self, token: str, chat_id: str):
+        self.token = token
+        self.chat_id = chat_id
+        self.enabled = bool(token and chat_id and "PON_AQUI" not in token)
 
-
-def save_state(state):
-    with open(config.STATE_FILE, "w") as f:
-        json.dump(state, f, indent=2)
-
-
-def get_stats(state):
-    stats = state.setdefault("stats", {})
-    defaults = {
-        "total_signals": 0, "buy_signals": 0, "sell_signals": 0,
-        "grade_a": 0, "grade_b": 0, "grade_c": 0,
-        "sl_hits": 0, "tp1_hits": 0, "tp2_hits": 0, "tp3_hits": 0,
-        "flips": 0, "wins": 0, "losses": 0, "be_saves": 0, "r_sum": 0.0,
-    }
-    for k, v in defaults.items():
-        stats.setdefault(k, v)
-    return stats
-
-
-# ══════════════════════════════════════════════════════════
-# Telegram / datos
-# ══════════════════════════════════════════════════════════
-
-def send_telegram(message: str):
-    if "PON_AQUI" in config.TELEGRAM_TOKEN or "PON_AQUI" in config.TELEGRAM_CHAT_ID:
-        print("[AVISO] Configura TELEGRAM_TOKEN y TELEGRAM_CHAT_ID en config.py")
-        print(message)
-        return
-    url = f"https://api.telegram.org/bot{config.TELEGRAM_TOKEN}/sendMessage"
-    try:
-        resp = requests.post(url, data={
-            "chat_id": config.TELEGRAM_CHAT_ID,
-            "text": message,
-            "parse_mode": "Markdown"
-        }, timeout=10)
-        if resp.status_code != 200:
-            print(f"[ERROR Telegram] {resp.status_code}: {resp.text}")
-    except Exception as e:
-        print(f"[ERROR Telegram] {e}")
-
-
-def fetch_ohlcv(exchange, symbol, timeframe, limit):
-    raw = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
-    df = pd.DataFrame(raw, columns=["timestamp", "open", "high", "low", "close", "volume"])
-    df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
-    return df
-
-
-# ══════════════════════════════════════════════════════════
-# Clasificación de una operación cerrada (igual criterio que Synapse Trail)
-# ══════════════════════════════════════════════════════════
-
-def classify_closed_position(pos, close_reason, was_be_at_start):
-    """
-    tp1_reached = True  -> GANADORA (1/3 en cada TP alcanzado, resto 0R)
-    tp1_reached = False -> PERDEDORA (-1R)
-    BE save: ganadora que cerró por el SL porque el break-even ya estaba activo.
-    """
-    if pos.get("tp1_reached"):
-        r1 = (1 / 3) * pos["tp_rr"][0]
-        r2 = (1 / 3) * pos["tp_rr"][1] if pos.get("tp2_reached") else 0.0
-        r3 = (1 / 3) * pos["tp_rr"][2] if pos.get("tp3_reached") else 0.0
-        r_total = r1 + r2 + r3
-        is_win = True
-        is_be_save = close_reason == "sl" and was_be_at_start
-    else:
-        r_total = -1.0
-        is_win = False
-        is_be_save = False
-    return is_win, is_be_save, r_total
-
-
-# ══════════════════════════════════════════════════════════
-# Lógica principal por símbolo
-# ══════════════════════════════════════════════════════════
-
-def check_symbol(exchange, symbol, state):
-    limit = max(config.REGIME_LEN, config.TRAIL_LEN) + 100
-    df = fetch_ohlcv(exchange, symbol, config.TIMEFRAME, limit)
-    df = compute_indicators(
-        df, config.ATR_LEN, config.TRAIL_LEN, config.ADX_PERIOD,
-        config.CHOPPINESS_LEN, config.REGIME_LEN, config.RSI_PERIOD,
-        config.VOLUME_MA_PERIOD
-    )
-    df = compute_synapse_trail(
-        df, config.ATR_LEN, config.TRAIL_LEN, config.BASE_MULT,
-        config.USE_ADAPTIVE_MULT, config.USE_RATCHET
-    )
-    df = compute_regime(df)
-
-    # --- HTF bias (timeframe de confirmación, ej. 1h, EMA de HTF_EMA_PERIOD) ---
-    htf_bull, htf_bear = None, None
-    if config.USE_HTF_FILTER:
-        df_htf = fetch_ohlcv(exchange, symbol, config.CONFIRM_TIMEFRAME, config.HTF_EMA_PERIOD + 50)
-        df_htf = add_ema(df_htf, config.HTF_EMA_PERIOD, f"EMA{config.HTF_EMA_PERIOD}")
-        htf_bull, htf_bear = get_trend_vs_ema200(df_htf, config.HTF_EMA_PERIOD)
-
-    has_volume = df["volume"].tail(20).sum() > 0
-
-    last_candle_time = df.iloc[-1]["datetime"].isoformat()
-    last_price = df.iloc[-1]["close"]
-    last_high = df.iloc[-1]["high"]
-    last_low = df.iloc[-1]["low"]
-
-    positions = state.setdefault("positions", {})
-    stats = get_stats(state)
-    pos = positions.get(symbol)
-
-    # --- Evitar reprocesar la misma vela dos veces ---
-    last_processed_key = f"{symbol}_last_processed_candle"
-    already_processed_this_candle = state.get(last_processed_key) == last_candle_time
-
-    # ── 1. Detectar señal (flip) en la última vela cerrada ──
-    raw_signal = None if already_processed_this_candle else detect_raw_signal(df)
-
-    new_signal_passes = False
-    score, grade, breakdown = None, None, None
-
-    if raw_signal:
-        is_choppy = bool(df.iloc[-1]["REGIME_is_choppy"])
-        score, grade, breakdown = compute_quality_score(
-            df, raw_signal, htf_bull, htf_bear, config.USE_HTF_FILTER,
-            config.USE_VOLUME_FILTER, config.VOLUME_THRESHOLD, has_volume
-        )
-        passes_min_quality = score >= config.MIN_QUALITY_SCORE
-        passes_choppy = not (config.SKIP_CHOPPY_SIGNALS and is_choppy)
-        new_signal_passes = passes_min_quality and passes_choppy
-
-    # ── 2. Si hay señal válida y ya había posición contraria -> FLIP (cerrar antes) ──
-    if new_signal_passes and pos and pos["dir"] != raw_signal:
-        was_be = pos.get("be_active", False)
-        is_win, is_be_save, r_total = classify_closed_position(pos, "flip", was_be)
-        stats["wins" if is_win else "losses"] += 1
-        stats["be_saves"] += 1 if is_be_save else 0
-        stats["r_sum"] += r_total
-        stats["flips"] += 1
-
-        send_telegram(
-            f"[{config.STRATEGY_LABEL}]\n"
-            f"🔄 *{symbol}* — FLIP {pos['dir']} → {raw_signal}\n"
-            f"Entrada anterior: `{pos['entry']:.4f}` | Cierre por flip a: `{last_price:.4f}`\n"
-            f"Resultado: {'GANADORA' if is_win else 'PERDEDORA'} ({r_total:+.2f}R)"
-        )
-        pos = None
-        positions.pop(symbol, None)
-
-    # ── 3. Si hay señal válida y no hay posición abierta -> ABRIR ──
-    if new_signal_passes and not pos:
-        preset = RISK_PRESETS[config.RISK_PRESET]
-        risk = build_risk_levels(last_price, df.iloc[-1]["ATR"], raw_signal, config.RISK_PRESET)
-
-        new_pos = {
-            "dir": raw_signal,
-            "entry": last_price,
-            "entry_candle": last_candle_time,
-            "sl": risk["sl"],
-            "tp1": risk["tps"][0]["price"], "tp2": risk["tps"][1]["price"], "tp3": risk["tps"][2]["price"],
-            "tp_rr": [tp["rr"] for tp in risk["tps"]],
-            "tp1_reached": False, "tp2_reached": False, "tp3_reached": False,
-            "be_active": False,
-            "grade": grade, "score": score,
-        }
-        positions[symbol] = new_pos
-        pos = new_pos
-
-        stats["total_signals"] += 1
-        stats["buy_signals" if raw_signal == "ALCISTA" else "sell_signals"] += 1
-        stats[f"grade_{grade.lower()}"] += 1
-
-        emoji = "🟢" if raw_signal == "ALCISTA" else "🔴"
-        breakdown_text = "\n".join(f"  • {k}: {v} pts" for k, v in breakdown.items())
-        entries = build_limit_entries(df, "TRAIL_EMA", config.HTF_EMA_PERIOD, raw_signal)
-        entries_text = "\n".join(f"  • {e['label']}: `{e['price']:.4f}` — {e['basis']}" for e in entries)
-        regime_label = "Trending" if df.iloc[-1]["REGIME_is_trending"] else (
-            "Choppy" if df.iloc[-1]["REGIME_is_choppy"] else "Mixed")
-
-        msg = (
-            f"[{config.STRATEGY_LABEL}]\n"
-            f"{emoji} *{symbol}* — señal *{raw_signal}* (Synapse Trail flip)\n"
-            f"Precio: `{last_price:.4f}` | Timeframe: `{config.TIMEFRAME}` | Vela: `{last_candle_time}`\n\n"
-            f"Quality Score: {score}/100 | Grado: *{grade}*\n"
-            f"{breakdown_text}\n"
-            f"Régimen: {regime_label} ({df.iloc[-1]['REGIME_score']:.0f}/100)\n\n"
-            f"*Entradas escalonadas sugeridas:*\n{entries_text}\n\n"
-            f"*Gestión de riesgo (preset {config.RISK_PRESET}):*\n"
-            f"  • SL: `{pos['sl']:.4f}`\n"
-            f"  • TP1: `{pos['tp1']:.4f}` (RR {pos['tp_rr'][0]}) | "
-            f"TP2: `{pos['tp2']:.4f}` (RR {pos['tp_rr'][1]}) | "
-            f"TP3: `{pos['tp3']:.4f}` (RR {pos['tp_rr'][2]})"
-        )
-        send_telegram(msg)
-        print(msg.replace("*", "").replace("`", ""))
-
-    # ── 4. Si hay posición abierta (nueva o de antes), comprobar hits en la última vela ──
-    if pos:
-        is_long = pos["dir"] == "ALCISTA"
-        is_entry_candle = pos["entry_candle"] == last_candle_time
-        can_hit = not is_entry_candle  # igual que ENTRY_BAR_HOLD del Pine: no evaluar en la propia vela de entrada
-
-        if can_hit:
-            effective_sl = pos["sl"]
-            sl_hit = (last_low <= effective_sl) if is_long else (last_high >= effective_sl)
-            tp1_hit = (last_high >= pos["tp1"]) if is_long else (last_low <= pos["tp1"])
-            tp2_hit = (last_high >= pos["tp2"]) if is_long else (last_low <= pos["tp2"])
-            tp3_hit = (last_high >= pos["tp3"]) if is_long else (last_low <= pos["tp3"])
-
-            tp1_first = tp1_hit and not pos["tp1_reached"] and not sl_hit
-            tp2_first = tp2_hit and not pos["tp2_reached"] and not sl_hit
-            tp3_first = tp3_hit and not pos["tp3_reached"] and not sl_hit
-
-            if tp1_first:
-                pos["tp1_reached"] = True
-                stats["tp1_hits"] += 1
-                if config.USE_BREAK_EVEN and not pos["be_active"]:
-                    pos["sl"] = pos["entry"]
-                    pos["be_active"] = True
-                    send_telegram(
-                        f"[{config.STRATEGY_LABEL}]\n🎯 *{symbol}* — TP1 alcanzado (`{pos['tp1']:.4f}`)\n"
-                        f"🛡️ Break-even activado: SL movido a la entrada (`{pos['entry']:.4f}`)"
-                    )
-                else:
-                    send_telegram(f"[{config.STRATEGY_LABEL}]\n🎯 *{symbol}* — TP1 alcanzado (`{pos['tp1']:.4f}`)")
-
-            if tp2_first:
-                pos["tp2_reached"] = True
-                stats["tp2_hits"] += 1
-                send_telegram(f"[{config.STRATEGY_LABEL}]\n🎯🎯 *{symbol}* — TP2 alcanzado (`{pos['tp2']:.4f}`)")
-
-            was_be_at_start = pos["be_active"]
-
-            if sl_hit or tp3_first:
-                if tp3_first:
-                    pos["tp3_reached"] = True
-                    stats["tp3_hits"] += 1
-                else:
-                    stats["sl_hits"] += 1
-
-                close_reason = "sl" if sl_hit else "tp3"
-                is_win, is_be_save, r_total = classify_closed_position(pos, close_reason, was_be_at_start)
-                stats["wins" if is_win else "losses"] += 1
-                stats["be_saves"] += 1 if is_be_save else 0
-                stats["r_sum"] += r_total
-
-                closed_trades = stats["wins"] + stats["losses"]
-                win_rate = stats["wins"] / closed_trades * 100 if closed_trades else 0
-                avg_r = stats["r_sum"] / closed_trades if closed_trades else 0
-
-                icon = "🛑" if sl_hit else "🏆"
-                reason_text = ("Break-even" if was_be_at_start and sl_hit else "Stop Loss") if sl_hit else "TP3 (objetivo completo)"
-                send_telegram(
-                    f"[{config.STRATEGY_LABEL}]\n"
-                    f"{icon} *{symbol}* — posición CERRADA ({reason_text})\n"
-                    f"Entrada: `{pos['entry']:.4f}` | Cierre: `{last_price:.4f}`\n"
-                    f"Resultado: {'GANADORA' if is_win else 'PERDEDORA'} ({r_total:+.2f}R)\n\n"
-                    f"*Estadísticas de sesión:*\n"
-                    f"  • Cerradas: {closed_trades} | Win rate: {win_rate:.1f}%\n"
-                    f"  • R medio: {avg_r:+.2f} | BE saves: {stats['be_saves']} | Flips: {stats['flips']}"
-                )
-                positions.pop(symbol, None)
-
-    state[last_processed_key] = last_candle_time
-
-
-# ══════════════════════════════════════════════════════════
-# Bucle principal
-# ══════════════════════════════════════════════════════════
-
-def run_once():
-    exchange_class = getattr(ccxt, config.EXCHANGE_ID)
-    exchange = exchange_class({
-        "enableRateLimit": True,
-        "options": {"defaultType": config.MARKET_TYPE},
-    })
-    state = load_state()
-
-    for symbol in config.SYMBOLS:
+    def send(self, text: str):
+        if not self.enabled:
+            logger.info(f"[Telegram OFF] {text}")
+            return
         try:
-            check_symbol(exchange, symbol, state)
+            import requests
+            url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+            payload = {"chat_id": self.chat_id, "text": text, "parse_mode": "HTML"}
+            resp = requests.post(url, json=payload, timeout=10)
+            if resp.status_code != 200:
+                logger.error(f"Telegram error: {resp.text}")
         except Exception as e:
-            print(f"[ERROR] {symbol}: {e}")
-
-    save_state(state)
+            logger.error(f"Telegram exception: {e}")
 
 
-def main():
-    print(f"[{config.STRATEGY_LABEL}] Bot iniciado {datetime.now(timezone.utc).isoformat()} | "
-          f"Símbolos: {config.SYMBOLS} | Timeframe: {config.TIMEFRAME}")
+# ============================================================
+# EXCHANGE CONNECTOR
+# ============================================================
+class ExchangeConnector:
+    """Maneja la conexión con Bitget."""
 
-    if "--once" in sys.argv:
-        run_once()
-        return
+    def __init__(self):
+        self.exchange = ccxt.bitget({
+            "apiKey": cfg.API_KEY,
+            "secret": cfg.API_SECRET,
+            "password": cfg.API_PASSWORD,
+            "options": {"defaultType": cfg.MARKET_TYPE},
+            "enableRateLimit": True,
+        })
+        logger.info(f"Conectado a {cfg.EXCHANGE_ID} ({cfg.MARKET_TYPE})")
 
-    while True:
-        run_once()
-        time.sleep(config.CHECK_INTERVAL_SECONDS)
+    def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 200) -> pd.DataFrame:
+        """Obtiene OHLCV como DataFrame."""
+        try:
+            candles = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+            df = pd.DataFrame(candles, columns=["timestamp", "open", "high", "low", "close", "volume"])
+            df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+            df.set_index("timestamp", inplace=True)
+            return df
+        except Exception as e:
+            logger.error(f"Error fetching {symbol} {timeframe}: {e}")
+            return pd.DataFrame()
+
+    def fetch_ticker(self, symbol: str) -> float:
+        """Obtiene el último precio."""
+        try:
+            ticker = self.exchange.fetch_ticker(symbol)
+            return ticker["last"]
+        except Exception:
+            return 0.0
+
+    def get_balance(self, quote="USDT") -> float:
+        """Obtiene balance disponible en USDT."""
+        try:
+            balance = self.exchange.fetch_balance()
+            return balance.get(quote, {}).get("free", 0.0)
+        except Exception as e:
+            logger.error(f"Error fetching balance: {e}")
+            return 0.0
+
+    def set_leverage(self, symbol: str, leverage: int):
+        """Configura el apalancamiento para un símbolo."""
+        try:
+            self.exchange.set_leverage(leverage, symbol)
+        except Exception as e:
+            logger.warning(f"No se pudo setear leverage {leverage}x para {symbol}: {e}")
+
+    def execute_market_order(self, symbol: str, side: str, amount_usd: float) -> Optional[dict]:
+        """
+        Ejecuta orden de mercado.
+        side: 'buy' o 'sell'
+        amount_usd: tamaño en USDT
+        """
+        try:
+            ticker = self.exchange.fetch_ticker(symbol)
+            price = ticker["last"]
+            amount = amount_usd / price
+
+            # Redondear según specs del exchange
+            market = self.exchange.market(symbol)
+            amount = self.exchange.amount_to_precision(symbol, amount)
+
+            order = self.exchange.create_order(
+                symbol=symbol,
+                type="market",
+                side=side,
+                amount=amount,
+            )
+            logger.info(f"ORDEN {side.upper()} {symbol}: {amount} @ ~{price:.4f} → ID: {order.get('id', '?')}")
+            return order
+        except Exception as e:
+            logger.error(f"Error ejecutando orden {side} {symbol}: {e}")
+            return None
+
+    def execute_limit_order(self, symbol: str, side: str, amount_usd: float,
+                            price: float) -> Optional[dict]:
+        """Ejecuta orden límite (para TP/SL simulados)."""
+        try:
+            ticker = self.exchange.fetch_ticker(symbol)
+            current_price = ticker["last"]
+            amount = amount_usd / current_price
+
+            market = self.exchange.market(symbol)
+            amount = self.exchange.amount_to_precision(symbol, amount)
+            price = self.exchange.price_to_precision(symbol, price)
+
+            order = self.exchange.create_order(
+                symbol=symbol,
+                type="limit",
+                side=side,
+                amount=amount,
+                price=price,
+            )
+            return order
+        except Exception as e:
+            logger.error(f"Error orden límite {side} {symbol} @ {price}: {e}")
+            return None
+
+    def cancel_order(self, order_id: str, symbol: str):
+        """Cancela una orden por ID."""
+        try:
+            self.exchange.cancel_order(order_id, symbol)
+        except Exception as e:
+            logger.warning(f"Error cancelando orden {order_id}: {e}")
 
 
+# ============================================================
+# ORDENADOR DE POSICIONES (ENTRADAS ESCALONADAS)
+# ============================================================
+
+class PositionExecutor:
+    """
+    Ejecuta las 3 entradas escalonadas y gestiona los cierres parciales.
+    """
+
+    def __init__(self, connector: ExchangeConnector, notifier: TelegramNotifier):
+        self.connector = connector
+        self.notifier = notifier
+
+    def open_scaled_entries(self, symbol: str, direction: int, capital_usd: float):
+        """
+        Abre 3 órdenes de mercado escalonadas.
+        Cada una = capital_usd / 3.
+        """
+        side = "buy" if direction == 1 else "sell"
+        split_size = capital_usd / cfg.ENTRY_SPLITS
+
+        orders = []
+        for i in range(cfg.ENTRY_SPLITS):
+            order = self.connector.execute_market_order(symbol, side, split_size)
+            if order:
+                orders.append(order.get("id", ""))
+            time.sleep(0.5)  # Pequeña pausa entre órdenes
+
+        return orders
+
+    def close_position(self, symbol: str, direction: int, size_pct: float = 1.0):
+        """
+        Cierra un porcentaje de la posición.
+        size_pct: 0.33 para cerrar 1/3, 1.0 para cerrar todo.
+        """
+        side = "sell" if direction == 1 else "buy"  # Cerrar = lado contrario
+        # El cierre es simplificado: market order por el % del capital
+        # En producción, calcularías el tamaño exacto del contrato
+        try:
+            # Obtenemos la posición actual
+            positions = self.connector.exchange.fetch_positions([symbol])
+            for pos in positions:
+                if float(pos.get("contracts", 0)) > 0:
+                    # Cerrar con orden de mercado en dirección contraria
+                    close_order = self.connector.exchange.create_order(
+                        symbol=symbol,
+                        type="market",
+                        side=side,
+                        amount=abs(float(pos["contracts"])) * size_pct,
+                        reduceOnly=True
+                    )
+                    return close_order
+        except Exception as e:
+            logger.error(f"Error cerrando posición {symbol}: {e}")
+        return None
+
+
+# ============================================================
+# BOT LOOP
+# ============================================================
+
+class SynapseBot:
+    """
+    Bot principal: coordina el loop de trading.
+    """
+
+    def __init__(self):
+        self.connector = ExchangeConnector()
+        self.notifier = TelegramNotifier(cfg.TELEGRAM_TOKEN, cfg.TELEGRAM_CHAT_ID)
+        self.state = StateManager()
+        self.strategy = SynapseStrategy(self.state, self.connector.exchange)
+        self.executor = PositionExecutor(self.connector, self.notifier)
+
+        # Track de velas procesadas
+        self.last_candle_ts: Dict[str, int] = {}
+
+    def send_startup_message(self):
+        """Mensaje de arranque por Telegram."""
+        balance = self.connector.get_balance()
+        msg = (
+            f"🤖 <b>{cfg.STRATEGY_LABEL}</b> INICIADO\n"
+            f"Exchange: {cfg.EXCHANGE_ID} | TF: {cfg.TIMEFRAME} | HTF: {cfg.CONFIRM_TIMEFRAME}\n"
+            f"Preset: {cfg.RISK_PRESET} | SL={cfg.SL_MULT}×ATR | "
+            f"TP={cfg.TP1_MULT}R/{cfg.TP2_MULT}R/{cfg.TP3_MULT}R\n"
+            f"Símbolos: {len(cfg.SYMBOLS)} | Balance: ${balance:.2f}"
+        )
+        self.notifier.send(msg)
+
+    def has_new_candle(self, symbol: str, df: pd.DataFrame) -> bool:
+        """Detecta si hay una vela nueva (no procesada)."""
+        if df.empty:
+            return False
+        last_ts = df.index[-1].timestamp()
+        if symbol not in self.last_candle_ts or self.last_candle_ts[symbol] < last_ts:
+            self.last_candle_ts[symbol] = last_ts
+            return True
+        return False
+
+    def process_symbol(self, symbol: str):
+        """Procesa un símbolo: fetch → analyze → execute."""
+        try:
+            # --- Fetch data ---
+            df = self.connector.fetch_ohlcv(symbol, cfg.TIMEFRAME, limit=200)
+            if df.empty or len(df) < 50:
+                return
+
+            # HTF data
+            htf_df = None
+            if cfg.USE_HTF_FILTER:
+                htf_df = self.connector.fetch_ohlcv(symbol, cfg.CONFIRM_TIMEFRAME, limit=200)
+
+            # Solo procesar en vela nueva
+            if not self.has_new_candle(symbol, df):
+                return
+
+            # --- Calcular señal ---
+            signal = self.strategy.get_signal(symbol, df, htf_df)
+            logger.debug(f"{symbol}: dir={signal['direction']} grade={signal['grade']} "
+                         f"regime={signal['regime_label']} quality={signal['quality_score']:.0f}")
+
+            existing_pos = self.state.get_position(symbol)
+
+            # --- Si hay señal nueva ---
+            if signal["direction"] != 0:
+                if signal["flip"] and existing_pos:
+                    # Cerrar posición existente (flip)
+                    logger.info(f"FLIP {symbol}: cerrando posición {existing_pos.direction} → nueva {signal['direction']}")
+                    self.executor.close_position(symbol, existing_pos.direction)
+                    self.state.close_position(symbol)
+
+                if not self.state.has_position(symbol):
+                    # Abrir nueva posición
+                    atr = compute_atr(df, cfg.ATR_LEN)  # Necesitamos ATR para SL
+                    atr_val = atr.iloc[-1] if not atr.empty else 0.01
+                    entry_price = df["close"].values[-1]
+
+                    # Calcular tamaño según riesgo
+                    balance = self.connector.get_balance()
+                    capital_per_trade = balance * (cfg.RISK_PER_TRADE_PCT / 100.0)
+
+                    # Set leverage
+                    self.connector.set_leverage(symbol, cfg.LEVERAGE)
+
+                    # Abrir posición (tracking interno)
+                    pos = self.strategy.open_position(
+                        symbol=symbol,
+                        direction=signal["direction"],
+                        entry_price=entry_price,
+                        quality_score=signal["quality_score"],
+                        grade=signal["grade"],
+                        bar_time=len(df) - 1,
+                        atr_value=atr_val
+                    )
+
+                    # Ejecutar 3 entradas escalonadas
+                    orders = self.executor.open_scaled_entries(
+                        symbol, signal["direction"], capital_per_trade
+                    )
+                    pos.orders_ids = orders
+
+                    # Notificar
+                    direction_str = "🟢 LONG" if signal["direction"] == 1 else "🔴 SHORT"
+                    msg = (
+                        f"{direction_str} <b>{symbol}</b>\n"
+                        f"Precio: {entry_price:.4f} | Grade: {signal['grade']} "
+                        f"({signal['quality_score']:.0f}/100)\n"
+                        f"SL: {pos.sl:.4f} | TP1: {pos.tp1:.4f} | "
+                        f"TP2: {pos.tp2:.4f} | TP3: {pos.tp3:.4f}\n"
+                        f"Régimen: {signal['regime_label']} "
+                        f"({'⚠️Choppy' if signal['is_choppy'] else '✅Trending' if signal['is_trending'] else 'Mixed'})"
+                    )
+                    self.notifier.send(msg)
+
+            # --- Monitorear posición existente ---
+            if existing_pos:
+                exit_event = self.strategy.check_exits(symbol, df)
+
+                if exit_event:
+                    event = exit_event["event"]
+                    price = exit_event["price"]
+
+                    if event == "sl":
+                        # Cerrar posición completa
+                        self.executor.close_position(symbol, existing_pos.direction)
+                        self.state.close_position(symbol)
+                        msg = (
+                            f"{'🛡️ BE' if existing_pos.be_active else '🛑 SL'} "
+                            f"<b>{symbol}</b> @ {price:.4f}"
+                        )
+                        self.notifier.send(msg)
+
+                    elif event == "tp1":
+                        # Cerrar 1/3
+                        self.executor.close_position(symbol, existing_pos.direction, 1/3)
+                        msg = f"🎯 TP1 <b>{symbol}</b> @ {price:.4f}"
+                        self.notifier.send(msg)
+
+                    elif event == "tp2":
+                        self.executor.close_position(symbol, existing_pos.direction, 1/3)
+                        msg = f"🎯🎯 TP2 <b>{symbol}</b> @ {price:.4f}"
+                        self.notifier.send(msg)
+
+                    elif event == "tp3":
+                        self.executor.close_position(symbol, existing_pos.direction, 1/3)
+                        self.state.close_position(symbol)
+                        msg = f"🏆 TP3 <b>{symbol}</b> @ {price:.4f} ✅ POSICIÓN CERRADA"
+                        self.notifier.send(msg)
+
+            # --- Actualizar estado ---
+            self.state.save()
+
+        except Exception as e:
+            logger.error(f"Error procesando {symbol}: {e}")
+            traceback.print_exc()
+
+    def run_once(self):
+        """Ejecuta una iteración sobre todos los símbolos."""
+        for symbol in cfg.SYMBOLS:
+            self.process_symbol(symbol)
+            time.sleep(1)  # Rate limiting entre símbolos
+
+    def run_loop(self):
+        """Loop principal."""
+        logger.info("=" * 50)
+        logger.info(f"Iniciando {cfg.STRATEGY_LABEL}")
+        logger.info("=" * 50)
+
+        self.send_startup_message()
+
+        while True:
+            try:
+                self.run_once()
+                logger.info(f"Ciclo completado. Esperando {cfg.CHECK_INTERVAL_SECONDS}s...")
+                time.sleep(cfg.CHECK_INTERVAL_SECONDS)
+            except KeyboardInterrupt:
+                logger.info("Bot detenido por usuario")
+                self.notifier.send(f"🛑 {cfg.STRATEGY_LABEL} DETENIDO")
+                break
+            except Exception as e:
+                logger.error(f"Error en loop principal: {e}")
+                traceback.print_exc()
+                time.sleep(30)
+
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
 if __name__ == "__main__":
-    main()
+    bot = SynapseBot()
+    bot.run_loop()
