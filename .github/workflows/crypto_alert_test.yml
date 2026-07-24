@@ -2,6 +2,8 @@ name: Crypto Alert Bot TEST
 
 on:
   workflow_dispatch: {}
+  schedule:
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -19,19 +21,19 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: pip install -r requirements.txt
+        run: pip install -r bot_test/requirements.txt
 
-      - name: Ejecutar bot_test (una sola pasada)
+      - name: Ejecutar bot
         working-directory: bot_test
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python bot.py --once
+        run: python bot.py
 
-      - name: Guardar el estado actualizado (bot_test/state.json)
+      - name: Guardar estado actualizado
         run: |
           git config user.name "crypto-alert-bot"
           git config user.email "bot@users.noreply.github.com"
           git add bot_test/state.json
-          git diff --quiet --cached || git commit -m "Actualizar estado bot_test [skip ci]"
+          git diff --quiet --cached || git commit -m "Actualizar estado [skip ci]"
           git push

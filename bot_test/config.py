@@ -1,11 +1,11 @@
 # ============================================================
 # CONFIGURACIÓN — Synapse Trail Signal Bot
-# Solo análisis y alertas. Sin ejecución de órdenes.
+# GitHub Actions + Seguimiento de SL/TP/BE
 # ============================================================
 import os
 
 # ============================================================
-# TELEGRAM (variables de entorno)
+# TELEGRAM
 # ============================================================
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
@@ -36,7 +36,7 @@ SYMBOLS = [
 # TIMEFRAMES
 # ============================================================
 TIMEFRAME = "5m"
-CONFIRM_TIMEFRAME = "1h"  # HTF para filtro de sesgo
+CONFIRM_TIMEFRAME = "1h"
 
 # ============================================================
 # SYNAPSE TRAIL
@@ -65,25 +65,26 @@ USE_VOLUME_FILTER = True
 VOLUME_THRESHOLD = 1.3
 VOLUME_MA_PERIOD = 20
 RSI_PERIOD = 14
-MIN_QUALITY_SCORE = 55     # Solo señales B o superior (55+)
+MIN_QUALITY_SCORE = 55
 GRADE_A_THRESHOLD = 75
 GRADE_B_THRESHOLD = 55
 
 # ============================================================
-# GESTIÓN DE RIESGO (SL/TP sugeridos)
+# GESTIÓN DE RIESGO
 # ============================================================
 RISK_PRESET = "Balanced"
 SL_MULT = 1.5
 TP1_MULT = 1.0
 TP2_MULT = 2.0
 TP3_MULT = 3.0
+USE_BREAK_EVEN = True
 
 # ============================================================
-# LOOP
+# PERSISTENCIA
 # ============================================================
-CHECK_INTERVAL_SECONDS = 60
+STATE_FILE = "state.json"
 
 # ============================================================
 # ETIQUETA
 # ============================================================
-STRATEGY_LABEL = "RODRI SIGNALS"
+STRATEGY_LABEL = "RODRI SIGNALS v1.0"
