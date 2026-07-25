@@ -1,410 +1,284 @@
-# ============================================================
-# STRATEGY — Rodri Bot
-# Máquina de estados: FLAT, LONG, SHORT
-# Gestiona: entradas escalonadas, SL/TP/BE, tracking parcial
-# ============================================================
-import json
-import logging
-import numpy as np
-import pandas as pd
-from datetime import datetime
-from typing import Dict, Optional, Tuple
-from dataclasses import dataclass, field, asdict
+"""
+Lógica ESPECÍFICA de la estrategia — inspirada en "Synapse Trail Pro"
+(WillyAlgoTrader), adaptada a un bot de alertas de Telegram (sin las partes
+puramente visuales: líneas, colores, dashboard en el gráfico).
 
-import config as cfg
+=== RESUMEN DE LA ESTRATEGIA ===
+
+1. SEÑAL (Synapse Trail): banda de tendencia tipo SuperTrend
+   trail_center = EMA(close, TRAIL_LEN)
+   banda = trail_center ± ATR(ATR_LEN) × multiplicador
+   Con "ratchet": la banda solo se aprieta a favor de la posición (nunca
+   se afloja) hasta que la dirección cambia.
+   Señal = cambio de dirección (flip) de la banda.
+
+2. MARKET REGIME (0-100): ADX(40%) + Choppiness Index invertido(35%) + R²(25%)
+   Trending si >=60, Choppy si <35.
+
+3. QUALITY SCORE (0-100) una vez detectada la señal:
+   HTF bias 30 | Volumen 20 | RSI 20 | Régimen 20 | Fuerza de ruptura 10
+   Grado: A (>=75), B (>=55), C (resto)
+
+4. GESTIÓN DE POSICIÓN VIVA: el bot recuerda la posición abierta (entry,
+   SL, TP1/TP2/TP3) entre ejecuciones. Al tocar TP1 activa break-even
+   (SL -> entrada). Se cierra al tocar el SL o el TP3. Un flip (señal
+   contraria mientras hay posición abierta) cierra la posición actual y
+   abre la nueva.
+
+5. PRESETS DE RIESGO: SL en múltiplos de ATR, TP1/TP2/TP3 en múltiplos-R
+   (relativos a la distancia del SL).
+"""
+import pandas as pd
+import numpy as np
+
 from indicators import (
-    compute_atr, compute_synapse_trail, compute_regime_score,
-    compute_quality_score, grade_from_score
+    add_ema, add_atr, add_adx, add_rsi, add_volume_ratio,
+    add_choppiness_index, add_r_squared
 )
 
-logger = logging.getLogger(__name__)
+# ── Presets de riesgo (SL en xATR, TP1/TP2/TP3 en múltiplos-R) ──
+RISK_PRESETS = {
+    "Conservative": {"sl_mult": 2.5, "tp_mults": [1.0, 2.0, 4.0]},
+    "Balanced":     {"sl_mult": 1.5, "tp_mults": [1.0, 2.0, 3.0]},
+    "Aggressive":   {"sl_mult": 1.0, "tp_mults": [1.5, 2.5, 4.0]},
+    "Scalping":     {"sl_mult": 0.8, "tp_mults": [0.8, 1.5, 2.0]},
+}
+
+GRADE_A_THRESHOLD = 75
+GRADE_B_THRESHOLD = 55
+REGIME_TRENDING = 60
+REGIME_CHOPPY = 35
 
 
-# ============================================================
-# ESTRUCTURA DE DATOS DE LA POSICIÓN
-# ============================================================
-
-@dataclass
-class PositionState:
-    """Estado de una posición abierta para un símbolo."""
-    symbol: str
-    direction: int = 0          # 1=LONG, -1=SHORT, 0=FLAT
-    entry_price: float = 0.0
-    entry_bar_time: int = 0     # timestamp de la vela de entrada
-    sl: float = 0.0
-    tp1: float = 0.0
-    tp2: float = 0.0
-    tp3: float = 0.0
-    quality_score: float = 0.0
-    grade: str = ""
-    tp1_reached: bool = False
-    tp2_reached: bool = False
-    tp3_reached: bool = False
-    be_active: bool = False     # Break-even activo (SL en entrada)
-    orders_ids: list = field(default_factory=list)  # IDs de órdenes de entrada
-    tp1_order_id: str = ""
-    tp2_order_id: str = ""
-    tp3_order_id: str = ""
+def compute_indicators(df: pd.DataFrame, atr_len: int, trail_len: int,
+                        adx_period: int, chop_period: int, regime_len: int,
+                        rsi_period: int, volume_ma_period: int) -> pd.DataFrame:
+    """Calcula todos los indicadores base necesarios para esta estrategia."""
+    df = add_atr(df, atr_len, col_name="ATR")
+    df = add_ema(df, trail_len, col_name="TRAIL_EMA")
+    df = add_adx(df, adx_period)
+    df = add_choppiness_index(df, chop_period)
+    df = add_r_squared(df, regime_len)
+    df = add_rsi(df, rsi_period)
+    df = add_volume_ratio(df, volume_ma_period)
+    return df
 
 
-# ============================================================
-# ESTADO GLOBAL
-# ============================================================
-
-class StateManager:
+def compute_synapse_trail(df: pd.DataFrame, atr_len: int, trail_len: int,
+                           base_mult: float = 1.618, use_adaptive_mult: bool = False,
+                           use_ratchet: bool = True) -> pd.DataFrame:
     """
-    Almacena y persiste el estado de todas las posiciones abiertas.
+    Calcula la banda de tendencia (Synapse Trail) bar a bar, con ratchet
+    opcional. Necesita recorrer el DataFrame en orden porque cada banda
+    depende de su propio valor en la vela anterior (igual que un SuperTrend).
+
+    Añade columnas: TRAIL_upper, TRAIL_lower, TRAIL_dir (1/-1/0), TRAIL_line.
     """
-    def __init__(self, filepath: str = cfg.STATE_FILE):
-        self.filepath = filepath
-        self.positions: Dict[str, PositionState] = {}  # symbol → PositionState
-        self.stats = {
-            "total_signals": 0,
-            "grade_a": 0, "grade_b": 0, "grade_c": 0,
-            "wins": 0, "losses": 0, "be_saves": 0, "flips": 0,
-            "r_sum": 0.0
-        }
-        self.load()
+    if use_adaptive_mult:
+        vol_rank = df["ATR"].rank(pct=True) * 100
+    else:
+        vol_rank = pd.Series(50.0, index=df.index)
 
-    def load(self):
-        """Carga el estado desde JSON."""
-        try:
-            with open(self.filepath, "r") as f:
-                data = json.load(f)
-                for sym, pos_data in data.get("positions", {}).items():
-                    self.positions[sym] = PositionState(**pos_data)
-                self.stats = data.get("stats", self.stats)
-            logger.info(f"Estado cargado: {len(self.positions)} posiciones activas")
-        except FileNotFoundError:
-            logger.info("No se encontró archivo de estado. Empezando limpio.")
-        except Exception as e:
-            logger.error(f"Error cargando estado: {e}")
+    mult_adjust = vol_rank.apply(lambda r: 0.8 if r < 30 else (1.25 if r > 70 else 1.0))
+    effective_mult = base_mult * mult_adjust
 
-    def save(self):
-        """Persiste el estado a JSON."""
-        try:
-            data = {
-                "positions": {sym: asdict(pos) for sym, pos in self.positions.items()},
-                "stats": self.stats,
-                "updated_at": datetime.now().isoformat()
-            }
-            with open(self.filepath, "w") as f:
-                json.dump(data, f, indent=2, default=str)
-        except Exception as e:
-            logger.error(f"Error guardando estado: {e}")
+    raw_upper = df["TRAIL_EMA"] + df["ATR"] * effective_mult
+    raw_lower = df["TRAIL_EMA"] - df["ATR"] * effective_mult
 
-    def get_position(self, symbol: str) -> Optional[PositionState]:
-        return self.positions.get(symbol)
+    dirs, uppers, lowers = [], [], []
+    dir_state = 0
+    upper_state, lower_state = np.nan, np.nan
 
-    def set_position(self, symbol: str, pos: PositionState):
-        self.positions[symbol] = pos
-        self.save()
+    closes = df["close"].values
+    ru = raw_upper.values
+    rl = raw_lower.values
 
-    def close_position(self, symbol: str):
-        if symbol in self.positions:
-            del self.positions[symbol]
-            self.save()
+    for i in range(len(df)):
+        prev_upper = upper_state
+        prev_lower = lower_state
+        prev_dir = dir_state
 
-    def has_position(self, symbol: str) -> bool:
-        return symbol in self.positions and self.positions[symbol].direction != 0
+        if not np.isnan(prev_upper) and closes[i] > prev_upper:
+            dir_state = 1
+        elif not np.isnan(prev_lower) and closes[i] < prev_lower:
+            dir_state = -1
+        # si no se cumple ninguna, dir_state se mantiene igual (persiste)
 
+        flipped = dir_state != prev_dir
 
-# ============================================================
-# MOTOR DE SEÑALES
-# ============================================================
-
-class SynapseStrategy:
-    """
-    Implementa la lógica completa de Synapse Trail Pro:
-    - Cálculo de bandas con ratchet
-    - Market regime
-    - Quality score
-    - Señales de entrada/salida
-    - Gestión de SL/TP/BE
-    """
-
-    def __init__(self, state: StateManager, exchange=None):
-        self.state = state
-        self.exchange = exchange
-        # Historial de bandas por símbolo (para el ratchet)
-        self.trail_state: Dict[str, dict] = {}
-
-    # ============================================================
-    # CÁLCULO DE SEÑALES
-    # ============================================================
-
-    def get_signal(
-        self,
-        symbol: str,
-        df: pd.DataFrame,
-        htf_df: Optional[pd.DataFrame]
-    ) -> dict:
-        """
-        Calcula la señal actual para un símbolo.
-
-        Devuelve:
-            {
-                "direction": 1 (LONG) / -1 (SHORT) / 0 (FLAT),
-                "trail_line": float,
-                "upper_band": float,
-                "lower_band": float,
-                "regime_score": float,
-                "regime_label": str,
-                "is_trending": bool,
-                "is_choppy": bool,
-                "quality_score": float,
-                "grade": str,
-                "flip": bool  # True si es señal contraria con posición abierta
-            }
-        """
-        result = {
-            "direction": 0,
-            "trail_line": np.nan,
-            "upper_band": np.nan,
-            "lower_band": np.nan,
-            "regime_score": 0.0,
-            "regime_label": "Mixed",
-            "is_trending": False,
-            "is_choppy": False,
-            "quality_score": 0.0,
-            "grade": "—",
-            "flip": False
-        }
-
-        if len(df) < max(cfg.ATR_LEN, cfg.TRAIL_LEN, cfg.REGIME_LEN) + 5:
-            return result
-
-        close = df["close"].values[-1]
-        prev_close = df["close"].values[-2] if len(df) >= 2 else close
-        atr = compute_atr(df, cfg.ATR_LEN)
-
-        # --- Market Regime ---
-        regime_score, regime_label, is_trending, is_choppy = compute_regime_score(
-            df, cfg.ADX_PERIOD, cfg.CHOPPINESS_LEN, cfg.REGIME_LEN
-        )
-        result["regime_score"] = regime_score
-        result["regime_label"] = regime_label
-        result["is_trending"] = is_trending
-        result["is_choppy"] = is_choppy
-
-        # --- Synapse Trail ---
-        direction, trail_line, upper, lower, center = compute_synapse_trail(
-            df, cfg.ATR_LEN, cfg.TRAIL_LEN, cfg.BASE_MULT,
-            cfg.USE_ADAPTIVE_MULT, cfg.USE_RATCHET
-        )
-
-        # --- Dirección real con estado (ratchet necesita historial) ---
-        trail_st = self.trail_state.get(symbol, {
-            "dir": 0, "upper": upper, "lower": lower
-        })
-
-        prev_dir = trail_st["dir"]
-        prev_upper = trail_st["upper"]
-        prev_lower = trail_st["lower"]
-
-        # Determinar nueva dirección
-        if close > prev_upper and not np.isnan(prev_upper):
-            new_dir = 1
-        elif close < prev_lower and not np.isnan(prev_lower):
-            new_dir = -1
-        else:
-            new_dir = prev_dir if prev_dir != 0 else 0
-
-        dir_flipped = new_dir != prev_dir
-
-        # Aplicar ratchet
-        if cfg.USE_RATCHET:
-            if new_dir == 1:
-                lower = max(lower, prev_lower) if not dir_flipped and prev_lower else lower
-                upper = upper  # upper flota libre en long
-            elif new_dir == -1:
-                upper = min(upper, prev_upper) if not dir_flipped and prev_upper else upper
-                lower = lower  # lower flota libre en short
-        else:
-            pass  # Sin ratchet: usar raw_upper/raw_lower
-
-        # Actualizar estado de trail
-        self.trail_state[symbol] = {
-            "dir": new_dir,
-            "upper": upper,
-            "lower": lower
-        }
-
-        # Trailing line activa
-        if new_dir == 1:
-            trail_line = lower
-        elif new_dir == -1:
-            trail_line = upper
-        else:
-            trail_line = np.nan
-
-        # ¿Señal nueva?
-        raw_buy = new_dir == 1 and prev_dir == -1
-        raw_sell = new_dir == -1 and prev_dir == 1
-
-        result["direction"] = new_dir
-        result["trail_line"] = trail_line
-        result["upper_band"] = upper
-        result["lower_band"] = lower
-
-        # --- Quality Score (solo en señal nueva) ---
-        if raw_buy or raw_sell:
-            signal_dir = 1 if raw_buy else -1
-            quality = compute_quality_score(
-                df, htf_df, signal_dir, regime_score,
-                cfg.USE_HTF_FILTER, cfg.USE_VOLUME_FILTER,
-                cfg.VOLUME_THRESHOLD, cfg.VOLUME_MA_PERIOD,
-                cfg.RSI_PERIOD, atr, prev_upper, prev_lower
-            )
-            result["quality_score"] = quality
-            result["grade"] = grade_from_score(quality)
-
-            # Filtros
-            passes_quality = quality >= cfg.MIN_QUALITY_SCORE
-            passes_choppy = not (cfg.SKIP_CHOPPY_SIGNALS and is_choppy)
-
-            if passes_quality and passes_choppy:
-                result["direction"] = signal_dir  # Señal confirmada
-
-                # ¿Flip?
-                existing_pos = self.state.get_position(symbol)
-                if existing_pos and existing_pos.direction == -signal_dir:
-                    result["flip"] = True
+        if use_ratchet:
+            if dir_state == 1:
+                lower_state = rl[i] if flipped else (max(rl[i], prev_lower) if not np.isnan(prev_lower) else rl[i])
+                upper_state = ru[i]
+            elif dir_state == -1:
+                upper_state = ru[i] if flipped else (min(ru[i], prev_upper) if not np.isnan(prev_upper) else ru[i])
+                lower_state = rl[i]
             else:
-                result["direction"] = 0  # Señal suprimida
-
-        return result
-
-    # ============================================================
-    # GESTIÓN DE POSICIÓN
-    # ============================================================
-
-    def open_position(self, symbol: str, direction: int, entry_price: float,
-                      quality_score: float, grade: str,
-                      bar_time: int, atr_value: float):
-        """
-        Abre una nueva posición (o flip).
-        Calcula SL/TP según preset Balanced.
-        """
-        sl_distance = atr_value * cfg.SL_MULT
-
-        if direction == 1:  # LONG
-            sl = entry_price - sl_distance
-            tp1 = entry_price + sl_distance * cfg.TP1_MULT
-            tp2 = entry_price + sl_distance * cfg.TP2_MULT
-            tp3 = entry_price + sl_distance * cfg.TP3_MULT
-        else:  # SHORT
-            sl = entry_price + sl_distance
-            tp1 = entry_price - sl_distance * cfg.TP1_MULT
-            tp2 = entry_price - sl_distance * cfg.TP2_MULT
-            tp3 = entry_price - sl_distance * cfg.TP3_MULT
-
-        pos = PositionState(
-            symbol=symbol,
-            direction=direction,
-            entry_price=entry_price,
-            entry_bar_time=bar_time,
-            sl=sl,
-            tp1=tp1,
-            tp2=tp2,
-            tp3=tp3,
-            quality_score=quality_score,
-            grade=grade
-        )
-
-        self.state.set_position(symbol, pos)
-        logger.info(f"NUEVA POSICIÓN {symbol}: {'LONG' if direction==1 else 'SHORT'} "
-                     f"Entry={entry_price:.4f} SL={sl:.4f} "
-                     f"TP1={tp1:.4f} TP2={tp2:.4f} TP3={tp3:.4f} "
-                     f"Grade={grade} Quality={quality_score:.0f}")
-        return pos
-
-    def update_sl_if_be(self, pos: PositionState):
-        """Activa Break-Even: mueve SL a entrada tras TP1."""
-        if cfg.USE_BREAK_EVEN and pos.tp1_reached and not pos.be_active:
-            pos.sl = pos.entry_price
-            pos.be_active = True
-            logger.info(f"BE ACTIVO {pos.symbol}: SL movido a entrada {pos.entry_price:.4f}")
-
-    def check_exits(self, symbol: str, df: pd.DataFrame) -> Optional[dict]:
-        """
-        Revisa si el precio tocó SL, TP1, TP2 o TP3.
-        Devuelve dict con el evento de salida, o None.
-        """
-        pos = self.state.get_position(symbol)
-        if not pos or pos.direction == 0:
-            return None
-
-        high = df["high"].values[-1]
-        low = df["low"].values[-1]
-        bar_index = len(df) - 1
-
-        # Misma barra de entrada: ignorar
-        if bar_index - pos.entry_bar_time < cfg.ENTRY_BAR_HOLD if hasattr(cfg, 'ENTRY_BAR_HOLD') else True:
-            # Simplificación: ignoramos la vela de entrada
-            if len(df) <= 2:
-                return None
-
-        result = {"event": None, "price": 0.0}
-
-        # SL Hit
-        sl_hit = (pos.direction == 1 and low <= pos.sl) or \
-                 (pos.direction == -1 and high >= pos.sl)
-        # TP hits (first touch)
-        tp1_hit = (pos.direction == 1 and high >= pos.tp1) or \
-                  (pos.direction == -1 and low <= pos.tp1)
-        tp2_hit = (pos.direction == 1 and high >= pos.tp2) or \
-                  (pos.direction == -1 and low <= pos.tp2)
-        tp3_hit = (pos.direction == 1 and high >= pos.tp3) or \
-                  (pos.direction == -1 and low <= pos.tp3)
-
-        # Prioridad: SL tiene preferencia sobre TP en misma vela
-        if sl_hit and pos.direction != 0:
-            result["event"] = "sl"
-            result["price"] = pos.sl
-            return result
-
-        if tp3_hit and not pos.tp3_reached:
-            pos.tp3_reached = True
-            result["event"] = "tp3"
-            result["price"] = pos.tp3
-            return result
-
-        if tp2_hit and not pos.tp2_reached:
-            pos.tp2_reached = True
-            result["event"] = "tp2"
-            result["price"] = pos.tp2
-            return result
-
-        if tp1_hit and not pos.tp1_reached:
-            pos.tp1_reached = True
-            self.update_sl_if_be(pos)
-            result["event"] = "tp1"
-            result["price"] = pos.tp1
-            return result
-
-        return None if result["event"] is None else result
-
-    def classify_closed_trade(self, pos: PositionState, close_reason: str,
-                              was_be: bool) -> Tuple[int, int, int, float]:
-        """
-        Clasifica un trade cerrado.
-        Devuelve: (wins, losses, be_saves, r_multiple)
-        """
-        wins, losses, be_saves = 0, 0, 0
-        r = 0.0
-
-        if pos.tp1_reached:
-            # WIN bucket
-            r1 = (1.0 / 3.0) * cfg.TP1_MULT
-            r2 = (1.0 / 3.0) * cfg.TP2_MULT if pos.tp2_reached else 0.0
-            r3 = (1.0 / 3.0) * cfg.TP3_MULT if pos.tp3_reached else 0.0
-            r = r1 + r2 + r3
-            wins = 1
-            if close_reason == "sl" and was_be:
-                be_saves = 1
+                upper_state = ru[i]
+                lower_state = rl[i]
         else:
-            r = -1.0
-            losses = 1
+            upper_state = ru[i]
+            lower_state = rl[i]
 
-        return wins, losses, be_saves, r
+        dirs.append(dir_state)
+        uppers.append(upper_state)
+        lowers.append(lower_state)
+
+    df["TRAIL_dir"] = dirs
+    df["TRAIL_upper"] = uppers
+    df["TRAIL_lower"] = lowers
+    df["TRAIL_line"] = [
+        lowers[i] if dirs[i] == 1 else (uppers[i] if dirs[i] == -1 else np.nan)
+        for i in range(len(df))
+    ]
+    return df
+
+
+def compute_regime(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Market Regime Score (0-100): ADX(40%) + Choppiness invertido(35%) + R²(25%).
+    Añade columnas: REGIME_score, REGIME_is_trending, REGIME_is_choppy.
+    Requiere que ya se hayan calculado ADX, CHOP y R2 (ver compute_indicators).
+    """
+    adx_score = (df["ADX"] / 50 * 100).clip(upper=100)
+    chop_score = (100 - df["CHOP"]).clip(lower=0, upper=100)
+    r2_score = (df["R2"] * 100).clip(lower=0, upper=100)
+
+    regime_score = adx_score * 0.40 + chop_score * 0.35 + r2_score * 0.25
+    df["REGIME_score"] = regime_score
+    df["REGIME_is_trending"] = regime_score >= REGIME_TRENDING
+    df["REGIME_is_choppy"] = regime_score < REGIME_CHOPPY
+    return df
+
+
+def detect_raw_signal(df: pd.DataFrame):
+    """
+    Detecta si en la ÚLTIMA vela cerrada se ha producido un flip de dirección
+    del Synapse Trail. Devuelve "ALCISTA", "BAJISTA" o None.
+    """
+    if len(df) < 3:
+        return None
+    prev_dir = df.iloc[-2]["TRAIL_dir"]
+    last_dir = df.iloc[-1]["TRAIL_dir"]
+    if last_dir == 1 and prev_dir == -1:
+        return "ALCISTA"
+    if last_dir == -1 and prev_dir == 1:
+        return "BAJISTA"
+    return None
+
+
+def compute_quality_score(df: pd.DataFrame, signal_type: str,
+                           htf_bull, htf_bear, use_htf_filter: bool,
+                           use_volume_filter: bool, volume_threshold: float,
+                           has_volume: bool):
+    """
+    Quality Score (0-100):
+      HTF bias        30 pts (alineado) / 15 (plano o filtro apagado) / 0 (en contra)
+      Volumen         20 pts (si hay confirmación, o si el filtro está apagado / sin datos)
+      RSI momentum    20 pts (RSI>50 para LONG, <50 para SHORT)
+      Régimen         20 pts (REGIME_score × 0.20)
+      Fuerza ruptura  10 pts (cuánto ha perforado el precio la banda, hasta 3×ATR)
+
+    Devuelve (score, grade, breakdown).
+    """
+    last = df.iloc[-1]
+    is_long = signal_type == "ALCISTA"
+    breakdown = {}
+
+    # --- HTF bias ---
+    htf_data_valid = use_htf_filter and htf_bull is not None and htf_bear is not None
+    htf_matches = htf_data_valid and ((is_long and htf_bull) or (not is_long and htf_bear))
+    htf_against = htf_data_valid and ((is_long and htf_bear) or (not is_long and htf_bull))
+    htf_pts = 30.0 if htf_matches else (0.0 if htf_against else 15.0)
+    breakdown["HTF"] = round(htf_pts, 1)
+
+    # --- Volumen ---
+    if (not use_volume_filter) or (not has_volume):
+        vol_pts = 20.0
+    else:
+        vol_confirm = last["VOL_RATIO"] > volume_threshold if pd.notna(last["VOL_RATIO"]) else False
+        vol_pts = 20.0 if vol_confirm else 0.0
+    breakdown["Volumen"] = round(vol_pts, 1)
+
+    # --- RSI ---
+    rsi_ok = (last["RSI"] > 50) if is_long else (last["RSI"] < 50)
+    rsi_pts = 20.0 if rsi_ok else 0.0
+    breakdown["RSI"] = round(rsi_pts, 1)
+
+    # --- Régimen ---
+    regime_pts = last["REGIME_score"] * 0.20
+    breakdown["Régimen"] = round(regime_pts, 1)
+
+    # --- Fuerza de ruptura ---
+    prev = df.iloc[-2]
+    if is_long:
+        break_dist = last["close"] - prev["TRAIL_upper"]
+    else:
+        break_dist = prev["TRAIL_lower"] - last["close"]
+    atr_val = last["ATR"]
+    break_strength = min(abs(break_dist) / atr_val, 3.0) / 3.0 * 100.0 if atr_val else 0.0
+    break_pts = break_strength * 0.10
+    breakdown["Ruptura"] = round(break_pts, 1)
+
+    score = round(min(100, sum(breakdown.values())))
+    grade = "A" if score >= GRADE_A_THRESHOLD else ("B" if score >= GRADE_B_THRESHOLD else "C")
+
+    return score, grade, breakdown
+
+
+def build_risk_levels(entry_price: float, atr_val: float, signal_type: str, preset: str):
+    """
+    Calcula SL y TP1/TP2/TP3 según el preset de riesgo elegido.
+    SL = entry -/+ (sl_mult × ATR). TP_n = entry +/- (tp_mult_n × distancia_SL).
+    """
+    cfg = RISK_PRESETS[preset]
+    is_long = signal_type == "ALCISTA"
+    sl_distance = atr_val * cfg["sl_mult"]
+
+    sl = entry_price - sl_distance if is_long else entry_price + sl_distance
+    tps = []
+    for i, mult in enumerate(cfg["tp_mults"], start=1):
+        tp_price = entry_price + sl_distance * mult if is_long else entry_price - sl_distance * mult
+        tps.append({"label": f"TP{i}", "price": tp_price, "rr": mult})
+
+    return {"sl": sl, "sl_distance": sl_distance, "tps": tps}
+
+
+def build_limit_entries(df: pd.DataFrame, ema_fast_col: str, ema_slow: int,
+                         signal_type: str, swing_lookback: int = 50):
+    """
+    Calcula de 2 a 4 niveles de entrada escalonados (limit orders), igual
+    que en versiones anteriores del bot: precio actual, retest EMA rápida,
+    Fibonacci 0.618 del swing reciente, y EMA lenta (invalidación).
+    """
+    last = df.iloc[-1]
+    price = last["close"]
+    ema_fast_val = last[ema_fast_col] if ema_fast_col in df.columns else None
+    ema_slow_val = last[f"EMA{ema_slow}"] if f"EMA{ema_slow}" in df.columns else None
+
+    window = df.tail(swing_lookback)
+    swing_high = window["high"].max()
+    swing_low = window["low"].min()
+    diff = swing_high - swing_low
+
+    entries = [{"price": price, "basis": "precio actual"}]
+    is_long = signal_type == "ALCISTA"
+
+    candidates = []
+    if ema_fast_val is not None:
+        candidates.append((ema_fast_val, "retest EMA rápida"))
+    fib = (swing_high - diff * 0.618) if is_long else (swing_low + diff * 0.618)
+    candidates.append((fib, "Fibonacci 0.618 del swing reciente"))
+    if ema_slow_val is not None:
+        candidates.append((ema_slow_val, f"EMA{ema_slow}, invalidación"))
+
+    for lvl, basis in candidates:
+        if is_long and lvl < entries[-1]["price"]:
+            entries.append({"price": lvl, "basis": basis})
+        elif not is_long and lvl > entries[-1]["price"]:
+            entries.append({"price": lvl, "basis": basis})
+
+    for i, e in enumerate(entries, start=1):
+        e["label"] = f"Entry {i} ({e['basis']})"
+
+    return entries

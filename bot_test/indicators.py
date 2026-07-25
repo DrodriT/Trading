@@ -1,167 +1,216 @@
-# ============================================================
-# INDICATORS — Synapse Trail Pro
-# ============================================================
-import numpy as np
+"""
+Caja de herramientas de análisis técnico — funciones GENÉRICAS y reutilizables.
+
+Este archivo NO decide nada sobre cuándo comprar o vender: solo calcula
+indicadores sobre un DataFrame OHLCV (columnas: open, high, low, close, volume).
+La lógica de qué combinación de indicadores dispara una señal vive en
+strategy.py, no aquí.
+
+Indicadores disponibles: EMA, Estocástico, ATR, RSI, MACD.
+"""
 import pandas as pd
-from typing import Tuple
 
 
-def safe_div(num: float, den: float, fallback: float = 0.0) -> float:
-    if den == 0 or np.isnan(num) or np.isnan(den):
-        return fallback
-    return num / den
+def add_ema(df: pd.DataFrame, period: int, col_name: str) -> pd.DataFrame:
+    """Media móvil exponencial."""
+    df[col_name] = df["close"].ewm(span=period, adjust=False).mean()
+    return df
 
 
-def r_squared(src: pd.Series, length: int) -> float:
-    if len(src) < length:
-        return 0.0
-    y = src.values[-length:]
-    x = np.arange(length)
-    corr = np.corrcoef(x, y)[0, 1]
-    if np.isnan(corr):
-        return 0.0
-    return corr ** 2
+def add_stochastic(df: pd.DataFrame, k_period: int, smooth: int, d_period: int) -> pd.DataFrame:
+    """Oscilador Estocástico (%K suavizado y %D)."""
+    low_min = df["low"].rolling(window=k_period).min()
+    high_max = df["high"].rolling(window=k_period).max()
+
+    raw_k = 100 * (df["close"] - low_min) / (high_max - low_min)
+    df["%K"] = raw_k.rolling(window=smooth).mean()   # estocástico "lento"
+    df["%D"] = df["%K"].rolling(window=d_period).mean()
+    return df
 
 
-def grade_from_score(score: float) -> str:
-    if score >= 75:
-        return "A"
-    elif score >= 55:
-        return "B"
-    return "C"
-
-
-def compute_atr(df: pd.DataFrame, length: int) -> pd.Series:
-    high, low, close = df["high"], df["low"], df["close"]
+def add_atr(df: pd.DataFrame, period: int = 14, col_name: str = "ATR") -> pd.DataFrame:
+    """
+    Average True Range: mide la volatilidad reciente en unidades de precio.
+    Útil como base para SL/TP proporcionales a cómo de "movida" está la
+    cripto ahora mismo, en vez de un % fijo igual para todas.
+    """
+    prev_close = df["close"].shift(1)
     tr = pd.concat([
-        high - low,
-        (high - close.shift(1)).abs(),
-        (low - close.shift(1)).abs()
+        df["high"] - df["low"],
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
     ], axis=1).max(axis=1)
-    return tr.ewm(span=length, adjust=False).mean()
+    df[col_name] = tr.rolling(window=period).mean()
+    return df
 
 
-def compute_ema(series: pd.Series, length: int) -> pd.Series:
-    return series.ewm(span=length, adjust=False).mean()
-
-
-def compute_rsi(close: pd.Series, length: int) -> float:
-    if len(close) < length + 1:
-        return 50.0
-    delta = close.diff()
+def add_rsi(df: pd.DataFrame, period: int = 14, col_name: str = "RSI") -> pd.DataFrame:
+    """
+    Relative Strength Index clásico (suavizado de Wilder).
+    Valores 0-100; tradicionalmente se considera sobrecompra >70 y
+    sobreventa <30, aunque estos umbrales no están aplicados aquí —
+    esta función solo calcula el valor, no decide nada.
+    """
+    delta = df["close"].diff()
     gain = delta.clip(lower=0)
-    loss = (-delta).clip(lower=0)
-    avg_gain = gain.ewm(alpha=1 / length, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1 / length, adjust=False).mean()
-    rs = safe_div(avg_gain.iloc[-1], avg_loss.iloc[-1], 0)
-    return 100.0 - (100.0 / (1.0 + rs))
+    loss = -delta.clip(upper=0)
+
+    # Suavizado de Wilder (equivalente a una EMA con alpha=1/period)
+    avg_gain = gain.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    avg_loss = loss.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+
+    rs = avg_gain / avg_loss
+    df[col_name] = 100 - (100 / (1 + rs))
+    df.loc[avg_loss == 0, col_name] = 100  # evitar división por cero cuando no hay pérdidas
+    return df
 
 
-def compute_adx(df: pd.DataFrame, length: int) -> Tuple[float, float, float]:
-    high, low, close = df["high"], df["low"], df["close"]
-    up_move = high.diff()
-    down_move = -low.diff()
-    plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
-    minus_dm = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
+def add_macd(df: pd.DataFrame, fast: int = 12, slow: int = 26, signal: int = 9,
+             prefix: str = "MACD") -> pd.DataFrame:
+    """
+    MACD (Moving Average Convergence Divergence).
+    Añade tres columnas: {prefix} (línea MACD), {prefix}_signal (línea de señal)
+    y {prefix}_hist (histograma = MACD - señal).
+    """
+    ema_fast = df["close"].ewm(span=fast, adjust=False).mean()
+    ema_slow = df["close"].ewm(span=slow, adjust=False).mean()
+
+    df[prefix] = ema_fast - ema_slow
+    df[f"{prefix}_signal"] = df[prefix].ewm(span=signal, adjust=False).mean()
+    df[f"{prefix}_hist"] = df[prefix] - df[f"{prefix}_signal"]
+    return df
+
+
+def add_adx(df: pd.DataFrame, period: int = 14, prefix: str = "ADX") -> pd.DataFrame:
+    """
+    Average Directional Index (con +DI y -DI), suavizado a la Wilder.
+    Añade tres columnas: {prefix} (fuerza de la tendencia, 0-100, sin dirección),
+    {prefix}_plusDI y {prefix}_minusDI (para saber si la dirección dominante
+    es alcista o bajista).
+    """
+    up_move = df["high"].diff()
+    down_move = -df["low"].diff()
+
+    plus_dm = ((up_move > down_move) & (up_move > 0)) * up_move
+    minus_dm = ((down_move > up_move) & (down_move > 0)) * down_move
+
+    prev_close = df["close"].shift(1)
     tr = pd.concat([
-        high - low,
-        (high - close.shift(1)).abs(),
-        (low - close.shift(1)).abs()
+        df["high"] - df["low"],
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
     ], axis=1).max(axis=1)
-    atr = tr.ewm(span=length, adjust=False).mean()
-    di_plus = safe_div(pd.Series(plus_dm).ewm(span=length, adjust=False).mean(), atr, 0) * 100
-    di_minus = safe_div(pd.Series(minus_dm).ewm(span=length, adjust=False).mean(), atr, 0) * 100
-    dx = safe_div((di_plus - di_minus).abs(), (di_plus + di_minus), 0) * 100
-    adx = dx.ewm(span=length, adjust=False).mean()
-    return (
-        adx.iloc[-1] if not adx.empty else 0.0,
-        di_plus.iloc[-1] if not di_plus.empty else 0.0,
-        di_minus.iloc[-1] if not di_minus.empty else 0.0
-    )
+
+    atr_wilder = tr.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    plus_di = 100 * plus_dm.ewm(alpha=1 / period, adjust=False, min_periods=period).mean() / atr_wilder
+    minus_di = 100 * minus_dm.ewm(alpha=1 / period, adjust=False, min_periods=period).mean() / atr_wilder
+
+    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+    adx = dx.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+
+    df[prefix] = adx
+    df[f"{prefix}_plusDI"] = plus_di
+    df[f"{prefix}_minusDI"] = minus_di
+    return df
 
 
-def compute_choppiness(df: pd.DataFrame, length: int) -> float:
-    if len(df) < length:
-        return 50.0
-    high = df["high"].values[-length:]
-    low = df["low"].values[-length:]
-    close = df["close"].values[-length:]
-    ci_range = np.max(high) - np.min(low)
-    if ci_range <= 0:
-        return 100.0
-    tr_sum = 0.0
-    for i in range(1, length):
-        tr_sum += max(high[i] - low[i], abs(high[i] - close[i - 1]), abs(low[i] - close[i - 1]))
-    if tr_sum <= 0:
-        return 50.0
-    chop_raw = 100.0 * np.log10(tr_sum / ci_range) / np.log10(max(length, 2))
-    return max(0.0, min(100.0, chop_raw))
+def add_ssl_channel(df: pd.DataFrame, period: int = 10, prefix: str = "SSL") -> pd.DataFrame:
+    """
+    SSL Channel: dos líneas (SSL Up / SSL Down) construidas a partir de medias
+    móviles simples de máximos y mínimos, que "cambian de lado" según si el
+    precio ha roto por encima de la media de máximos o por debajo de la media
+    de mínimos. Se usa como filtro/confirmación de tendencia: cuando SSL Up
+    está por ENCIMA de SSL Down, el estado es alcista; cuando está por DEBAJO,
+    bajista. El cruce entre ambas líneas es la señal clásica de este indicador.
+    """
+    sma_high = df["high"].rolling(window=period).mean()
+    sma_low = df["low"].rolling(window=period).mean()
+
+    hlv = pd.Series(index=df.index, dtype="float64")
+    state = 0.0
+    values = []
+    for close, sh, sl in zip(df["close"], sma_high, sma_low):
+        if pd.notna(sh) and close > sh:
+            state = 1.0
+        elif pd.notna(sl) and close < sl:
+            state = -1.0
+        values.append(state)
+    hlv = pd.Series(values, index=df.index)
+
+    df[f"{prefix}_up"] = sma_low.where(hlv < 0, sma_high)
+    df[f"{prefix}_down"] = sma_high.where(hlv < 0, sma_low)
+    return df
 
 
-def compute_regime_score(df, adx_period=14, choppiness_len=14, regime_len=50):
-    adx, _, _ = compute_adx(df, adx_period)
-    adx_score = min(adx / 50.0 * 100.0, 100.0) if not np.isnan(adx) else 0.0
-    chop_raw = compute_choppiness(df, choppiness_len)
-    chop_score = max(0.0, min(100.0, 100.0 - chop_raw))
-    r2 = r_squared(df["close"], regime_len)
-    r2_score = r2 * 100.0
-    score = adx_score * 0.40 + chop_score * 0.35 + r2_score * 0.25
-    is_trending = score >= 60
-    is_choppy = score < 35
-    label = "Trending" if is_trending else "Choppy" if is_choppy else "Mixed"
-    return score, label, is_trending, is_choppy
+def add_volume_ratio(df: pd.DataFrame, period: int = 20, col_name: str = "VOL_RATIO",
+                      ma_col_name: str = "VOL_MA") -> pd.DataFrame:
+    """
+    Ratio entre el volumen de la vela actual y la media de las 'period' velas
+    anteriores (sin incluir la actual), y expone también esa media como columna
+    propia (VOL_MA). >1 en el ratio significa más participación de lo habitual;
+    se usa como confirmación de que el movimiento tiene "fuerza" real detrás,
+    independientemente de la dirección.
+    """
+    avg_volume = df["volume"].shift(1).rolling(window=period).mean()
+    df[ma_col_name] = avg_volume
+    df[col_name] = df["volume"] / avg_volume
+    return df
 
 
-def compute_quality_score(df, htf_df, direction, regime_score, use_htf, use_volume,
-                          vol_threshold, vol_ma_period, rsi_period, atr_series,
-                          upper_band_prev, lower_band_prev):
-    close_val = df["close"].values[-1]
-    score = 0.0
+def add_choppiness_index(df: pd.DataFrame, period: int = 14, col_name: str = "CHOP") -> pd.DataFrame:
+    """
+    Choppiness Index: mide si el mercado está en tendencia (valores bajos)
+    o "lateral/picado" (valores altos), 0-100. NO indica dirección, solo si
+    el precio se mueve de forma ordenada o errática.
+    """
+    import numpy as np
 
-    # HTF (30 pts)
-    if use_htf and htf_df is not None and len(htf_df) >= 50:
-        htf_ema = compute_ema(htf_df["close"], 50)
-        if len(htf_ema) >= 2:
-            htf_bull = htf_df["close"].values[-1] > htf_ema.values[-1]
-            htf_bear = htf_df["close"].values[-1] < htf_ema.values[-1]
-            if (direction == 1 and htf_bull) or (direction == -1 and htf_bear):
-                score += 30.0
-            elif (direction == 1 and htf_bear) or (direction == -1 and htf_bull):
-                score += 0.0
-            else:
-                score += 15.0
-        else:
-            score += 15.0
-    else:
-        score += 15.0
+    prev_close = df["close"].shift(1)
+    tr = pd.concat([
+        df["high"] - df["low"],
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
+    ], axis=1).max(axis=1)
 
-    # Volumen (20 pts)
-    if use_volume and "volume" in df.columns and df["volume"].sum() > 0:
-        vol_sma = df["volume"].rolling(vol_ma_period).mean()
-        if len(vol_sma) > 0 and not np.isnan(vol_sma.values[-1]):
-            if df["volume"].values[-1] > vol_sma.values[-1] * vol_threshold:
-                score += 20.0
-        else:
-            score += 20.0
-    else:
-        score += 20.0
+    tr_sum = tr.rolling(window=period).sum()
+    highest_high = df["high"].rolling(window=period).max()
+    lowest_low = df["low"].rolling(window=period).min()
+    rng = highest_high - lowest_low
 
-    # RSI (20 pts)
-    rsi_val = compute_rsi(df["close"], rsi_period)
-    if (direction == 1 and rsi_val > 50) or (direction == -1 and rsi_val < 50):
-        score += 20.0
+    log_n = np.log10(max(period, 2))
 
-    # Régimen (20 pts)
-    score += regime_score * 0.20
+    ratio = tr_sum / rng.replace(0, pd.NA)
+    chop = 100 * np.log10(ratio.astype("float64")) / log_n
+    chop = chop.where(rng > 0, 100.0)    # rango plano (extremo) -> máxima choppiness
+    chop = chop.where(tr_sum > 0, 50.0)  # sin datos de TR -> valor neutro
+    df[col_name] = chop
+    return df
 
-    # Breakout Strength (10 pts)
-    if not np.isnan(upper_band_prev) and not np.isnan(lower_band_prev):
-        atr_val = atr_series.iloc[-1] if not np.isnan(atr_series.iloc[-1]) else 1.0
-        if direction == 1:
-            break_dist = close_val - upper_band_prev
-        else:
-            break_dist = lower_band_prev - close_val
-        break_strength = min(abs(break_dist) / atr_val, 3.0) / 3.0 * 100.0
-        score += break_strength * 0.10
 
-    return score
+def add_r_squared(df: pd.DataFrame, period: int = 50, col_name: str = "R2") -> pd.DataFrame:
+    """
+    R² de la regresión lineal del precio de cierre frente al tiempo, sobre
+    una ventana de 'period' velas. Mide linealidad (0-1): valores altos =
+    movimiento de precio muy direccional/lineal; valores bajos = errático.
+    """
+    bar_index = pd.Series(range(len(df)), index=df.index, dtype="float64")
+    corr = df["close"].rolling(window=period).corr(bar_index)
+    df[col_name] = corr.pow(2)
+    return df
+
+
+def get_trend_vs_ma(df: pd.DataFrame, ma_col: str, min_periods: int = 0):
+    """
+    Dado un DataFrame ya con una media móvil calculada en ma_col, devuelve
+    (is_above, is_below) según la última vela cerrada. Genérico: sirve para
+    cualquier media (EMA200, EMA50, SMA...), no solo EMA200.
+    """
+    if len(df) < min_periods + 2:
+        return None, None
+    last = df.iloc[-1]
+    return last["close"] > last[ma_col], last["close"] < last[ma_col]
+
+
+def get_trend_vs_ema200(df: pd.DataFrame, ema_slow: int):
+    """Atajo de compatibilidad: get_trend_vs_ma() aplicado a la columna EMA{ema_slow}."""
+    return get_trend_vs_ma(df, f"EMA{ema_slow}", min_periods=ema_slow)
