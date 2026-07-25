@@ -27,6 +27,11 @@ SYMBOLS = [
     "AVAX/USDT:USDT",
     "LTC/USDT:USDT",
     "AAVE/USDT:USDT",
+    "ICP/USDT:USDT",
+    "OP/USDT:USDT",
+    "NEAR/USDT:USDT",
+    "XMR/USDT:USDT",
+    "DOGE/USDT:USDT",
 ]
 
 # --- Timeframe principal ---
