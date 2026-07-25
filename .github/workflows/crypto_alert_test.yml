@@ -3,6 +3,13 @@ name: Crypto Alert Bot TEST
 on:
   workflow_dispatch: {}
 
+# Evita que dos ejecuciones se solapen: si una corrida ya está en curso,
+# la siguiente se ENCOLA (no se cancela) en vez de arrancar en paralelo
+# y pelear por el mismo commit de state.json.
+concurrency:
+  group: crypto-alert-bot-test
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -34,4 +41,8 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add bot_test/state.json
           git diff --quiet --cached || git commit -m "Actualizar estado bot_test [skip ci]"
-          git push
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push falló (intento $i), reintentando..."
+            sleep 5
+          done
