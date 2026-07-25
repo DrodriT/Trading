@@ -2,102 +2,102 @@
   "trail_state": {
     "BTC/USDT:USDT": {
       "dir": 1,
-      "upper": 64213.68380255394,
+      "upper": 64216.403432228275,
       "lower": 64137.32586124917
     },
     "ETH/USDT:USDT": {
       "dir": -1,
       "upper": 1869.461110708012,
-      "lower": 1865.1121046517248
+      "lower": 1865.1505081694422
     },
     "SOL/USDT:USDT": {
       "dir": 1,
-      "upper": 74.32960148654391,
-      "lower": 74.1112809275794
+      "upper": 74.35115811342823,
+      "lower": 74.1220242465607
     },
     "XRP/USDT:USDT": {
       "dir": 1,
-      "upper": 1.1018392355729205,
-      "lower": 1.0969540076646667
+      "upper": 1.1018217219813935,
+      "lower": 1.0971390776518697
     },
     "BCH/USDT:USDT": {
       "dir": -1,
       "upper": 209.99599430042792,
-      "lower": 209.54482490116018
+      "lower": 209.56324632292709
     },
     "SUI/USDT:USDT": {
       "dir": 1,
-      "upper": 0.7136099314441984,
+      "upper": 0.715008829394643,
       "lower": 0.7092030368605673
     },
     "XLM/USDT:USDT": {
       "dir": 1,
-      "upper": 0.17903880229230112,
+      "upper": 0.17910296491941768,
       "lower": 0.17824381134552103
     },
     "INJ/USDT:USDT": {
       "dir": -1,
-      "upper": 5.0917295400925155,
-      "lower": 5.0238681631258615
+      "upper": 5.086295313614513,
+      "lower": 5.024661276214522
     },
     "HBAR/USDT:USDT": {
       "dir": 1,
-      "upper": 0.07050596744911072,
+      "upper": 0.07053111422511116,
       "lower": 0.07016470940991525
     },
     "ADA/USDT:USDT": {
       "dir": 1,
-      "upper": 0.16541080782487105,
-      "lower": 0.16413510817901186
+      "upper": 0.16540090183987352,
+      "lower": 0.16415566483993002
     },
     "AVAX/USDT:USDT": {
       "dir": 1,
-      "upper": 6.691951812301703,
-      "lower": 6.580690040116647
+      "upper": 6.693718597304924,
+      "lower": 6.582765731350387
     },
     "LTC/USDT:USDT": {
       "dir": 1,
-      "upper": 46.21212683690286,
-      "lower": 45.97963962207117
+      "upper": 46.21749093801377,
+      "lower": 45.99255236979785
     },
     "AAVE/USDT:USDT": {
       "dir": 1,
-      "upper": 92.14774245192308,
-      "lower": 91.54206251399206
+      "upper": 92.17674419816886,
+      "lower": 91.54262007350032
     },
     "ICP/USDT:USDT": {
       "dir": 1,
-      "upper": 2.140788470041216,
+      "upper": 2.1402569363056188,
       "lower": 2.1356896336106588
     },
     "OP/USDT:USDT": {
       "dir": 1,
-      "upper": 0.09283112322692402,
+      "upper": 0.09281475952427387,
       "lower": 0.09268001436072659
     },
     "NEAR/USDT:USDT": {
       "dir": -1,
       "upper": 1.7941766130149286,
-      "lower": 1.789038014673114
+      "lower": 1.7887928667378346
     }
   },
   "last_candle_ts": {
-    "BTC/USDT:USDT": 1784999700,
-    "ETH/USDT:USDT": 1784999700,
-    "SOL/USDT:USDT": 1784999700,
-    "XRP/USDT:USDT": 1784999700,
-    "BCH/USDT:USDT": 1784999700,
-    "SUI/USDT:USDT": 1784999700,
-    "XLM/USDT:USDT": 1784999700,
-    "INJ/USDT:USDT": 1784999700,
-    "HBAR/USDT:USDT": 1784999700,
-    "ADA/USDT:USDT": 1784999700,
-    "AVAX/USDT:USDT": 1784999700,
-    "LTC/USDT:USDT": 1784999700,
-    "AAVE/USDT:USDT": 1784999700,
-    "ICP/USDT:USDT": 1784999700,
-    "OP/USDT:USDT": 1784999700,
-    "NEAR/USDT:USDT": 1784999700
+    "BTC/USDT:USDT": 1785000000,
+    "ETH/USDT:USDT": 1785000000,
+    "SOL/USDT:USDT": 1785000000,
+    "XRP/USDT:USDT": 1785000000,
+    "BCH/USDT:USDT": 1785000000,
+    "SUI/USDT:USDT": 1785000000,
+    "XLM/USDT:USDT": 1785000000,
+    "INJ/USDT:USDT": 1785000000,
+    "HBAR/USDT:USDT": 1785000000,
+    "ADA/USDT:USDT": 1785000000,
+    "AVAX/USDT:USDT": 1785000000,
+    "LTC/USDT:USDT": 1785000000,
+    "AAVE/USDT:USDT": 1785000000,
+    "ICP/USDT:USDT": 1785000000,
+    "OP/USDT:USDT": 1785000000,
+    "NEAR/USDT:USDT": 1785000000
   },
   "last_signal": {
     "ICP/USDT:USDT": "ICP/USDT:USDT_2026-07-25 16:15:00",
@@ -118,5 +118,5 @@
     "SUI/USDT:USDT": "SUI/USDT:USDT_2026-07-25 12:40:00"
   },
   "active_positions": {},
-  "updated_at": "2026-07-25T17:16:14.274981"
+  "updated_at": "2026-07-25T17:21:16.621520"
 }
