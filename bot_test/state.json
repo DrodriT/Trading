@@ -3,101 +3,101 @@
     "BTC/USDT:USDT": {
       "dir": -1,
       "upper": 64123.03490406791,
-      "lower": 64007.472135120806
+      "lower": 64005.0809289859
     },
     "ETH/USDT:USDT": {
       "dir": -1,
-      "upper": 1861.9988162235697,
-      "lower": 1858.059687921819
+      "upper": 1861.8147794701324,
+      "lower": 1857.981381333938
     },
     "SOL/USDT:USDT": {
       "dir": 1,
-      "upper": 74.13819598392091,
-      "lower": 73.95447504071699
+      "upper": 74.14157892860679,
+      "lower": 73.95641952422791
     },
     "XRP/USDT:USDT": {
       "dir": 1,
-      "upper": 1.0934787846573444,
+      "upper": 1.0935872012647712,
       "lower": 1.0914935084041637
     },
     "BCH/USDT:USDT": {
       "dir": -1,
-      "upper": 210.83207514047376,
-      "lower": 210.02032547855595
+      "upper": 210.75862636498053,
+      "lower": 210.01529155272445
     },
     "SUI/USDT:USDT": {
       "dir": -1,
       "upper": 0.7112092432824825,
-      "lower": 0.7096132204760618
+      "lower": 0.7095884206129703
     },
     "XLM/USDT:USDT": {
       "dir": 1,
-      "upper": 0.17887992162850802,
+      "upper": 0.17895773077221983,
       "lower": 0.17776032271145942
     },
     "INJ/USDT:USDT": {
       "dir": 1,
-      "upper": 5.239459401808728,
+      "upper": 5.252976365871024,
       "lower": 5.2004844508993555
     },
     "HBAR/USDT:USDT": {
       "dir": 1,
-      "upper": 0.07058145365070598,
+      "upper": 0.07070863460036182,
       "lower": 0.07025098565824597
     },
     "ADA/USDT:USDT": {
       "dir": -1,
       "upper": 0.1641034969348985,
-      "lower": 0.16367304195255733
+      "lower": 0.16364474677596338
     },
     "AVAX/USDT:USDT": {
       "dir": -1,
-      "upper": 6.277603800192729,
-      "lower": 6.259201713855855
+      "upper": 6.277330202896635,
+      "lower": 6.258228528893599
     },
     "LTC/USDT:USDT": {
       "dir": 1,
-      "upper": 46.31924951947421,
+      "upper": 46.319380330282485,
       "lower": 46.23484627655935
     },
     "AAVE/USDT:USDT": {
       "dir": -1,
       "upper": 92.05222366153808,
-      "lower": 91.46881913899816
+      "lower": 91.12346990358446
     },
     "ICP/USDT:USDT": {
       "dir": -1,
       "upper": 2.134666395419509,
-      "lower": 2.1299861017784334
+      "lower": 2.128343944555741
     },
     "OP/USDT:USDT": {
       "dir": -1,
-      "upper": 0.0922693024812832,
-      "lower": 0.09207312809070436
+      "upper": 0.09225671085192937,
+      "lower": 0.09201987892531079
     },
     "NEAR/USDT:USDT": {
       "dir": -1,
       "upper": 1.806286686118855,
-      "lower": 1.7968787524999321
+      "lower": 1.7958962779304777
     }
   },
   "last_candle_ts": {
-    "BTC/USDT:USDT": 1784944500,
-    "ETH/USDT:USDT": 1784944500,
-    "SOL/USDT:USDT": 1784944500,
-    "XRP/USDT:USDT": 1784944500,
-    "BCH/USDT:USDT": 1784944500,
-    "SUI/USDT:USDT": 1784944500,
-    "XLM/USDT:USDT": 1784944500,
-    "INJ/USDT:USDT": 1784944500,
-    "HBAR/USDT:USDT": 1784944500,
-    "ADA/USDT:USDT": 1784944500,
-    "AVAX/USDT:USDT": 1784944500,
-    "LTC/USDT:USDT": 1784944500,
-    "AAVE/USDT:USDT": 1784944500,
-    "ICP/USDT:USDT": 1784944500,
-    "OP/USDT:USDT": 1784944500,
-    "NEAR/USDT:USDT": 1784944500
+    "BTC/USDT:USDT": 1784944800,
+    "ETH/USDT:USDT": 1784944800,
+    "SOL/USDT:USDT": 1784944800,
+    "XRP/USDT:USDT": 1784944800,
+    "BCH/USDT:USDT": 1784944800,
+    "SUI/USDT:USDT": 1784944800,
+    "XLM/USDT:USDT": 1784944800,
+    "INJ/USDT:USDT": 1784944800,
+    "HBAR/USDT:USDT": 1784944800,
+    "ADA/USDT:USDT": 1784944800,
+    "AVAX/USDT:USDT": 1784944800,
+    "LTC/USDT:USDT": 1784944800,
+    "AAVE/USDT:USDT": 1784944800,
+    "ICP/USDT:USDT": 1784944800,
+    "OP/USDT:USDT": 1784944800,
+    "NEAR/USDT:USDT": 1784944800
   },
   "last_signal": {
     "ICP/USDT:USDT": "ICP/USDT:USDT_2026-07-25 01:55:00",
@@ -118,5 +118,5 @@
     "SUI/USDT:USDT": "SUI/USDT:USDT_2026-07-25 00:45:00"
   },
   "active_positions": {},
-  "updated_at": "2026-07-25T01:56:06.245797"
+  "updated_at": "2026-07-25T02:01:34.886666"
 }
