@@ -2,102 +2,102 @@
   "trail_state": {
     "BTC/USDT:USDT": {
       "dir": 1,
-      "upper": 64205.007132752005,
+      "upper": 64213.68380255394,
       "lower": 64137.32586124917
     },
     "ETH/USDT:USDT": {
       "dir": -1,
       "upper": 1869.461110708012,
-      "lower": 1864.8756233443903
+      "lower": 1865.1121046517248
     },
     "SOL/USDT:USDT": {
       "dir": 1,
-      "upper": 74.32617572353473,
-      "lower": 74.09350402379044
+      "upper": 74.32960148654391,
+      "lower": 74.1112809275794
     },
     "XRP/USDT:USDT": {
       "dir": 1,
-      "upper": 1.101755280365835,
-      "lower": 1.096730014472872
+      "upper": 1.1018392355729205,
+      "lower": 1.0969540076646667
     },
     "BCH/USDT:USDT": {
       "dir": -1,
       "upper": 209.99599430042792,
-      "lower": 209.51482530390928
+      "lower": 209.54482490116018
     },
     "SUI/USDT:USDT": {
       "dir": 1,
-      "upper": 0.7135248870966892,
-      "lower": 0.7089421053205481
+      "upper": 0.7136099314441984,
+      "lower": 0.7092030368605673
     },
     "XLM/USDT:USDT": {
       "dir": 1,
-      "upper": 0.17892720967619974,
+      "upper": 0.17903880229230112,
       "lower": 0.17824381134552103
     },
     "INJ/USDT:USDT": {
       "dir": -1,
-      "upper": 5.096953295487212,
-      "lower": 5.029531450930878
+      "upper": 5.0917295400925155,
+      "lower": 5.0238681631258615
     },
     "HBAR/USDT:USDT": {
       "dir": 1,
-      "upper": 0.07050132911195708,
+      "upper": 0.07050596744911072,
       "lower": 0.07016470940991525
     },
     "ADA/USDT:USDT": {
       "dir": 1,
-      "upper": 0.1653083375083,
+      "upper": 0.16541080782487105,
       "lower": 0.16413510817901186
     },
     "AVAX/USDT:USDT": {
       "dir": 1,
-      "upper": 6.7081355881915234,
-      "lower": 6.560806813278794
+      "upper": 6.691951812301703,
+      "lower": 6.580690040116647
     },
     "LTC/USDT:USDT": {
       "dir": 1,
-      "upper": 46.17742891019444,
+      "upper": 46.21212683690286,
       "lower": 45.97963962207117
     },
     "AAVE/USDT:USDT": {
       "dir": 1,
-      "upper": 92.13779010032243,
+      "upper": 92.14774245192308,
       "lower": 91.54206251399206
     },
     "ICP/USDT:USDT": {
       "dir": 1,
-      "upper": 2.1400682653746173,
+      "upper": 2.140788470041216,
       "lower": 2.1356896336106588
     },
     "OP/USDT:USDT": {
       "dir": 1,
-      "upper": 0.09284993792545554,
+      "upper": 0.09283112322692402,
       "lower": 0.09268001436072659
     },
     "NEAR/USDT:USDT": {
       "dir": -1,
       "upper": 1.7941766130149286,
-      "lower": 1.7888869081516348
+      "lower": 1.789038014673114
     }
   },
   "last_candle_ts": {
-    "BTC/USDT:USDT": 1784999400,
-    "ETH/USDT:USDT": 1784999400,
-    "SOL/USDT:USDT": 1784999400,
-    "XRP/USDT:USDT": 1784999400,
-    "BCH/USDT:USDT": 1784999400,
-    "SUI/USDT:USDT": 1784999400,
-    "XLM/USDT:USDT": 1784999400,
-    "INJ/USDT:USDT": 1784999400,
-    "HBAR/USDT:USDT": 1784999400,
-    "ADA/USDT:USDT": 1784999400,
-    "AVAX/USDT:USDT": 1784999400,
-    "LTC/USDT:USDT": 1784999400,
-    "AAVE/USDT:USDT": 1784999400,
-    "ICP/USDT:USDT": 1784999400,
-    "OP/USDT:USDT": 1784999400,
-    "NEAR/USDT:USDT": 1784999400
+    "BTC/USDT:USDT": 1784999700,
+    "ETH/USDT:USDT": 1784999700,
+    "SOL/USDT:USDT": 1784999700,
+    "XRP/USDT:USDT": 1784999700,
+    "BCH/USDT:USDT": 1784999700,
+    "SUI/USDT:USDT": 1784999700,
+    "XLM/USDT:USDT": 1784999700,
+    "INJ/USDT:USDT": 1784999700,
+    "HBAR/USDT:USDT": 1784999700,
+    "ADA/USDT:USDT": 1784999700,
+    "AVAX/USDT:USDT": 1784999700,
+    "LTC/USDT:USDT": 1784999700,
+    "AAVE/USDT:USDT": 1784999700,
+    "ICP/USDT:USDT": 1784999700,
+    "OP/USDT:USDT": 1784999700,
+    "NEAR/USDT:USDT": 1784999700
   },
   "last_signal": {
     "ICP/USDT:USDT": "ICP/USDT:USDT_2026-07-25 16:15:00",
@@ -118,5 +118,5 @@
     "SUI/USDT:USDT": "SUI/USDT:USDT_2026-07-25 12:40:00"
   },
   "active_positions": {},
-  "updated_at": "2026-07-25T17:11:16.596853"
+  "updated_at": "2026-07-25T17:16:14.274981"
 }
