@@ -2,102 +2,102 @@
   "trail_state": {
     "BTC/USDT:USDT": {
       "dir": 1,
-      "upper": 64037.515361876984,
-      "lower": 63971.50744600412
+      "upper": 64039.62447338328,
+      "lower": 63975.8293193698
     },
     "ETH/USDT:USDT": {
       "dir": 1,
-      "upper": 1858.719519337045,
-      "lower": 1856.0389832592052
+      "upper": 1858.6922500722571,
+      "lower": 1856.0691985769658
     },
     "SOL/USDT:USDT": {
       "dir": 1,
-      "upper": 73.98602273220588,
+      "upper": 73.98172304597277,
       "lower": 73.88761887499528
     },
     "XRP/USDT:USDT": {
       "dir": 1,
-      "upper": 1.0902237105224948,
-      "lower": 1.0888895162722074
+      "upper": 1.0902167251266732,
+      "lower": 1.0889093488305086
     },
     "BCH/USDT:USDT": {
       "dir": 1,
-      "upper": 210.59433175744783,
-      "lower": 210.1472523253924
+      "upper": 210.58027837266673,
+      "lower": 210.17223608396614
     },
     "SUI/USDT:USDT": {
       "dir": 1,
-      "upper": 0.7057074970006497,
+      "upper": 0.7056371560365892,
       "lower": 0.7042580579136571
     },
     "XLM/USDT:USDT": {
       "dir": 1,
-      "upper": 0.17733086366074458,
-      "lower": 0.1768965466330824
+      "upper": 0.17733049842494927,
+      "lower": 0.1769043373808307
     },
     "INJ/USDT:USDT": {
       "dir": -1,
-      "upper": 5.229728051558908,
-      "lower": 5.20601222536955
+      "upper": 5.227993162172225,
+      "lower": 5.205076511152774
     },
     "HBAR/USDT:USDT": {
       "dir": 1,
-      "upper": 0.07008891299625415,
+      "upper": 0.07019496799175308,
       "lower": 0.0699912751614767
     },
     "ADA/USDT:USDT": {
       "dir": -1,
-      "upper": 0.16226176249078025,
-      "lower": 0.16188824840053265
+      "upper": 0.1622516993661075,
+      "lower": 0.16186814524793613
     },
     "AVAX/USDT:USDT": {
       "dir": 1,
-      "upper": 6.277526961051623,
+      "upper": 6.277639700739652,
       "lower": 6.267348975125587
     },
     "LTC/USDT:USDT": {
       "dir": -1,
-      "upper": 45.91700636393314,
-      "lower": 45.83047219619117
+      "upper": 45.90639738102202,
+      "lower": 45.82271535969217
     },
     "AAVE/USDT:USDT": {
       "dir": 1,
-      "upper": 91.08930299414558,
-      "lower": 90.9267467216049
+      "upper": 91.08196517189427,
+      "lower": 90.93312134645126
     },
     "ICP/USDT:USDT": {
       "dir": -1,
-      "upper": 2.1279472302720746,
-      "lower": 2.124049580856068
+      "upper": 2.127399340527515,
+      "lower": 2.1236886695995096
     },
     "OP/USDT:USDT": {
       "dir": 1,
-      "upper": 0.09186299283405476,
-      "lower": 0.09159887670337323
+      "upper": 0.09189749102570924,
+      "lower": 0.09163148128104345
     },
     "NEAR/USDT:USDT": {
       "dir": 1,
-      "upper": 1.7900295867508769,
-      "lower": 1.78451131122777
+      "upper": 1.7897321183169264,
+      "lower": 1.7849282021542634
     }
   },
   "last_candle_ts": {
-    "BTC/USDT:USDT": 1784978400,
-    "ETH/USDT:USDT": 1784978400,
-    "SOL/USDT:USDT": 1784978400,
-    "XRP/USDT:USDT": 1784978400,
-    "BCH/USDT:USDT": 1784978400,
-    "SUI/USDT:USDT": 1784978400,
-    "XLM/USDT:USDT": 1784978400,
-    "INJ/USDT:USDT": 1784978400,
-    "HBAR/USDT:USDT": 1784978400,
-    "ADA/USDT:USDT": 1784978400,
-    "AVAX/USDT:USDT": 1784978400,
-    "LTC/USDT:USDT": 1784978400,
-    "AAVE/USDT:USDT": 1784978400,
-    "ICP/USDT:USDT": 1784978400,
-    "OP/USDT:USDT": 1784978400,
-    "NEAR/USDT:USDT": 1784978400
+    "BTC/USDT:USDT": 1784978700,
+    "ETH/USDT:USDT": 1784978700,
+    "SOL/USDT:USDT": 1784978700,
+    "XRP/USDT:USDT": 1784978700,
+    "BCH/USDT:USDT": 1784978700,
+    "SUI/USDT:USDT": 1784978700,
+    "XLM/USDT:USDT": 1784978700,
+    "INJ/USDT:USDT": 1784978700,
+    "HBAR/USDT:USDT": 1784978700,
+    "ADA/USDT:USDT": 1784978700,
+    "AVAX/USDT:USDT": 1784978700,
+    "LTC/USDT:USDT": 1784978700,
+    "AAVE/USDT:USDT": 1784978700,
+    "ICP/USDT:USDT": 1784978700,
+    "OP/USDT:USDT": 1784978700,
+    "NEAR/USDT:USDT": 1784978700
   },
   "last_signal": {
     "ICP/USDT:USDT": "ICP/USDT:USDT_2026-07-25 10:35:00",
@@ -118,5 +118,5 @@
     "SUI/USDT:USDT": "SUI/USDT:USDT_2026-07-25 09:50:00"
   },
   "active_positions": {},
-  "updated_at": "2026-07-25T11:21:11.774200"
+  "updated_at": "2026-07-25T11:26:05.735054"
 }
