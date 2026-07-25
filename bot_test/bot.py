@@ -81,6 +81,11 @@ def send_telegram(message: str):
         print(f"[ERROR Telegram] {e}")
 
 
+def display_symbol(symbol: str) -> str:
+    """'BTC/USDT:USDT' -> 'BTCUSDT' — símbolo limpio para mostrar en Telegram."""
+    return symbol.split(":")[0].replace("/", "")
+
+
 def pct_from_entry(entry: float, level: float) -> str:
     """'(+0.42%)' / '(-1.18%)' — igual que formatPctFromEntry() en el Pine."""
     if not entry:
@@ -204,7 +209,7 @@ def check_symbol(exchange, symbol, state):
         flip_pct = pct_from_entry(pos["entry"], last_price)
         send_telegram(
             f"[{config.STRATEGY_LABEL}]\n"
-            f"🔄 *{symbol}* — FLIP {pos['dir']} → {raw_signal}\n"
+            f"🔄 *{display_symbol(symbol)}* — FLIP {pos['dir']} → {raw_signal}\n"
             f"Entrada anterior: `{pos['entry']:.4f}` | Cierre por flip a: `{last_price:.4f}`{flip_pct}\n"
             f"Resultado: {'GANADORA' if is_win else 'PERDEDORA'} ({r_total:+.2f}R)\n"
             f"{context_line(pos)}"
@@ -241,25 +246,27 @@ def check_symbol(exchange, symbol, state):
         stats[f"grade_{grade.lower()}"] += 1
 
         emoji = "🟢" if raw_signal == "ALCISTA" else "🔴"
-        breakdown_text = "\n".join(f"  • {k}: {v} pts" for k, v in breakdown.items())
+        dir_label = "LONG" if raw_signal == "ALCISTA" else "SHORT"
+        sym = display_symbol(symbol)
         entries = build_limit_entries(df, "TRAIL_EMA", config.HTF_EMA_PERIOD, raw_signal)
-        entries_text = "\n".join(f"  • {e['label']}: `{e['price']:.4f}` — {e['basis']}" for e in entries)
+        # Solo mostramos entradas escalonadas adicionales a la de "precio actual"
+        extra_entries = entries[1:]
         regime_label = regime_label_at_entry
+        sl_pct = pct_from_entry(pos["entry"], pos["sl"])
 
         msg = (
-            f"[{config.STRATEGY_LABEL}]\n"
-            f"{emoji} *{symbol}* — señal *{raw_signal}* (Synapse Trail flip)\n"
-            f"Precio: `{last_price:.4f}` | Timeframe: `{config.TIMEFRAME}` | Vela: `{last_candle_time}`\n\n"
-            f"Quality Score: {score}/100 | Grado: *{grade}*\n"
-            f"{breakdown_text}\n"
-            f"Régimen: {regime_label} ({df.iloc[-1]['REGIME_score']:.0f}/100)\n\n"
-            f"*Entradas escalonadas sugeridas:*\n{entries_text}\n\n"
-            f"*Gestión de riesgo (preset {config.RISK_PRESET}):*\n"
-            f"  • SL: `{pos['sl']:.4f}`\n"
-            f"  • TP1: `{pos['tp1']:.4f}` (RR {pos['tp_rr'][0]}) | "
-            f"TP2: `{pos['tp2']:.4f}` (RR {pos['tp_rr'][1]}) | "
-            f"TP3: `{pos['tp3']:.4f}` (RR {pos['tp_rr'][2]})"
+            f"{emoji} *{sym} | {dir_label}*  ·  Score {score} ({grade})\n\n"
+            f"💰 Entrada: `{pos['entry']:.4f}`\n"
+            f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n\n"
+            f"🎯 TP1: `{pos['tp1']:.4f}`{pct_from_entry(pos['entry'], pos['tp1'])} · RR {pos['tp_rr'][0]}\n"
+            f"🎯 TP2: `{pos['tp2']:.4f}`{pct_from_entry(pos['entry'], pos['tp2'])} · RR {pos['tp_rr'][1]}\n"
+            f"🎯 TP3: `{pos['tp3']:.4f}`{pct_from_entry(pos['entry'], pos['tp3'])} · RR {pos['tp_rr'][2]}\n\n"
+            f"📊 Régimen: {regime_label} ({df.iloc[-1]['REGIME_score']:.0f}/100) | Preset: {config.RISK_PRESET}\n"
+            f"⏱ {symbol} · {config.TIMEFRAME} · {last_candle_time}"
         )
+        if extra_entries:
+            extra_text = "\n".join(f"  • `{e['price']:.4f}` — {e['basis']}" for e in extra_entries)
+            msg += f"\n\n*Entradas escalonadas alternativas:*\n{extra_text}"
         send_telegram(msg)
         print(msg.replace("*", "").replace("`", ""))
 
@@ -289,14 +296,14 @@ def check_symbol(exchange, symbol, state):
                     pos["be_active"] = True
                     send_telegram(
                         f"[{config.STRATEGY_LABEL}]\n"
-                        f"🎯 *{symbol}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct}) — RR {pos['tp_rr'][0]}\n"
+                        f"🎯 *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct}) — RR {pos['tp_rr'][0]}\n"
                         f"🛡️ Break-even activado: SL movido a la entrada (`{pos['entry']:.4f}`)\n"
                         f"{context_line(pos)}"
                     )
                 else:
                     send_telegram(
                         f"[{config.STRATEGY_LABEL}]\n"
-                        f"🎯 *{symbol}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct}) — RR {pos['tp_rr'][0]}\n"
+                        f"🎯 *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct}) — RR {pos['tp_rr'][0]}\n"
                         f"{context_line(pos)}"
                     )
 
@@ -306,7 +313,7 @@ def check_symbol(exchange, symbol, state):
                 tp2_pct = pct_from_entry(pos["entry"], pos["tp2"])
                 send_telegram(
                     f"[{config.STRATEGY_LABEL}]\n"
-                    f"🎯🎯 *{symbol}* — TP2 alcanzado (`{pos['tp2']:.4f}`{tp2_pct}) — RR {pos['tp_rr'][1]}\n"
+                    f"🎯🎯 *{display_symbol(symbol)}* — TP2 alcanzado (`{pos['tp2']:.4f}`{tp2_pct}) — RR {pos['tp_rr'][1]}\n"
                     f"{context_line(pos)}"
                 )
 
@@ -334,7 +341,7 @@ def check_symbol(exchange, symbol, state):
                 close_pct = pct_from_entry(pos["entry"], last_price)
                 send_telegram(
                     f"[{config.STRATEGY_LABEL}]\n"
-                    f"{icon} *{symbol}* — posición CERRADA ({reason_text})\n"
+                    f"{icon} *{display_symbol(symbol)}* — posición CERRADA ({reason_text})\n"
                     f"Entrada: `{pos['entry']:.4f}` | Cierre: `{last_price:.4f}`{close_pct}\n"
                     f"Resultado: {'GANADORA' if is_win else 'PERDEDORA'} ({r_total:+.2f}R)\n"
                     f"{context_line(pos)}\n\n"
