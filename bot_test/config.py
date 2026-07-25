@@ -30,10 +30,12 @@ SYMBOLS = [
 ]
 
 # --- Timeframe principal ---
-TIMEFRAME = "15m"
+TIMEFRAME = "3m"
 
 # --- Timeframe de confirmación (HTF bias) ---
-CONFIRM_TIMEFRAME = "1h"
+# El Pine usa autoHtf() = 4× el timeframe actual, redondeado al bucket
+# disponible más cercano. Para 3m: 3×4=12min -> cae en el bucket "15".
+CONFIRM_TIMEFRAME = "15m"
 
 # ============================================================
 #  SYNAPSE TRAIL (banda de tendencia tipo SuperTrend)
@@ -78,7 +80,10 @@ USE_BREAK_EVEN = True    # mover el SL a la entrada tras alcanzar TP1
 STATE_FILE = "state.json"
 
 # --- Frecuencia de revisión en modo bucle (segundos) ---
-CHECK_INTERVAL_SECONDS = 300
+# Solo aplica si corres `python bot.py` sin --once (modo bucle local).
+# En GitHub Actions (--once) esto no se usa: la frecuencia real la marca
+# quien dispare el workflow (cron-job.org) — debe apuntar cada 3 min.
+CHECK_INTERVAL_SECONDS = 180
 
 # ============================================================
 #  RESUMEN DIARIO DE ESTADÍSTICAS
