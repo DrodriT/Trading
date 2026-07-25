@@ -207,11 +207,12 @@ def check_symbol(exchange, symbol, state):
         stats["flips"] += 1
 
         flip_pct = pct_from_entry(pos["entry"], last_price)
+        old_dir_label = "LONG" if pos["dir"] == "ALCISTA" else "SHORT"
+        new_dir_label = "LONG" if raw_signal == "ALCISTA" else "SHORT"
         send_telegram(
-            f"[{config.STRATEGY_LABEL}]\n"
-            f"🔄 *{display_symbol(symbol)}* — FLIP {pos['dir']} → {raw_signal}\n"
-            f"Entrada anterior: `{pos['entry']:.4f}` | Cierre por flip a: `{last_price:.4f}`{flip_pct}\n"
-            f"Resultado: {'GANADORA' if is_win else 'PERDEDORA'} ({r_total:+.2f}R)\n"
+            f"🔄 *{display_symbol(symbol)}* — Flip {old_dir_label}→{new_dir_label}. Trade cerrado.\n"
+            f"Cierre: `{last_price:.4f}`{flip_pct}\n"
+            f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
             f"{context_line(pos)}"
         )
         pos = None
@@ -295,15 +296,13 @@ def check_symbol(exchange, symbol, state):
                     pos["sl"] = pos["entry"]
                     pos["be_active"] = True
                     send_telegram(
-                        f"[{config.STRATEGY_LABEL}]\n"
-                        f"🎯 *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct}) — RR {pos['tp_rr'][0]}\n"
-                        f"🛡️ Break-even activado: SL movido a la entrada (`{pos['entry']:.4f}`)\n"
+                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct} · RR {pos['tp_rr'][0]}).\n"
+                        f"🔒 SL movido a BE (`{pos['entry']:.4f}`).\n"
                         f"{context_line(pos)}"
                     )
                 else:
                     send_telegram(
-                        f"[{config.STRATEGY_LABEL}]\n"
-                        f"🎯 *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct}) — RR {pos['tp_rr'][0]}\n"
+                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct} · RR {pos['tp_rr'][0]}).\n"
                         f"{context_line(pos)}"
                     )
 
@@ -312,8 +311,8 @@ def check_symbol(exchange, symbol, state):
                 stats["tp2_hits"] += 1
                 tp2_pct = pct_from_entry(pos["entry"], pos["tp2"])
                 send_telegram(
-                    f"[{config.STRATEGY_LABEL}]\n"
-                    f"🎯🎯 *{display_symbol(symbol)}* — TP2 alcanzado (`{pos['tp2']:.4f}`{tp2_pct}) — RR {pos['tp_rr'][1]}\n"
+                    f"🔥 *{display_symbol(symbol)}* — TP2 alcanzado. Runner hacia TP3.\n"
+                    f"`{pos['tp2']:.4f}`{tp2_pct} · RR {pos['tp_rr'][1]}\n"
                     f"{context_line(pos)}"
                 )
 
@@ -336,18 +335,21 @@ def check_symbol(exchange, symbol, state):
                 win_rate = stats["wins"] / closed_trades * 100 if closed_trades else 0
                 avg_r = stats["r_sum"] / closed_trades if closed_trades else 0
 
-                icon = "🛑" if sl_hit else "🏆"
-                reason_text = ("Break-even" if was_be_at_start and sl_hit else "Stop Loss") if sl_hit else "TP3 (objetivo completo)"
+                was_be_stop = sl_hit and was_be_at_start
+                if tp3_first:
+                    icon, reason_text = "💠", "TP3 alcanzado"
+                elif was_be_stop:
+                    icon, reason_text = "🔒", "BE stop-out"
+                else:
+                    icon, reason_text = "🛑", "SL alcanzado"
                 close_pct = pct_from_entry(pos["entry"], last_price)
                 send_telegram(
-                    f"[{config.STRATEGY_LABEL}]\n"
-                    f"{icon} *{display_symbol(symbol)}* — posición CERRADA ({reason_text})\n"
+                    f"{icon} *{display_symbol(symbol)}* — {reason_text}. Trade cerrado.\n"
                     f"Entrada: `{pos['entry']:.4f}` | Cierre: `{last_price:.4f}`{close_pct}\n"
-                    f"Resultado: {'GANADORA' if is_win else 'PERDEDORA'} ({r_total:+.2f}R)\n"
+                    f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
                     f"{context_line(pos)}\n\n"
-                    f"*Estadísticas de sesión:*\n"
-                    f"  • Cerradas: {closed_trades} | Win rate: {win_rate:.1f}%\n"
-                    f"  • R medio: {avg_r:+.2f} | BE saves: {stats['be_saves']} | Flips: {stats['flips']}"
+                    f"📈 Cerradas: {closed_trades} | WR {win_rate:.1f}% | R medio {avg_r:+.2f} "
+                    f"| BE saves: {stats['be_saves']} | Flips: {stats['flips']}"
                 )
                 positions.pop(symbol, None)
 
