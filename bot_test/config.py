@@ -8,6 +8,16 @@ import os
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "PON_AQUI_TU_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "PON_AQUI_TU_CHAT_ID")
 
+# --- Bitget Demo ---
+BITGET_API_KEY = os.environ.get('BITGET_API_KEY')
+BITGET_SECRET_KEY = os.environ.get('BITGET_SECRET_KEY')
+BITGET_PASSPHRASE = os.environ.get('BITGET_PASSPHRASE')
+BITGET_DEMO = True   # Siempre True para cuenta demo
+
+# Parámetros de orden (ajusta según tu tolerancia al riesgo)
+ORDER_AMOUNT_USDT = 50   # cantidad en USDT por operación (demo)
+ORDER_TYPE = 'market'    # 'market' o 'limit' (recomiendo market para simplicidad)
+
 # --- Exchange ---
 EXCHANGE_ID = "bitget"
 MARKET_TYPE = "swap"   # perpetuos

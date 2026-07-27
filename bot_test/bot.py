@@ -1,11 +1,6 @@
 """
 Bot de alertas cripto — VERSIÓN "Synapse" (basada en Synapse Trail Pro)
-
-A diferencia de versiones anteriores (aviso puntual y ya está), este bot
-RECUERDA la posición abierta por símbolo entre ejecuciones (guardada en
-state.json): sabe si hay un LONG/SHORT activo, mueve el SL a break-even
-tras TP1, seguí TP2/TP3, y avisa también cuando la posición se CIERRA
-(por SL, por TP3, o por un flip de la señal).
+con ejecución real de órdenes en Bitget Demo (swap).
 
 Uso:
     python3 bot.py            # corre en bucle
@@ -28,7 +23,7 @@ from strategy import (
     detect_raw_signal, compute_quality_score, build_risk_levels,
     build_limit_entries, RISK_PRESETS
 )
-
+from trading_engine import BitgetTrader   # <--- importamos el motor
 
 # ══════════════════════════════════════════════════════════
 # Persistencia de estado
@@ -118,7 +113,7 @@ def fetch_ohlcv(exchange, symbol, timeframe, limit):
 
 
 # ══════════════════════════════════════════════════════════
-# Clasificación de una operación cerrada (igual criterio que Synapse Trail)
+# Clasificación de una operación cerrada
 # ══════════════════════════════════════════════════════════
 
 def classify_closed_position(pos, close_reason, was_be_at_start):
@@ -142,10 +137,13 @@ def classify_closed_position(pos, close_reason, was_be_at_start):
 
 
 # ══════════════════════════════════════════════════════════
-# Lógica principal por símbolo
+# Lógica principal por símbolo (con órdenes reales)
 # ══════════════════════════════════════════════════════════
 
-def check_symbol(exchange, symbol, state):
+def check_symbol(exchange, symbol, state, trader):
+    """
+    trader: instancia de BitgetTrader (o None si no se quiere operar)
+    """
     limit = max(config.REGIME_LEN, config.TRAIL_LEN) + 100
     df = fetch_ohlcv(exchange, symbol, config.TIMEFRAME, limit)
     df = compute_indicators(
@@ -159,7 +157,7 @@ def check_symbol(exchange, symbol, state):
     )
     df = compute_regime(df)
 
-    # --- HTF bias (timeframe de confirmación, ej. 1h, EMA de HTF_EMA_PERIOD) ---
+    # --- HTF bias ---
     htf_bull, htf_bear = None, None
     if config.USE_HTF_FILTER:
         df_htf = fetch_ohlcv(exchange, symbol, config.CONFIRM_TIMEFRAME, config.HTF_EMA_PERIOD + 50)
@@ -177,11 +175,11 @@ def check_symbol(exchange, symbol, state):
     stats = get_stats(state)
     pos = positions.get(symbol)
 
-    # --- Evitar reprocesar la misma vela dos veces ---
+    # --- Evitar reprocesar la misma vela ---
     last_processed_key = f"{symbol}_last_processed_candle"
     already_processed_this_candle = state.get(last_processed_key) == last_candle_time
 
-    # ── 1. Detectar señal (flip) en la última vela cerrada ──
+    # ── 1. Detectar señal ──
     raw_signal = None if already_processed_this_candle else detect_raw_signal(df)
 
     new_signal_passes = False
@@ -199,20 +197,31 @@ def check_symbol(exchange, symbol, state):
         passes_min_quality = score >= config.MIN_QUALITY_SCORE
         passes_choppy = not (config.SKIP_CHOPPY_SIGNALS and is_choppy)
 
-        # HTF hard filter: si el HTF está claramente en contra, se descarta
-        # la señal directamente (antes solo restaba puntos, pero un score
-        # alto en el resto de componentes podía compensarlo).
         htf_data_valid = config.USE_HTF_FILTER and htf_bull is not None and htf_bear is not None
         htf_against = htf_data_valid and ((is_long and htf_bear) or (not is_long and htf_bull))
         passes_htf = not (config.HTF_HARD_FILTER and htf_against)
 
-        # Régimen: exigir Trending estricto (no basta con "no Choppy").
         passes_regime = not config.REQUIRE_TRENDING_REGIME or is_trending
 
         new_signal_passes = passes_min_quality and passes_choppy and passes_htf and passes_regime
 
-    # ── 2. Si hay señal válida y ya había posición contraria -> FLIP (cerrar antes) ──
+    # ── 2. FLIP: cerrar posición contraria antes de abrir la nueva ──
     if new_signal_passes and pos and pos["dir"] != raw_signal:
+        # Cerrar la posición real primero
+        if trader:
+            side = 'long' if pos["dir"] == "ALCISTA" else 'short'
+            close_order = trader.close_position(symbol, side)
+            if not close_order:
+                print(f"[ERROR] No se pudo cerrar posición flip para {symbol}")
+                # No eliminamos la posición del estado, para que en la próxima iteración se reintente
+                # Pero entonces no abriremos la nueva señal. Dejamos el estado como está.
+                # Para evitar bucles, podríamos marcarla como pendiente de cierre, pero por simplicidad
+                # si falla, no hacemos nada más y salimos.
+                # Como es demo, podemos arriesgarnos a no actualizar el estado y que el bot intente de nuevo.
+                # No obstante, para no perder la oportunidad, podríamos forzar el cierre en el siguiente ciclo.
+                # Decido no actualizar estado y retornar para que no se abra la nueva.
+                return
+        # Si llegamos aquí, la orden de cierre se ejecutó correctamente (o no hay trader)
         was_be = pos.get("be_active", False)
         is_win, is_be_save, r_total = classify_closed_position(pos, "flip", was_be)
         stats["wins" if is_win else "losses"] += 1
@@ -229,30 +238,51 @@ def check_symbol(exchange, symbol, state):
             f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
             f"{context_line(pos)}"
         )
-        pos = None
         positions.pop(symbol, None)
+        pos = None   # para que pueda abrir la nueva a continuación
 
-    # ── 3. Si hay señal válida y no hay posición abierta -> ABRIR ──
+    # ── 3. Abrir nueva posición si hay señal y no hay posición ──
     if new_signal_passes and not pos:
+        # Ejecutar orden real ANTES de guardar estado
+        if trader:
+            side = 'buy' if raw_signal == 'ALCISTA' else 'sell'
+            order = trader.open_position(symbol, side, amount_usdt=config.ORDER_AMOUNT_USDT)
+            if not order:
+                print(f"[ERROR] No se pudo abrir posición para {symbol}")
+                return   # No actualizar estado, se reintentará en la próxima ejecución
+            # Si la orden se ejecutó, obtenemos el precio de ejecución (puede diferir de last_price)
+            filled_price = order.get('price', last_price)
+        else:
+            # Si no hay trader, usamos last_price (solo alerta)
+            filled_price = last_price
+            order = None
+
         preset = RISK_PRESETS[config.RISK_PRESET]
-        risk = build_risk_levels(last_price, df.iloc[-1]["ATR"], raw_signal, config.RISK_PRESET)
+        risk = build_risk_levels(filled_price, df.iloc[-1]["ATR"], raw_signal, config.RISK_PRESET)
 
         regime_label_at_entry = "Trending" if df.iloc[-1]["REGIME_is_trending"] else (
             "Choppy" if df.iloc[-1]["REGIME_is_choppy"] else "Mixed")
 
         new_pos = {
             "dir": raw_signal,
-            "entry": last_price,
+            "entry": filled_price,
             "entry_candle": last_candle_time,
             "sl": risk["sl"],
-            "tp1": risk["tps"][0]["price"], "tp2": risk["tps"][1]["price"], "tp3": risk["tps"][2]["price"],
+            "tp1": risk["tps"][0]["price"],
+            "tp2": risk["tps"][1]["price"],
+            "tp3": risk["tps"][2]["price"],
             "tp_rr": [tp["rr"] for tp in risk["tps"]],
-            "tp1_reached": False, "tp2_reached": False, "tp3_reached": False,
+            "tp1_reached": False,
+            "tp2_reached": False,
+            "tp3_reached": False,
             "be_active": False,
-            "grade": grade, "score": score,
+            "grade": grade,
+            "score": score,
             "regime_label": regime_label_at_entry,
             "regime_score": float(df.iloc[-1]["REGIME_score"]),
         }
+        if order:
+            new_pos["order_id"] = order['id']
         positions[symbol] = new_pos
         pos = new_pos
 
@@ -264,9 +294,7 @@ def check_symbol(exchange, symbol, state):
         dir_label = "LONG" if raw_signal == "ALCISTA" else "SHORT"
         sym = display_symbol(symbol)
         entries = build_limit_entries(df, "TRAIL_EMA", config.HTF_EMA_PERIOD, raw_signal)
-        # Solo mostramos entradas escalonadas adicionales a la de "precio actual"
         extra_entries = entries[1:]
-        regime_label = regime_label_at_entry
         sl_pct = pct_from_entry(pos["entry"], pos["sl"])
 
         msg = (
@@ -285,11 +313,11 @@ def check_symbol(exchange, symbol, state):
         send_telegram(msg)
         print(msg.replace("*", "").replace("`", ""))
 
-    # ── 4. Si hay posición abierta (nueva o de antes), comprobar hits en la última vela ──
+    # ── 4. Si hay posición abierta, comprobar hits ──
     if pos:
         is_long = pos["dir"] == "ALCISTA"
         is_entry_candle = pos["entry_candle"] == last_candle_time
-        can_hit = not is_entry_candle  # igual que ENTRY_BAR_HOLD del Pine: no evaluar en la propia vela de entrada
+        can_hit = not is_entry_candle
 
         if can_hit:
             effective_sl = pos["sl"]
@@ -333,6 +361,15 @@ def check_symbol(exchange, symbol, state):
             was_be_at_start = pos["be_active"]
 
             if sl_hit or tp3_first:
+                # Cerrar la posición real ANTES de actualizar estadísticas
+                if trader:
+                    side = 'long' if pos["dir"] == "ALCISTA" else 'short'
+                    close_order = trader.close_position(symbol, side)
+                    if not close_order:
+                        print(f"[ERROR] No se pudo cerrar posición {symbol} por SL/TP3")
+                        # No eliminamos la posición, se reintentará
+                        return
+
                 if tp3_first:
                     pos["tp3_reached"] = True
                     stats["tp3_hits"] += 1
@@ -371,17 +408,10 @@ def check_symbol(exchange, symbol, state):
 
 
 # ══════════════════════════════════════════════════════════
-# Resumen diario de estadísticas
+# Resumen diario
 # ══════════════════════════════════════════════════════════
 
 def maybe_send_daily_summary(state):
-    """
-    Envía un resumen de la sesión una vez por día, la primera vez que el
-    bot corre en/después de la hora configurada (DAILY_SUMMARY_HOUR_UTC)
-    y todavía no se ha enviado ese resumen hoy. Se guarda la fecha del
-    último envío en state.json para no duplicar en corridas posteriores
-    dentro de la misma hora.
-    """
     if not config.SEND_DAILY_SUMMARY:
         return
 
@@ -430,16 +460,17 @@ def run_once():
         "enableRateLimit": True,
         "options": {"defaultType": config.MARKET_TYPE},
     })
+    # Instanciamos el trader (si no hay credenciales, se lanzará excepción)
+    trader = BitgetTrader()
     state = load_state()
 
     for symbol in config.SYMBOLS:
         try:
-            check_symbol(exchange, symbol, state)
+            check_symbol(exchange, symbol, state, trader)
         except Exception as e:
             print(f"[ERROR] {symbol}: {e}")
 
     maybe_send_daily_summary(state)
-
     save_state(state)
 
 
