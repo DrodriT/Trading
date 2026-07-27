@@ -3,7 +3,8 @@ import ccxt
 import time
 from config import (
     BITGET_API_KEY, BITGET_SECRET_KEY, BITGET_PASSPHRASE,
-    BITGET_DEMO, ORDER_AMOUNT_USDT, ORDER_TYPE
+    BITGET_DEMO, ORDER_AMOUNT_USDT, ORDER_TYPE,
+    LEVERAGE, MARGIN_MODE          # <--- importamos los nuevos parámetros
 )
 
 class BitgetTrader:
@@ -59,21 +60,26 @@ class BitgetTrader:
         if not price:
             return None
 
-        # Cantidad en el activo base (BTC, ETH, etc.)
+        # ---- Configurar modo de margen y apalancamiento ----
+        try:
+            # Establecer modo aislado (si no está ya)
+            self.exchange.set_margin_mode(symbol, MARGIN_MODE)
+            # Establecer apalancamiento (10x)
+            self.exchange.set_leverage(LEVERAGE, symbol)
+            print(f"[INFO] Margen {MARGIN_MODE}, apalancamiento {LEVERAGE}x para {symbol}")
+        except Exception as e:
+            # Puede fallar si ya está configurado o si el símbolo no lo permite
+            print(f"[WARN] Configuración de margen/apalancamiento: {e}")
+
+        # Cantidad en el activo base (sin aplicar apalancamiento, el exchange lo gestiona)
         quantity = amount_usdt / price
         market = self.exchange.market(symbol)
         precision = market.get('precision', {}).get('amount', 8)
         quantity = round(quantity, precision)
 
-        # Opcional: establecer apalancamiento (demo suele tener 1x por defecto)
-        try:
-            self.exchange.set_leverage(1, symbol)   # o el valor que quieras
-        except:
-            pass
-
         try:
             order = self.exchange.create_market_order(symbol, side, quantity)
-            print(f"[ORDEN] Abrir {side.upper()} {quantity} {symbol} a mercado")
+            print(f"[ORDEN] Abrir {side.upper()} {quantity} {symbol} a mercado (apalancamiento {LEVERAGE}x, {MARGIN_MODE})")
             return order
         except Exception as e:
             print(f"[ERROR] Abrir orden {side}: {e}")
