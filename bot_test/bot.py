@@ -189,13 +189,27 @@ def check_symbol(exchange, symbol, state):
 
     if raw_signal:
         is_choppy = bool(df.iloc[-1]["REGIME_is_choppy"])
+        is_trending = bool(df.iloc[-1]["REGIME_is_trending"])
+        is_long = raw_signal == "ALCISTA"
+
         score, grade, breakdown = compute_quality_score(
             df, raw_signal, htf_bull, htf_bear, config.USE_HTF_FILTER,
             config.USE_VOLUME_FILTER, config.VOLUME_THRESHOLD, has_volume
         )
         passes_min_quality = score >= config.MIN_QUALITY_SCORE
         passes_choppy = not (config.SKIP_CHOPPY_SIGNALS and is_choppy)
-        new_signal_passes = passes_min_quality and passes_choppy
+
+        # HTF hard filter: si el HTF está claramente en contra, se descarta
+        # la señal directamente (antes solo restaba puntos, pero un score
+        # alto en el resto de componentes podía compensarlo).
+        htf_data_valid = config.USE_HTF_FILTER and htf_bull is not None and htf_bear is not None
+        htf_against = htf_data_valid and ((is_long and htf_bear) or (not is_long and htf_bull))
+        passes_htf = not (config.HTF_HARD_FILTER and htf_against)
+
+        # Régimen: exigir Trending estricto (no basta con "no Choppy").
+        passes_regime = not config.REQUIRE_TRENDING_REGIME or is_trending
+
+        new_signal_passes = passes_min_quality and passes_choppy and passes_htf and passes_regime
 
     # ── 2. Si hay señal válida y ya había posición contraria -> FLIP (cerrar antes) ──
     if new_signal_passes and pos and pos["dir"] != raw_signal:

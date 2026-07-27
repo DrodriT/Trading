@@ -35,12 +35,12 @@ SYMBOLS = [
 ]
 
 # --- Timeframe principal ---
-TIMEFRAME = "3m"
+TIMEFRAME = "15m"
  
 # --- Timeframe de confirmación (HTF bias) ---
 # El Pine usa autoHtf() = 4× el timeframe actual, redondeado al bucket
 # disponible más cercano. Para 3m: 3×4=12min -> cae en el bucket "15".
-CONFIRM_TIMEFRAME = "15m"
+CONFIRM_TIMEFRAME = "1h"
  
 # ============================================================
 #  SYNAPSE TRAIL (banda de tendencia tipo SuperTrend)
@@ -65,9 +65,11 @@ REGIME_LEN = 50          # ventana para el R² (linealidad)
 #  QUALITY SCORE (HTF 30 + Volumen 20 + RSI 20 + Régimen 20 + Ruptura 10 = 100)
 # ============================================================
 USE_HTF_FILTER = True
+HTF_HARD_FILTER = True   # nuevo — si el HTF está en contra, descarta la señal
+                         # directamente (no solo resta puntos del Quality Score)
 HTF_EMA_PERIOD = 50      # EMA usada en el timeframe de confirmación para el HTF bias
  
-USE_VOLUME_FILTER = False   # si False, el componente de volumen da siempre 20/20
+USE_VOLUME_FILTER = True    # antes False — exige volumen real de respaldo
 VOLUME_THRESHOLD = 1.3      # el volumen debe superar 1.3x su media de 20 velas para confirmar
 VOLUME_MA_PERIOD = 20
  
@@ -76,6 +78,9 @@ RSI_PERIOD = 14
 # --- Filtros sobre la señal ---
 MIN_QUALITY_SCORE = 75   # antes 0 — solo Grado A (máxima selectividad)
 SKIP_CHOPPY_SIGNALS = True   # antes False — descarta señales en régimen Choppy
+REQUIRE_TRENDING_REGIME = True   # nuevo — exige régimen Trending (>=60), ni
+                                 # siquiera Mixed vale; más estricto que
+                                 # SKIP_CHOPPY_SIGNALS (que solo descarta <35)
  
 # ============================================================
 #  GESTIÓN DE RIESGO
