@@ -17,8 +17,7 @@ BITGET_DEMO = True   # Siempre True para cuenta demo
 # Parámetros de orden (ajusta según tu tolerancia al riesgo)
 ORDER_AMOUNT_USDT = 50   # cantidad en USDT por operación (demo)
 ORDER_TYPE = 'market'    # 'market' o 'limit' (recomiendo market para simplicidad)
-# --- Apalancamiento y margen ---
-LEVERAGE = 2            # 10x
+LEVERAGE = 2             # 10x
 MARGIN_MODE = 'isolated' # 'isolated' o 'crossed'
 
 # --- Exchange ---
