@@ -1,10 +1,6 @@
 """
 Bot de alertas cripto — VERSIÓN "Synapse" (basada en Synapse Trail Pro)
-con ejecución real de órdenes en Bitget Demo (swap).
-
-Uso:
-    python3 bot.py            # corre en bucle
-    python3 bot.py --once     # ejecuta una sola pasada (usado por GitHub Actions)
+con ejecución real de órdenes en Bitget Demo (swap) y cierre parcial en cada TP.
 """
 import json
 import os
@@ -23,7 +19,7 @@ from strategy import (
     detect_raw_signal, compute_quality_score, build_risk_levels,
     build_limit_entries, RISK_PRESETS
 )
-from trading_engine import BitgetTrader   # <--- importamos el motor
+from trading_engine import BitgetTrader
 
 # ══════════════════════════════════════════════════════════
 # Persistencia de estado
@@ -35,11 +31,9 @@ def load_state():
             return json.load(f)
     return {"positions": {}, "stats": {}}
 
-
 def save_state(state):
     with open(config.STATE_FILE, "w") as f:
         json.dump(state, f, indent=2)
-
 
 def get_stats(state):
     stats = state.setdefault("stats", {})
@@ -52,7 +46,6 @@ def get_stats(state):
     for k, v in defaults.items():
         stats.setdefault(k, v)
     return stats
-
 
 # ══════════════════════════════════════════════════════════
 # Telegram / datos
@@ -75,28 +68,17 @@ def send_telegram(message: str):
     except Exception as e:
         print(f"[ERROR Telegram] {e}")
 
-
 def display_symbol(symbol: str) -> str:
-    """'BTC/USDT:USDT' -> 'BTCUSDT' — símbolo limpio para mostrar en Telegram."""
     return symbol.split(":")[0].replace("/", "")
 
-
 def pct_from_entry(entry: float, level: float) -> str:
-    """'(+0.42%)' / '(-1.18%)' — igual que formatPctFromEntry() en el Pine."""
     if not entry:
         return ""
     pct = (level - entry) / entry * 100.0
     sign = "+" if pct >= 0 else ""
     return f" ({sign}{pct:.2f}%)"
 
-
 def context_line(pos: dict) -> str:
-    """
-    Línea de contexto reutilizada en todos los mensajes de cierre/TP/SL:
-    grado, quality score y régimen de mercado EN EL MOMENTO DE LA ENTRADA
-    (igual criterio que el tooltip del Pine, que muestra el contexto de
-    la señal, no el régimen actual que ya pudo cambiar).
-    """
     grade = pos.get("grade", "—")
     score = pos.get("score", "—")
     regime_label = pos.get("regime_label", "—")
@@ -104,24 +86,17 @@ def context_line(pos: dict) -> str:
     regime_str = f"{regime_label} ({regime_score:.0f}/100)" if regime_score is not None else regime_label
     return f"Grado: *{grade}* ({score}/100) | Régimen en la entrada: {regime_str}"
 
-
 def fetch_ohlcv(exchange, symbol, timeframe, limit):
     raw = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
     df = pd.DataFrame(raw, columns=["timestamp", "open", "high", "low", "close", "volume"])
     df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     return df
 
-
 # ══════════════════════════════════════════════════════════
-# Clasificación de una operación cerrada
+# Clasificación de una operación cerrada (global, no parcial)
 # ══════════════════════════════════════════════════════════
 
 def classify_closed_position(pos, close_reason, was_be_at_start):
-    """
-    tp1_reached = True  -> GANADORA (1/3 en cada TP alcanzado, resto 0R)
-    tp1_reached = False -> PERDEDORA (-1R)
-    BE save: ganadora que cerró por el SL porque el break-even ya estaba activo.
-    """
     if pos.get("tp1_reached"):
         r1 = (1 / 3) * pos["tp_rr"][0]
         r2 = (1 / 3) * pos["tp_rr"][1] if pos.get("tp2_reached") else 0.0
@@ -135,15 +110,11 @@ def classify_closed_position(pos, close_reason, was_be_at_start):
         is_be_save = False
     return is_win, is_be_save, r_total
 
-
 # ══════════════════════════════════════════════════════════
-# Lógica principal por símbolo (con órdenes reales)
+# Lógica principal por símbolo
 # ══════════════════════════════════════════════════════════
 
 def check_symbol(exchange, symbol, state, trader):
-    """
-    trader: instancia de BitgetTrader (o None si no se quiere operar)
-    """
     limit = max(config.REGIME_LEN, config.TRAIL_LEN) + 100
     df = fetch_ohlcv(exchange, symbol, config.TIMEFRAME, limit)
     df = compute_indicators(
@@ -157,7 +128,6 @@ def check_symbol(exchange, symbol, state, trader):
     )
     df = compute_regime(df)
 
-    # --- HTF bias ---
     htf_bull, htf_bear = None, None
     if config.USE_HTF_FILTER:
         df_htf = fetch_ohlcv(exchange, symbol, config.CONFIRM_TIMEFRAME, config.HTF_EMA_PERIOD + 50)
@@ -175,13 +145,11 @@ def check_symbol(exchange, symbol, state, trader):
     stats = get_stats(state)
     pos = positions.get(symbol)
 
-    # --- Evitar reprocesar la misma vela ---
     last_processed_key = f"{symbol}_last_processed_candle"
     already_processed_this_candle = state.get(last_processed_key) == last_candle_time
 
     # ── 1. Detectar señal ──
     raw_signal = None if already_processed_this_candle else detect_raw_signal(df)
-
     new_signal_passes = False
     score, grade, breakdown = None, None, None
 
@@ -196,32 +164,22 @@ def check_symbol(exchange, symbol, state, trader):
         )
         passes_min_quality = score >= config.MIN_QUALITY_SCORE
         passes_choppy = not (config.SKIP_CHOPPY_SIGNALS and is_choppy)
-
         htf_data_valid = config.USE_HTF_FILTER and htf_bull is not None and htf_bear is not None
         htf_against = htf_data_valid and ((is_long and htf_bear) or (not is_long and htf_bull))
         passes_htf = not (config.HTF_HARD_FILTER and htf_against)
-
         passes_regime = not config.REQUIRE_TRENDING_REGIME or is_trending
-
         new_signal_passes = passes_min_quality and passes_choppy and passes_htf and passes_regime
 
-    # ── 2. FLIP: cerrar posición contraria antes de abrir la nueva ──
+    # ── 2. FLIP ──
     if new_signal_passes and pos and pos["dir"] != raw_signal:
-        # Cerrar la posición real primero
-        if trader:
+        # Cerrar toda la posición restante
+        if trader and pos.get("remaining_size", 0) > 0:
             side = 'long' if pos["dir"] == "ALCISTA" else 'short'
-            close_order = trader.close_position(symbol, side)
+            close_order = trader.close_position_partial(symbol, side, pos["remaining_size"])
             if not close_order:
-                print(f"[ERROR] No se pudo cerrar posición flip para {symbol}")
-                # No eliminamos la posición del estado, para que en la próxima iteración se reintente
-                # Pero entonces no abriremos la nueva señal. Dejamos el estado como está.
-                # Para evitar bucles, podríamos marcarla como pendiente de cierre, pero por simplicidad
-                # si falla, no hacemos nada más y salimos.
-                # Como es demo, podemos arriesgarnos a no actualizar el estado y que el bot intente de nuevo.
-                # No obstante, para no perder la oportunidad, podríamos forzar el cierre en el siguiente ciclo.
-                # Decido no actualizar estado y retornar para que no se abra la nueva.
+                print(f"[ERROR] No se pudo cerrar flip para {symbol}")
                 return
-        # Si llegamos aquí, la orden de cierre se ejecutó correctamente (o no hay trader)
+        # Actualizar estadísticas (como si se hubiera cerrado todo)
         was_be = pos.get("be_active", False)
         is_win, is_be_save, r_total = classify_closed_position(pos, "flip", was_be)
         stats["wins" if is_win else "losses"] += 1
@@ -239,22 +197,29 @@ def check_symbol(exchange, symbol, state, trader):
             f"{context_line(pos)}"
         )
         positions.pop(symbol, None)
-        pos = None   # para que pueda abrir la nueva a continuación
+        pos = None
 
-    # ── 3. Abrir nueva posición si hay señal y no hay posición ──
+    # ── 3. Abrir nueva posición ──
     if new_signal_passes and not pos:
-        # Ejecutar orden real ANTES de guardar estado
         if trader:
             side = 'buy' if raw_signal == 'ALCISTA' else 'sell'
             order = trader.open_position(symbol, side, amount_usdt=config.ORDER_AMOUNT_USDT)
             if not order:
                 print(f"[ERROR] No se pudo abrir posición para {symbol}")
-                return   # No actualizar estado, se reintentará en la próxima ejecución
-            # Si la orden se ejecutó, obtenemos el precio de ejecución (puede diferir de last_price)
+                return
             filled_price = order.get('price', last_price)
+            # Obtener la cantidad real ejecutada (contratos)
+            filled_qty = order.get('filled', 0)
+            if filled_qty <= 0:
+                # Si no viene filled, usar la calculada
+                price = last_price
+                qty = config.ORDER_AMOUNT_USDT / price
+                market = trader.exchange.market(symbol)
+                precision = market.get('precision', {}).get('amount', 8)
+                filled_qty = round(qty, precision)
         else:
-            # Si no hay trader, usamos last_price (solo alerta)
             filled_price = last_price
+            filled_qty = 1.0  # dummy
             order = None
 
         preset = RISK_PRESETS[config.RISK_PRESET]
@@ -280,6 +245,8 @@ def check_symbol(exchange, symbol, state, trader):
             "score": score,
             "regime_label": regime_label_at_entry,
             "regime_score": float(df.iloc[-1]["REGIME_score"]),
+            "size": filled_qty,            # cantidad total de contratos original
+            "remaining_size": filled_qty,  # lo que queda por cerrar
         }
         if order:
             new_pos["order_id"] = order['id']
@@ -313,7 +280,7 @@ def check_symbol(exchange, symbol, state, trader):
         send_telegram(msg)
         print(msg.replace("*", "").replace("`", ""))
 
-    # ── 4. Si hay posición abierta, comprobar hits ──
+    # ── 4. Gestión de posición abierta ──
     if pos:
         is_long = pos["dir"] == "ALCISTA"
         is_entry_candle = pos["entry_candle"] == last_candle_time
@@ -330,94 +297,164 @@ def check_symbol(exchange, symbol, state, trader):
             tp2_first = tp2_hit and not pos["tp2_reached"] and not sl_hit
             tp3_first = tp3_hit and not pos["tp3_reached"] and not sl_hit
 
+            # ── TP1: cerrar 33% y mover SL a BE ──
             if tp1_first:
-                pos["tp1_reached"] = True
-                stats["tp1_hits"] += 1
-                tp1_pct = pct_from_entry(pos["entry"], pos["tp1"])
-                if config.USE_BREAK_EVEN and not pos["be_active"]:
-                    pos["sl"] = pos["entry"]
-                    pos["be_active"] = True
-                    send_telegram(
-                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct} · RR {pos['tp_rr'][0]}).\n"
-                        f"🔒 SL movido a BE (`{pos['entry']:.4f}`).\n"
-                        f"{context_line(pos)}"
-                    )
-                else:
-                    send_telegram(
-                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct} · RR {pos['tp_rr'][0]}).\n"
-                        f"{context_line(pos)}"
-                    )
-
-            if tp2_first:
-                pos["tp2_reached"] = True
-                stats["tp2_hits"] += 1
-                tp2_pct = pct_from_entry(pos["entry"], pos["tp2"])
-                send_telegram(
-                    f"🔥 *{display_symbol(symbol)}* — TP2 alcanzado. Runner hacia TP3.\n"
-                    f"`{pos['tp2']:.4f}`{tp2_pct} · RR {pos['tp_rr'][1]}\n"
-                    f"{context_line(pos)}"
-                )
-
-            was_be_at_start = pos["be_active"]
-
-            if sl_hit or tp3_first:
-                # Cerrar la posición real ANTES de actualizar estadísticas
                 if trader:
-                    side = 'long' if pos["dir"] == "ALCISTA" else 'short'
-                    close_order = trader.close_position(symbol, side)
-                    if not close_order:
-                        print(f"[ERROR] No se pudo cerrar posición {symbol} por SL/TP3")
-                        # No eliminamos la posición, se reintentará
-                        return
+                    # Calcular cantidad a cerrar: 33% del tamaño original
+                    close_qty = pos["size"] * 0.33
+                    market = trader.exchange.market(symbol)
+                    precision = market.get('precision', {}).get('amount', 8)
+                    close_qty = round(close_qty, precision)
+                    if close_qty > 0 and pos["remaining_size"] >= close_qty:
+                        order = trader.close_position_partial(symbol, 'long' if is_long else 'short', close_qty)
+                        if order:
+                            pos["remaining_size"] -= close_qty
+                            # Marcar TP1 alcanzado
+                            pos["tp1_reached"] = True
+                            stats["tp1_hits"] += 1
+                            # Mover SL a BE
+                            if config.USE_BREAK_EVEN and not pos["be_active"]:
+                                pos["sl"] = pos["entry"]
+                                pos["be_active"] = True
+                            tp1_pct = pct_from_entry(pos["entry"], pos["tp1"])
+                            send_telegram(
+                                f"✅ *{display_symbol(symbol)}* — TP1 alcanzado. Cerrado {close_qty} contratos (33%).\n"
+                                f"Precio: `{pos['tp1']:.4f}`{tp1_pct} · RR {pos['tp_rr'][0]}\n"
+                                f"🔒 SL movido a BE (`{pos['entry']:.4f}`).\n"
+                                f"Restante: {pos['remaining_size']} contratos.\n"
+                                f"{context_line(pos)}"
+                            )
+                        else:
+                            print(f"[ERROR] No se pudo cerrar parcial en TP1 para {symbol}")
+                    else:
+                        print(f"[WARN] Cantidad a cerrar en TP1 inválida: {close_qty}, remaining: {pos['remaining_size']}")
+                else:
+                    # Sin trader, solo marcamos como alcanzado
+                    pos["tp1_reached"] = True
+                    stats["tp1_hits"] += 1
+                    if config.USE_BREAK_EVEN and not pos["be_active"]:
+                        pos["sl"] = pos["entry"]
+                        pos["be_active"] = True
 
-                if tp3_first:
+            # ── TP2: cerrar otro 33% ──
+            if tp2_first and pos.get("tp1_reached", False):
+                if trader:
+                    close_qty = pos["size"] * 0.33
+                    market = trader.exchange.market(symbol)
+                    precision = market.get('precision', {}).get('amount', 8)
+                    close_qty = round(close_qty, precision)
+                    if close_qty > 0 and pos["remaining_size"] >= close_qty:
+                        order = trader.close_position_partial(symbol, 'long' if is_long else 'short', close_qty)
+                        if order:
+                            pos["remaining_size"] -= close_qty
+                            pos["tp2_reached"] = True
+                            stats["tp2_hits"] += 1
+                            tp2_pct = pct_from_entry(pos["entry"], pos["tp2"])
+                            send_telegram(
+                                f"🔥 *{display_symbol(symbol)}* — TP2 alcanzado. Cerrado {close_qty} contratos (33%).\n"
+                                f"Precio: `{pos['tp2']:.4f}`{tp2_pct} · RR {pos['tp_rr'][1]}\n"
+                                f"Restante: {pos['remaining_size']} contratos.\n"
+                                f"{context_line(pos)}"
+                            )
+                        else:
+                            print(f"[ERROR] No se pudo cerrar parcial en TP2 para {symbol}")
+                    else:
+                        print(f"[WARN] Cantidad a cerrar en TP2 inválida: {close_qty}, remaining: {pos['remaining_size']}")
+                else:
+                    pos["tp2_reached"] = True
+                    stats["tp2_hits"] += 1
+
+            # ── TP3: cerrar el resto ──
+            if tp3_first and pos.get("tp2_reached", False):
+                if trader and pos["remaining_size"] > 0:
+                    close_qty = pos["remaining_size"]
+                    order = trader.close_position_partial(symbol, 'long' if is_long else 'short', close_qty)
+                    if order:
+                        pos["remaining_size"] = 0
+                        pos["tp3_reached"] = True
+                        stats["tp3_hits"] += 1
+                        close_reason = "tp3"
+                        was_be = pos.get("be_active", False)
+                        is_win, is_be_save, r_total = classify_closed_position(pos, close_reason, was_be)
+                        stats["wins" if is_win else "losses"] += 1
+                        stats["be_saves"] += 1 if is_be_save else 0
+                        stats["r_sum"] += r_total
+
+                        closed_trades = stats["wins"] + stats["losses"]
+                        win_rate = stats["wins"] / closed_trades * 100 if closed_trades else 0
+                        avg_r = stats["r_sum"] / closed_trades if closed_trades else 0
+
+                        tp3_pct = pct_from_entry(pos["entry"], pos["tp3"])
+                        send_telegram(
+                            f"💠 *{display_symbol(symbol)}* — TP3 alcanzado. Posición cerrada completamente.\n"
+                            f"Precio: `{pos['tp3']:.4f}`{tp3_pct} · RR {pos['tp_rr'][2]}\n"
+                            f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
+                            f"{context_line(pos)}\n\n"
+                            f"📈 Cerradas: {closed_trades} | WR {win_rate:.1f}% | R medio {avg_r:+.2f} "
+                            f"| BE saves: {stats['be_saves']} | Flips: {stats['flips']}"
+                        )
+                        positions.pop(symbol, None)
+                        pos = None
+                    else:
+                        print(f"[ERROR] No se pudo cerrar TP3 para {symbol}")
+                else:
                     pos["tp3_reached"] = True
                     stats["tp3_hits"] += 1
+                    # En modo sin trader, simplemente marcamos y cerramos estado
+                    positions.pop(symbol, None)
+                    pos = None
+
+            # ── SL: cerrar todo lo que quede ──
+            if sl_hit and pos is not None:
+                was_be_at_start = pos.get("be_active", False)
+                if trader and pos["remaining_size"] > 0:
+                    close_qty = pos["remaining_size"]
+                    order = trader.close_position_partial(symbol, 'long' if is_long else 'short', close_qty)
+                    if order:
+                        pos["remaining_size"] = 0
+                        stats["sl_hits"] += 1
+                        close_reason = "sl"
+                        is_win, is_be_save, r_total = classify_closed_position(pos, close_reason, was_be_at_start)
+                        stats["wins" if is_win else "losses"] += 1
+                        stats["be_saves"] += 1 if is_be_save else 0
+                        stats["r_sum"] += r_total
+
+                        closed_trades = stats["wins"] + stats["losses"]
+                        win_rate = stats["wins"] / closed_trades * 100 if closed_trades else 0
+                        avg_r = stats["r_sum"] / closed_trades if closed_trades else 0
+
+                        was_be_stop = was_be_at_start
+                        icon, reason_text = ("🔒", "BE stop-out") if was_be_stop else ("🛑", "SL alcanzado")
+                        close_pct = pct_from_entry(pos["entry"], last_price)
+                        send_telegram(
+                            f"{icon} *{display_symbol(symbol)}* — {reason_text}. Trade cerrado.\n"
+                            f"Entrada: `{pos['entry']:.4f}` | Cierre: `{last_price:.4f}`{close_pct}\n"
+                            f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
+                            f"{context_line(pos)}\n\n"
+                            f"📈 Cerradas: {closed_trades} | WR {win_rate:.1f}% | R medio {avg_r:+.2f} "
+                            f"| BE saves: {stats['be_saves']} | Flips: {stats['flips']}"
+                        )
+                        positions.pop(symbol, None)
+                        pos = None
+                    else:
+                        print(f"[ERROR] No se pudo cerrar SL para {symbol}")
                 else:
+                    # Sin trader, solo registro
                     stats["sl_hits"] += 1
-
-                close_reason = "sl" if sl_hit else "tp3"
-                is_win, is_be_save, r_total = classify_closed_position(pos, close_reason, was_be_at_start)
-                stats["wins" if is_win else "losses"] += 1
-                stats["be_saves"] += 1 if is_be_save else 0
-                stats["r_sum"] += r_total
-
-                closed_trades = stats["wins"] + stats["losses"]
-                win_rate = stats["wins"] / closed_trades * 100 if closed_trades else 0
-                avg_r = stats["r_sum"] / closed_trades if closed_trades else 0
-
-                was_be_stop = sl_hit and was_be_at_start
-                if tp3_first:
-                    icon, reason_text = "💠", "TP3 alcanzado"
-                elif was_be_stop:
-                    icon, reason_text = "🔒", "BE stop-out"
-                else:
-                    icon, reason_text = "🛑", "SL alcanzado"
-                close_pct = pct_from_entry(pos["entry"], last_price)
-                send_telegram(
-                    f"{icon} *{display_symbol(symbol)}* — {reason_text}. Trade cerrado.\n"
-                    f"Entrada: `{pos['entry']:.4f}` | Cierre: `{last_price:.4f}`{close_pct}\n"
-                    f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
-                    f"{context_line(pos)}\n\n"
-                    f"📈 Cerradas: {closed_trades} | WR {win_rate:.1f}% | R medio {avg_r:+.2f} "
-                    f"| BE saves: {stats['be_saves']} | Flips: {stats['flips']}"
-                )
-                positions.pop(symbol, None)
+                    positions.pop(symbol, None)
+                    pos = None
 
     state[last_processed_key] = last_candle_time
 
-
 # ══════════════════════════════════════════════════════════
-# Resumen diario
+# Resumen diario (sin cambios)
 # ══════════════════════════════════════════════════════════
 
 def maybe_send_daily_summary(state):
     if not config.SEND_DAILY_SUMMARY:
         return
-
     now = datetime.now(timezone.utc)
     today_str = now.strftime("%Y-%m-%d")
-
     if now.hour < config.DAILY_SUMMARY_HOUR_UTC:
         return
     if state.get("last_daily_summary_date") == today_str:
@@ -430,7 +467,7 @@ def maybe_send_daily_summary(state):
 
     open_positions = state.get("positions", {})
     open_lines = "\n".join(
-        f"  • {sym}: {p['dir']} desde `{p['entry']:.4f}`"
+        f"  • {sym}: {p['dir']} desde `{p['entry']:.4f}` (restante {p.get('remaining_size', 0)} contratos)"
         f"{' (BE activo)' if p.get('be_active') else ''}"
         for sym, p in open_positions.items()
     ) or "  • Ninguna"
@@ -449,7 +486,6 @@ def maybe_send_daily_summary(state):
     send_telegram(msg)
     state["last_daily_summary_date"] = today_str
 
-
 # ══════════════════════════════════════════════════════════
 # Bucle principal
 # ══════════════════════════════════════════════════════════
@@ -460,7 +496,6 @@ def run_once():
         "enableRateLimit": True,
         "options": {"defaultType": config.MARKET_TYPE},
     })
-    # Instanciamos el trader (si no hay credenciales, se lanzará excepción)
     trader = BitgetTrader()
     state = load_state()
 
@@ -473,7 +508,6 @@ def run_once():
     maybe_send_daily_summary(state)
     save_state(state)
 
-
 def main():
     print(f"[{config.STRATEGY_LABEL}] Bot iniciado {datetime.now(timezone.utc).isoformat()} | "
           f"Símbolos: {config.SYMBOLS} | Timeframe: {config.TIMEFRAME}")
@@ -485,7 +519,6 @@ def main():
     while True:
         run_once()
         time.sleep(config.CHECK_INTERVAL_SECONDS)
-
 
 if __name__ == "__main__":
     main()

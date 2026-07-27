@@ -4,7 +4,7 @@ import time
 from config import (
     BITGET_API_KEY, BITGET_SECRET_KEY, BITGET_PASSPHRASE,
     BITGET_DEMO, ORDER_AMOUNT_USDT, ORDER_TYPE,
-    LEVERAGE, MARGIN_MODE          # <--- importamos los nuevos parámetros
+    LEVERAGE, MARGIN_MODE
 )
 
 class BitgetTrader:
@@ -14,7 +14,7 @@ class BitgetTrader:
             'secret': BITGET_SECRET_KEY,
             'password': BITGET_PASSPHRASE,
             'options': {
-                'defaultType': 'swap',          # perpetuos
+                'defaultType': 'swap',
             },
             'demo': BITGET_DEMO,
             'enableRateLimit': True,
@@ -49,10 +49,6 @@ class BitgetTrader:
             return None
 
     def open_position(self, symbol, side, amount_usdt=None):
-        """
-        Abre una posición long (buy) o short (sell) en swap.
-        amount_usdt: capital a usar en USDT (se convierte a cantidad base).
-        """
         if amount_usdt is None:
             amount_usdt = self.amount_usdt
 
@@ -60,18 +56,15 @@ class BitgetTrader:
         if not price:
             return None
 
-        # ---- Configurar modo de margen y apalancamiento ----
+        # Configurar margen y apalancamiento
         try:
-            # Establecer modo aislado (si no está ya)
             self.exchange.set_margin_mode(symbol, MARGIN_MODE)
-            # Establecer apalancamiento (10x)
             self.exchange.set_leverage(LEVERAGE, symbol)
             print(f"[INFO] Margen {MARGIN_MODE}, apalancamiento {LEVERAGE}x para {symbol}")
         except Exception as e:
-            # Puede fallar si ya está configurado o si el símbolo no lo permite
             print(f"[WARN] Configuración de margen/apalancamiento: {e}")
 
-        # Cantidad en el activo base (sin aplicar apalancamiento, el exchange lo gestiona)
+        # Cantidad en el activo base
         quantity = amount_usdt / price
         market = self.exchange.market(symbol)
         precision = market.get('precision', {}).get('amount', 8)
@@ -79,19 +72,37 @@ class BitgetTrader:
 
         try:
             order = self.exchange.create_market_order(symbol, side, quantity)
-            print(f"[ORDEN] Abrir {side.upper()} {quantity} {symbol} a mercado (apalancamiento {LEVERAGE}x, {MARGIN_MODE})")
+            # La cantidad realmente ejecutada (puede diferir ligeramente)
+            filled = order.get('filled', quantity)
+            print(f"[ORDEN] Abrir {side.upper()} {filled} {symbol} a mercado (apalancamiento {LEVERAGE}x, {MARGIN_MODE})")
             return order
         except Exception as e:
             print(f"[ERROR] Abrir orden {side}: {e}")
             return None
 
+    def close_position_partial(self, symbol, side, quantity):
+        """
+        Cierra una cantidad específica de la posición.
+        side: 'long' o 'short' (dirección de la posición abierta)
+        quantity: número de contratos a cerrar
+        """
+        if quantity <= 0:
+            print("[WARN] Cantidad a cerrar <= 0, ignorando.")
+            return None
+        try:
+            close_side = 'sell' if side == 'long' else 'buy'
+            order = self.exchange.create_market_order(symbol, close_side, quantity)
+            print(f"[ORDEN] Cerrar parcial {side.upper()} {quantity} {symbol} a mercado")
+            return order
+        except Exception as e:
+            print(f"[ERROR] Cerrar parcial: {e}")
+            return None
+
     def close_position(self, symbol, side):
         """
-        Cierra una posición long o short completamente.
-        side: 'long' o 'short' (dirección de la posición abierta)
+        Cierra toda la posición restante.
         """
         try:
-            # Obtener la posición actual
             positions = self.exchange.fetch_positions([symbol])
             if not positions:
                 print(f"[WARN] No hay posición abierta para {symbol}")
@@ -100,11 +111,8 @@ class BitgetTrader:
             if pos['side'] != side:
                 print(f"[WARN] La posición abierta es {pos['side']}, no {side}")
                 return None
-            quantity = pos['contracts']   # número de contratos
-            close_side = 'sell' if side == 'long' else 'buy'
-            order = self.exchange.create_market_order(symbol, close_side, quantity)
-            print(f"[ORDEN] Cerrar {side.upper()} {quantity} {symbol} a mercado")
-            return order
+            quantity = pos['contracts']
+            return self.close_position_partial(symbol, side, quantity)
         except Exception as e:
             print(f"[ERROR] Cerrar posición: {e}")
             return None
