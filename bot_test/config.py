@@ -48,12 +48,12 @@ SYMBOLS = [
 ]
 
 # --- Timeframe principal ---
-TIMEFRAME = "15m"
+TIMEFRAME = "3m"
  
 # --- Timeframe de confirmación (HTF bias) ---
 # El Pine usa autoHtf() = 4× el timeframe actual, redondeado al bucket
 # disponible más cercano. Para 3m: 3×4=12min -> cae en el bucket "15".
-CONFIRM_TIMEFRAME = "1h"
+CONFIRM_TIMEFRAME = "15m"
  
 # ============================================================
 #  SYNAPSE TRAIL (banda de tendencia tipo SuperTrend)
