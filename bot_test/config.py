@@ -8,18 +8,6 @@ import os
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "PON_AQUI_TU_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "PON_AQUI_TU_CHAT_ID")
 
-# --- Bitget Demo ---
-BITGET_API_KEY = os.environ.get('BITGET_API_KEY')
-BITGET_SECRET_KEY = os.environ.get('BITGET_SECRET_KEY')
-BITGET_PASSPHRASE = os.environ.get('BITGET_PASSPHRASE')
-BITGET_DEMO = True   # Siempre True para cuenta demo
-
-# Parámetros de orden (ajusta según tu tolerancia al riesgo)
-ORDER_AMOUNT_USDT = 50   # cantidad en USDT por operación (demo)
-ORDER_TYPE = 'market'    # 'market' o 'limit' (recomiendo market para simplicidad)
-LEVERAGE = 2             # 10x
-MARGIN_MODE = 'isolated' # 'isolated' o 'crossed'
-
 # --- Exchange ---
 EXCHANGE_ID = "bitget"
 MARKET_TYPE = "swap"   # perpetuos
@@ -47,12 +35,12 @@ SYMBOLS = [
 ]
 
 # --- Timeframe principal ---
-TIMEFRAME = "15m"
+TIMEFRAME = "3m"
  
 # --- Timeframe de confirmación (HTF bias) ---
-# El Pine usa autoHtf() = 4× el timeframe actual. Para 15m: 15×4=60min -> "1h".
-# Match exacto con el bucket del Pine (a diferencia de 3m, que redondeaba a 15m).
-CONFIRM_TIMEFRAME = "1h"
+# El Pine usa autoHtf() = 4× el timeframe actual, redondeado al bucket
+# disponible más cercano. Para 3m: 3×4=12min -> cae en el bucket "15".
+CONFIRM_TIMEFRAME = "15m"
  
 # ============================================================
 #  SYNAPSE TRAIL (banda de tendencia tipo SuperTrend)
@@ -77,11 +65,9 @@ REGIME_LEN = 50          # ventana para el R² (linealidad)
 #  QUALITY SCORE (HTF 30 + Volumen 20 + RSI 20 + Régimen 20 + Ruptura 10 = 100)
 # ============================================================
 USE_HTF_FILTER = True
-HTF_HARD_FILTER = True   # nuevo — si el HTF está en contra, descarta la señal
-                         # directamente (no solo resta puntos del Quality Score)
 HTF_EMA_PERIOD = 50      # EMA usada en el timeframe de confirmación para el HTF bias
  
-USE_VOLUME_FILTER = True    # antes False — exige volumen real de respaldo
+USE_VOLUME_FILTER = False   # si False, el componente de volumen da siempre 20/20
 VOLUME_THRESHOLD = 1.3      # el volumen debe superar 1.3x su media de 20 velas para confirmar
 VOLUME_MA_PERIOD = 20
  
@@ -90,9 +76,6 @@ RSI_PERIOD = 14
 # --- Filtros sobre la señal ---
 MIN_QUALITY_SCORE = 75   # antes 0 — solo Grado A (máxima selectividad)
 SKIP_CHOPPY_SIGNALS = True   # antes False — descarta señales en régimen Choppy
-REQUIRE_TRENDING_REGIME = True   # nuevo — exige régimen Trending (>=60), ni
-                                 # siquiera Mixed vale; más estricto que
-                                 # SKIP_CHOPPY_SIGNALS (que solo descarta <35)
  
 # ============================================================
 #  GESTIÓN DE RIESGO
@@ -107,8 +90,8 @@ STATE_FILE = "state.json"
 # --- Frecuencia de revisión en modo bucle (segundos) ---
 # Solo aplica si corres `python bot.py` sin --once (modo bucle local).
 # En GitHub Actions (--once) esto no se usa: la frecuencia real la marca
-# quien dispare el workflow (cron-job.org) — debe apuntar cada 15 min.
-CHECK_INTERVAL_SECONDS = 900
+# quien dispare el workflow (cron-job.org) — debe apuntar cada 3 min.
+CHECK_INTERVAL_SECONDS = 180
  
 # ============================================================
 #  RESUMEN DIARIO DE ESTADÍSTICAS
