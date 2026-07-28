@@ -35,17 +35,17 @@ SYMBOLS = [
 ]
 
 # --- Timeframe principal ---
-TIMEFRAME = "15m"
+TIMEFRAME = "3m"
 
 # --- Timeframe de confirmación (HTF bias) ---
 # El Pine usa autoHtf() = 4× el timeframe actual, redondeado al bucket
 # disponible más cercano. Para 3m: 3×4=12min -> cae en el bucket "15".
-CONFIRM_TIMEFRAME = "1h"
+CONFIRM_TIMEFRAME = "15m"
 
 # ============================================================
 #  SYNAPSE TRAIL (banda de tendencia tipo SuperTrend)
 # ============================================================
-ATR_LEN = 13             # ATR usado tanto para la banda como para el SL
+ATR_LEN = 21             # ATR usado tanto para la banda como para el SL
 TRAIL_LEN = 21           # periodo de la EMA que forma el centro de la banda
 BASE_MULT = 1.618        # multiplicador base del ATR para el ancho de la banda
 USE_ADAPTIVE_MULT = False  # si True, ajusta el multiplicador según percentil de volatilidad
@@ -78,7 +78,7 @@ SKIP_CHOPPY_SIGNALS = False     # si True, descarta señales cuando el régimen 
 #  GESTIÓN DE RIESGO
 # ============================================================
 # Presets disponibles: "Conservative", "Balanced", "Aggressive", "Scalping"
-RISK_PRESET = "Balanced"
+RISK_PRESET = "Scalping"
 USE_BREAK_EVEN = True    # mover el SL a la entrada tras alcanzar TP1
 
 # --- Persistencia de estado ---
