@@ -71,28 +71,6 @@
       "regime_label": "Mixed",
       "regime_score": 36.65880894176167
     },
-    "NEAR/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 1.676,
-      "entry_candle": "2026-07-28T04:33:00+00:00",
-      "sl": 1.6782153846153847,
-      "tp1": 1.6737846153846152,
-      "tp2": 1.6715692307692305,
-      "tp3": 1.6693538461538457,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "grade": "A",
-      "score": 78,
-      "regime_label": "Mixed",
-      "regime_score": 36.98193546023202
-    },
     "AAVE/USDT:USDT": {
       "dir": "ALCISTA",
       "entry": 97.96,
@@ -123,15 +101,15 @@
     "grade_a": 5,
     "grade_b": 0,
     "grade_c": 1,
-    "sl_hits": 1,
+    "sl_hits": 2,
     "tp1_hits": 0,
     "tp2_hits": 0,
     "tp3_hits": 0,
     "flips": 0,
     "wins": 0,
-    "losses": 1,
+    "losses": 2,
     "be_saves": 0,
-    "r_sum": -1.0
+    "r_sum": -2.0
   },
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T04:45:00+00:00",
   "ETH/USDT:USDT_last_processed_candle": "2026-07-28T04:45:00+00:00",
