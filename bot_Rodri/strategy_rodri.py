@@ -296,6 +296,12 @@ def compute_ensemble_signal(df, cfg):
     def dir_total(hs):
         if not hs:
             return -1.0
+        if len(hs) == 1:
+            # Sin confluencia: se capa el score, ninguna estrategia sola
+            # puede alcanzar el máximo (evita falsa sensación de "Score 100"
+            # cuando en realidad solo hay UNA señal detrás, sin confirmación
+            # de ninguna otra).
+            return min(hs[0]["score"], cfg.MAX_SOLO_SCORE)
         avg = sum(h["score"] for h in hs) / len(hs)
         bonus = cfg.CONFLUENCE_BONUS * (len(hs) - 1)
         return min(100.0, avg + bonus)
