@@ -26,33 +26,6 @@
       "leverage": 20,
       "is_red": false,
       "size_factor": 1.0
-    },
-    "SUI/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 0.6954,
-      "entry_candle": "2026-07-28T21:35:00+00:00",
-      "sl": 0.6954,
-      "tp1": 0.6942964285714286,
-      "tp2": 0.6931928571428572,
-      "tp3": 0.6920892857142859,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 100,
-      "prob": 0.85,
-      "strategies": [
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
     }
   },
   "cooldowns": {
@@ -71,14 +44,14 @@
     "XLM/USDT:USDT": "2026-07-29T01:34:47.159915+00:00",
     "SOL/USDT:USDT": "2026-07-29T01:35:57.274493+00:00",
     "DOGE/USDT:USDT": "2026-07-28T19:21:41.243642+00:00",
-    "AAVE/USDT:USDT": "2026-07-28T20:15:58.851267+00:00"
+    "AAVE/USDT:USDT": "2026-07-28T20:15:58.851267+00:00",
+    "SUI/USDT:USDT": "2026-07-29T01:56:39.762934+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-28",
     "count": 2
   },
   "recent_results": [
-    false,
     true,
     true,
     true,
@@ -87,6 +60,7 @@
     true,
     false,
     false,
+    true,
     true
   ],
   "dynamic_min_score": 50,
@@ -96,15 +70,15 @@
     "red_signals": 2,
     "long_signals": 14,
     "short_signals": 12,
-    "sl_hits": 17,
+    "sl_hits": 18,
     "tp1_hits": 13,
     "tp2_hits": 8,
     "tp3_hits": 2,
     "flips": 5,
-    "wins": 12,
+    "wins": 13,
     "losses": 12,
-    "be_saves": 8,
-    "r_sum": 0.7333333333333336
+    "be_saves": 9,
+    "r_sum": 1.0666666666666669
   },
   "last_daily_summary_date": "2026-07-28",
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T21:55:00+00:00",
