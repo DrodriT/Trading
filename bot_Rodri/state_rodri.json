@@ -1,33 +1,5 @@
 {
-  "positions": {
-    "SOL/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 72.606,
-      "entry_candle": "2026-07-28T13:40:00+00:00",
-      "sl": 72.606,
-      "tp1": 72.89839285714285,
-      "tp2": 73.19078571428571,
-      "tp3": 73.48317857142857,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 100,
-      "prob": 0.85,
-      "strategies": [
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "BTC/USDT:USDT": "2026-07-28T17:46:39.558174+00:00",
     "BCH/USDT:USDT": "2026-07-28T17:58:48.597286+00:00",
@@ -41,14 +13,14 @@
     "OP/USDT:USDT": "2026-07-28T15:27:42.467825+00:00",
     "NEAR/USDT:USDT": "2026-07-28T16:02:42.157685+00:00",
     "XMR/USDT:USDT": "2026-07-28T17:31:40.069999+00:00",
-    "XLM/USDT:USDT": "2026-07-28T17:32:50.391250+00:00"
+    "XLM/USDT:USDT": "2026-07-28T17:32:50.391250+00:00",
+    "SOL/USDT:USDT": "2026-07-28T18:16:48.356159+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-28",
     "count": 2
   },
   "recent_results": [
-    false,
     true,
     false,
     true,
@@ -57,7 +29,8 @@
     true,
     true,
     false,
-    false
+    false,
+    true
   ],
   "dynamic_min_score": 75,
   "stats": {
@@ -66,15 +39,15 @@
     "red_signals": 2,
     "long_signals": 11,
     "short_signals": 5,
-    "sl_hits": 12,
+    "sl_hits": 13,
     "tp1_hits": 7,
     "tp2_hits": 4,
     "tp3_hits": 1,
     "flips": 2,
-    "wins": 6,
+    "wins": 7,
     "losses": 9,
-    "be_saves": 5,
-    "r_sum": -1.9333333333333331
+    "be_saves": 6,
+    "r_sum": -1.5999999999999999
   },
   "last_daily_summary_date": "2026-07-28",
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T14:15:00+00:00",
