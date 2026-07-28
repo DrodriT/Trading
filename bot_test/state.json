@@ -19,7 +19,7 @@
         2.0
       ],
       "tp1_reached": true,
-      "tp2_reached": false,
+      "tp2_reached": true,
       "tp3_reached": false,
       "be_active": true,
       "grade": "A",
@@ -37,7 +37,7 @@
     "grade_c": 1,
     "sl_hits": 6,
     "tp1_hits": 2,
-    "tp2_hits": 0,
+    "tp2_hits": 1,
     "tp3_hits": 0,
     "flips": 0,
     "wins": 1,
