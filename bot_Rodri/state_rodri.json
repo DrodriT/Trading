@@ -26,6 +26,34 @@
       "leverage": 20,
       "is_red": false,
       "size_factor": 1.0
+    },
+    "LTC/USDT:USDT": {
+      "dir": "ALCISTA",
+      "entry": 45.98,
+      "entry_candle": "2026-07-28T23:00:00+00:00",
+      "sl": 45.89642857142857,
+      "tp1": 46.06357142857142,
+      "tp2": 46.14714285714285,
+      "tp3": 46.23071428571428,
+      "tp_rr": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "tp1_reached": false,
+      "tp2_reached": false,
+      "tp3_reached": false,
+      "be_active": false,
+      "score": 73,
+      "prob": 0.7,
+      "strategies": [
+        "VP_MEAN_REVERT",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "leverage": 20,
+      "is_red": false,
+      "size_factor": 1.0
     }
   },
   "cooldowns": {
@@ -65,10 +93,10 @@
   ],
   "dynamic_min_score": 50,
   "stats": {
-    "total_signals": 29,
-    "normal_signals": 27,
+    "total_signals": 30,
+    "normal_signals": 28,
     "red_signals": 2,
-    "long_signals": 15,
+    "long_signals": 16,
     "short_signals": 14,
     "sl_hits": 20,
     "tp1_hits": 15,
