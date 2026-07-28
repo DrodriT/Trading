@@ -91,4 +91,4 @@ CHECK_INTERVAL_SECONDS = 60   # solo aplica en modo bucle local (sin --once)
 SEND_DAILY_SUMMARY = True
 DAILY_SUMMARY_HOUR_UTC = 0
 
-STRATEGY_LABEL = "Rodri v1.0 (ensemble: SMC + Breakout + Trend Pullback + RSI Div + VP Mean Revert + Liquidity Grab)"
+STRATEGY_LABEL = "Rodri v1.0 (Multi-Estrategia)"
