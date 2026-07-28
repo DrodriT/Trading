@@ -4,30 +4,7 @@
   "last_signal": {},
   "active_positions": {},
   "updated_at": null,
-  "positions": {
-    "XRP/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 1.0563,
-      "entry_candle": "2026-07-28T04:30:00+00:00",
-      "sl": 1.0573384615384618,
-      "tp1": 1.0552615384615383,
-      "tp2": 1.0542230769230767,
-      "tp3": 1.0531846153846152,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "grade": "A",
-      "score": 78,
-      "regime_label": "Choppy",
-      "regime_score": 32.45222929408501
-    }
-  },
+  "positions": {},
   "stats": {
     "total_signals": 6,
     "buy_signals": 1,
@@ -35,15 +12,15 @@
     "grade_a": 5,
     "grade_b": 0,
     "grade_c": 1,
-    "sl_hits": 5,
+    "sl_hits": 6,
     "tp1_hits": 1,
     "tp2_hits": 0,
     "tp3_hits": 0,
     "flips": 0,
     "wins": 1,
-    "losses": 4,
+    "losses": 5,
     "be_saves": 1,
-    "r_sum": -3.666666666666667
+    "r_sum": -4.666666666666667
   },
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T05:00:00+00:00",
   "ETH/USDT:USDT_last_processed_candle": "2026-07-28T05:00:00+00:00",
