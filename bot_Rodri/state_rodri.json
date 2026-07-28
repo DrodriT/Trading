@@ -27,44 +27,18 @@
       "leverage": 20,
       "is_red": false,
       "size_factor": 1.0
-    },
-    "BCH/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 213.84,
-      "entry_candle": "2026-07-28T09:40:00+00:00",
-      "sl": 214.19892857142858,
-      "tp1": 213.48107142857143,
-      "tp2": 213.22982142857143,
-      "tp3": 213.22982142857143,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 59,
-      "prob": 0.62,
-      "strategies": [
-        "VP_MEAN_REVERT",
-        "LIQUIDITY_GRAB"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": true,
-      "size_factor": 0.3
     }
   },
   "cooldowns": {
-    "BTC/USDT:USDT": "2026-07-28T13:40:58.174089+00:00"
+    "BTC/USDT:USDT": "2026-07-28T13:40:58.174089+00:00",
+    "BCH/USDT:USDT": "2026-07-28T13:48:58.370549+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-28",
     "count": 2
   },
   "recent_results": [
+    false,
     false
   ],
   "dynamic_min_score": 60,
@@ -74,15 +48,15 @@
     "red_signals": 2,
     "long_signals": 2,
     "short_signals": 1,
-    "sl_hits": 0,
+    "sl_hits": 1,
     "tp1_hits": 0,
     "tp2_hits": 0,
     "tp3_hits": 0,
     "flips": 1,
     "wins": 0,
-    "losses": 1,
+    "losses": 2,
     "be_saves": 0,
-    "r_sum": -0.3
+    "r_sum": -0.6
   },
   "last_daily_summary_date": "2026-07-28",
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T09:45:00+00:00",
