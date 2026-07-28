@@ -4,7 +4,7 @@
       "dir": "ALCISTA",
       "entry": 0.06785,
       "entry_candle": "2026-07-28T10:20:00+00:00",
-      "sl": 0.06775999999999999,
+      "sl": 0.06785,
       "tp1": 0.06794,
       "tp2": 0.06803,
       "tp3": 0.06812,
@@ -13,10 +13,10 @@
         2.0,
         3.0
       ],
-      "tp1_reached": false,
+      "tp1_reached": true,
       "tp2_reached": false,
       "tp3_reached": false,
-      "be_active": false,
+      "be_active": true,
       "score": 100,
       "prob": 0.85,
       "strategies": [
@@ -27,14 +27,14 @@
       "is_red": false,
       "size_factor": 1.0
     },
-    "LTC/USDT:USDT": {
+    "ICP/USDT:USDT": {
       "dir": "BAJISTA",
-      "entry": 46.44,
-      "entry_candle": "2026-07-28T10:25:00+00:00",
-      "sl": 46.52142857142857,
-      "tp1": 46.35857142857142,
-      "tp2": 46.277142857142856,
-      "tp3": 46.19571428571428,
+      "entry": 2.094,
+      "entry_candle": "2026-07-28T10:30:00+00:00",
+      "sl": 2.0979642857142857,
+      "tp1": 2.090035714285714,
+      "tp2": 2.0860714285714286,
+      "tp3": 2.0821071428571427,
       "tp_rr": [
         1.0,
         2.0,
@@ -44,8 +44,8 @@
       "tp2_reached": false,
       "tp3_reached": false,
       "be_active": false,
-      "score": 64,
-      "prob": 0.65,
+      "score": 91,
+      "prob": 0.8,
       "strategies": [
         "VP_MEAN_REVERT"
       ],
@@ -59,7 +59,8 @@
     "BTC/USDT:USDT": "2026-07-28T13:40:58.174089+00:00",
     "BCH/USDT:USDT": "2026-07-28T13:48:58.370549+00:00",
     "AVAX/USDT:USDT": "2026-07-28T14:18:45.391161+00:00",
-    "INJ/USDT:USDT": "2026-07-28T14:25:49.085762+00:00"
+    "INJ/USDT:USDT": "2026-07-28T14:25:49.085762+00:00",
+    "LTC/USDT:USDT": "2026-07-28T14:31:53.591253+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-28",
@@ -69,24 +70,25 @@
     false,
     false,
     true,
+    false,
     false
   ],
   "dynamic_min_score": 60,
   "stats": {
-    "total_signals": 6,
-    "normal_signals": 4,
+    "total_signals": 7,
+    "normal_signals": 5,
     "red_signals": 2,
     "long_signals": 3,
-    "short_signals": 3,
-    "sl_hits": 2,
-    "tp1_hits": 1,
+    "short_signals": 4,
+    "sl_hits": 3,
+    "tp1_hits": 2,
     "tp2_hits": 1,
     "tp3_hits": 0,
     "flips": 2,
     "wins": 1,
-    "losses": 3,
+    "losses": 4,
     "be_saves": 1,
-    "r_sum": -0.6
+    "r_sum": -1.6
   },
   "last_daily_summary_date": "2026-07-28",
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T10:30:00+00:00",
