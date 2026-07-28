@@ -1,60 +1,5 @@
 {
-  "positions": {
-    "OP/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 0.0885,
-      "entry_candle": "2026-07-28T10:40:00+00:00",
-      "sl": 0.0885,
-      "tp1": 0.0881142857142857,
-      "tp2": 0.08772857142857142,
-      "tp3": 0.08734285714285714,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 100,
-      "prob": 0.85,
-      "strategies": [
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
-    "ETH/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 1873.34,
-      "entry_candle": "2026-07-28T11:10:00+00:00",
-      "sl": 1873.34,
-      "tp1": 1877.4607142857142,
-      "tp2": 1881.5814285714287,
-      "tp3": 1885.702142857143,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 99,
-      "prob": 0.84,
-      "strategies": [
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "BTC/USDT:USDT": "2026-07-28T13:40:58.174089+00:00",
     "BCH/USDT:USDT": "2026-07-28T13:48:58.370549+00:00",
@@ -63,7 +8,9 @@
     "LTC/USDT:USDT": "2026-07-28T14:31:53.591253+00:00",
     "ICP/USDT:USDT": "2026-07-28T14:37:43.398989+00:00",
     "HBAR/USDT:USDT": "2026-07-28T14:40:52.996208+00:00",
-    "XRP/USDT:USDT": "2026-07-28T15:07:44.388975+00:00"
+    "XRP/USDT:USDT": "2026-07-28T15:07:44.388975+00:00",
+    "ETH/USDT:USDT": "2026-07-28T15:27:42.467825+00:00",
+    "OP/USDT:USDT": "2026-07-28T15:27:42.467825+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-28",
@@ -77,7 +24,9 @@
     false,
     false,
     true,
-    false
+    false,
+    true,
+    true
   ],
   "dynamic_min_score": 75,
   "stats": {
@@ -86,15 +35,15 @@
     "red_signals": 2,
     "long_signals": 5,
     "short_signals": 5,
-    "sl_hits": 6,
+    "sl_hits": 7,
     "tp1_hits": 4,
-    "tp2_hits": 1,
-    "tp3_hits": 0,
+    "tp2_hits": 2,
+    "tp3_hits": 1,
     "flips": 2,
-    "wins": 2,
+    "wins": 4,
     "losses": 6,
-    "be_saves": 2,
-    "r_sum": -3.2666666666666666
+    "be_saves": 3,
+    "r_sum": -0.9333333333333331
   },
   "last_daily_summary_date": "2026-07-28",
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T11:25:00+00:00",
