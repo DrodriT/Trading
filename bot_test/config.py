@@ -71,8 +71,8 @@ VOLUME_MA_PERIOD = 20
 RSI_PERIOD = 14
 
 # --- Filtros sobre la señal ---
-MIN_QUALITY_SCORE = 0    # 0 = mostrar todas las señales; sube esto para exigir más calidad
-SKIP_CHOPPY_SIGNALS = False   # si True, descarta señales cuando el régimen es Choppy
+MIN_QUALITY_SCORE = 75          # 0 = mostrar todas las señales; sube esto para exigir más calidad
+SKIP_CHOPPY_SIGNALS = False     # si True, descarta señales cuando el régimen es Choppy
 
 # ============================================================
 #  GESTIÓN DE RIESGO
