@@ -47,12 +47,12 @@ SYMBOLS = [
 ]
 
 # --- Timeframe principal ---
-TIMEFRAME = "3m"
+TIMEFRAME = "15m"
  
 # --- Timeframe de confirmación (HTF bias) ---
-# El Pine usa autoHtf() = 4× el timeframe actual, redondeado al bucket
-# disponible más cercano. Para 3m: 3×4=12min -> cae en el bucket "15".
-CONFIRM_TIMEFRAME = "15m"
+# El Pine usa autoHtf() = 4× el timeframe actual. Para 15m: 15×4=60min -> "1h".
+# Match exacto con el bucket del Pine (a diferencia de 3m, que redondeaba a 15m).
+CONFIRM_TIMEFRAME = "1h"
  
 # ============================================================
 #  SYNAPSE TRAIL (banda de tendencia tipo SuperTrend)
@@ -107,8 +107,8 @@ STATE_FILE = "state.json"
 # --- Frecuencia de revisión en modo bucle (segundos) ---
 # Solo aplica si corres `python bot.py` sin --once (modo bucle local).
 # En GitHub Actions (--once) esto no se usa: la frecuencia real la marca
-# quien dispare el workflow (cron-job.org) — debe apuntar cada 3 min.
-CHECK_INTERVAL_SECONDS = 180
+# quien dispare el workflow (cron-job.org) — debe apuntar cada 15 min.
+CHECK_INTERVAL_SECONDS = 900
  
 # ============================================================
 #  RESUMEN DIARIO DE ESTADÍSTICAS
