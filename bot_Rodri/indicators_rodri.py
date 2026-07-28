@@ -1,16 +1,93 @@
 """
-Indicadores adicionales para la estrategia Rodri v1.0.
+Indicadores para la estrategia Rodri v1.0 — archivo AUTOCONTENIDO, sin
+dependencias de ningún otro archivo del proyecto.
 
-Se apoyan en las funciones ya existentes de indicators.py (EMA, ATR, RSI,
-ADX, ratio de volumen) y añaden lo que faltaba para poder construir las 6
-estrategias del ensemble: detección de swings/fractales, un Volume Profile
-aproximado (POC/VAH/VAL) y detección de divergencias RSI.
+Incluye tanto los indicadores "clásicos" (EMA, ATR, RSI, ADX, ratio de
+volumen) como los nuevos que necesita el ensemble: swings/fractales, un
+Volume Profile aproximado (POC/VAH/VAL) y detección de divergencias RSI.
 
 Todo trabaja con índices POSICIONALES (0..n-1), asumiendo que el DataFrame
-viene con un índice por defecto (como el que devuelve fetch_ohlcv en bot.py).
+viene con un índice por defecto (como el que devuelve fetch_ohlcv en bot_rodri.py).
 """
 import numpy as np
 import pandas as pd
+
+
+# ─────────────────────────────────────────────────────────
+# Indicadores base (EMA, ATR, RSI, ADX, ratio de volumen)
+# ─────────────────────────────────────────────────────────
+
+def add_ema(df: pd.DataFrame, period: int, col_name: str) -> pd.DataFrame:
+    """Media móvil exponencial."""
+    df[col_name] = df["close"].ewm(span=period, adjust=False).mean()
+    return df
+
+
+def add_atr(df: pd.DataFrame, period: int = 14, col_name: str = "ATR") -> pd.DataFrame:
+    """Average True Range: mide la volatilidad reciente en unidades de precio."""
+    prev_close = df["close"].shift(1)
+    tr = pd.concat([
+        df["high"] - df["low"],
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
+    ], axis=1).max(axis=1)
+    df[col_name] = tr.rolling(window=period).mean()
+    return df
+
+
+def add_rsi(df: pd.DataFrame, period: int = 14, col_name: str = "RSI") -> pd.DataFrame:
+    """Relative Strength Index clásico (suavizado de Wilder)."""
+    delta = df["close"].diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    avg_loss = loss.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    rs = avg_gain / avg_loss
+    df[col_name] = 100 - (100 / (1 + rs))
+    df.loc[avg_loss == 0, col_name] = 100
+    return df
+
+
+def add_adx(df: pd.DataFrame, period: int = 14, prefix: str = "ADX") -> pd.DataFrame:
+    """Average Directional Index (con +DI y -DI), suavizado a la Wilder."""
+    up_move = df["high"].diff()
+    down_move = -df["low"].diff()
+
+    plus_dm = ((up_move > down_move) & (up_move > 0)) * up_move
+    minus_dm = ((down_move > up_move) & (down_move > 0)) * down_move
+
+    prev_close = df["close"].shift(1)
+    tr = pd.concat([
+        df["high"] - df["low"],
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
+    ], axis=1).max(axis=1)
+
+    atr_wilder = tr.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    plus_di = 100 * plus_dm.ewm(alpha=1 / period, adjust=False, min_periods=period).mean() / atr_wilder
+    minus_di = 100 * minus_dm.ewm(alpha=1 / period, adjust=False, min_periods=period).mean() / atr_wilder
+
+    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+    adx = dx.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+
+    df[prefix] = adx
+    df[f"{prefix}_plusDI"] = plus_di
+    df[f"{prefix}_minusDI"] = minus_di
+    return df
+
+
+def add_volume_ratio(df: pd.DataFrame, period: int = 20, col_name: str = "VOL_RATIO",
+                      ma_col_name: str = "VOL_MA") -> pd.DataFrame:
+    """Ratio entre el volumen actual y la media de las 'period' velas anteriores."""
+    avg_volume = df["volume"].shift(1).rolling(window=period).mean()
+    df[ma_col_name] = avg_volume
+    df[col_name] = df["volume"] / avg_volume
+    return df
+
+
+# ─────────────────────────────────────────────────────────
+# Indicadores nuevos para el ensemble Rodri
+# ─────────────────────────────────────────────────────────
 
 
 def add_swings(df: pd.DataFrame, left: int = 3, right: int = 3,

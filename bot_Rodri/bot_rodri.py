@@ -29,9 +29,9 @@ import pandas as pd
 import requests
 
 import config_rodri as config
-from strategy import build_risk_levels
 from strategy_rodri import (
-    compute_base_indicators, compute_ensemble_signal, suggest_leverage, cap_tp_at_r
+    compute_base_indicators, compute_ensemble_signal, suggest_leverage,
+    cap_tp_at_r, build_risk_levels
 )
 
 

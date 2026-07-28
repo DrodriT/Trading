@@ -1,20 +1,41 @@
 # ============================================================
 #  CONFIGURACIÓN — Estrategia "Rodri v1.0" (ensemble multi-estrategia)
 #  Inspirada en la ficha de parámetros de "Bot Portero V9 Sniper".
-#  Reutiliza Telegram/exchange/símbolos de tu config.py actual.
+#  Archivo AUTOCONTENIDO: no depende de ningún otro config.py.
 # ============================================================
-import config as base_config
+import os
 
-# --- Telegram / Exchange (reutilizados de config.py) ---
-TELEGRAM_TOKEN = base_config.TELEGRAM_TOKEN
-TELEGRAM_CHAT_ID = base_config.TELEGRAM_CHAT_ID
-EXCHANGE_ID = base_config.EXCHANGE_ID
-MARKET_TYPE = base_config.MARKET_TYPE
+# --- Telegram ---
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "PON_AQUI_TU_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "PON_AQUI_TU_CHAT_ID")
 
-# --- Símbolos ---
-# El V9 vigila 30 activos. De momento reutilizamos tu lista actual (18);
+# --- Exchange ---
+EXCHANGE_ID = "bitget"
+MARKET_TYPE = "swap"   # perpetuos
+
+# --- Símbolos a vigilar (formato ccxt para perpetuos con margen USDT) ---
+# El V9 vigila 30 activos. De momento son los mismos 18 que ya usabas;
 # añade aquí los que falten cuando quieras llegar a los 30.
-SYMBOLS = base_config.SYMBOLS
+SYMBOLS = [
+    "BTC/USDT:USDT",
+    "ETH/USDT:USDT",
+    "SOL/USDT:USDT",
+    "XRP/USDT:USDT",
+    "BCH/USDT:USDT",
+    "SUI/USDT:USDT",
+    "XLM/USDT:USDT",
+    "INJ/USDT:USDT",
+    "HBAR/USDT:USDT",
+    "ADA/USDT:USDT",
+    "AVAX/USDT:USDT",
+    "LTC/USDT:USDT",
+    "AAVE/USDT:USDT",
+    "ICP/USDT:USDT",
+    "OP/USDT:USDT",
+    "NEAR/USDT:USDT",
+    "XMR/USDT:USDT",
+    "DOGE/USDT:USDT",
+]
 
 # --- Timeframes ---
 TIMEFRAME = "5m"           # escaneo de señales (detección del ensemble)
@@ -91,4 +112,4 @@ CHECK_INTERVAL_SECONDS = 60   # solo aplica en modo bucle local (sin --once)
 SEND_DAILY_SUMMARY = True
 DAILY_SUMMARY_HOUR_UTC = 0
 
-STRATEGY_LABEL = "Rodri v1.0 (Multi-Estrategia)"
+STRATEGY_LABEL = "Rodri v1.0 (ensemble: SMC + Breakout + Trend Pullback + RSI Div + VP Mean Revert + Liquidity Grab)"

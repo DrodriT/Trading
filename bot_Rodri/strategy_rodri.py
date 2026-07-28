@@ -21,13 +21,41 @@ score_to_probability).
 """
 import pandas as pd
 
-from indicators import add_ema, add_atr, add_adx, add_rsi, add_volume_ratio
-from indicators_rodri import add_swings, add_volume_profile, rsi_divergence, last_confirmed_swing
+from indicators_rodri import (
+    add_ema, add_atr, add_adx, add_rsi, add_volume_ratio,
+    add_swings, add_volume_profile, rsi_divergence, last_confirmed_swing,
+)
 
 STRATEGY_NAMES = [
     "SMC_REVERSAL", "BREAKOUT", "TREND_PULLBACK",
     "RSI_DIVERGENCE", "VP_MEAN_REVERT", "LIQUIDITY_GRAB",
 ]
+
+# ── Presets de riesgo (SL en xATR, TP1/TP2/TP3 en múltiplos-R) ──
+RISK_PRESETS = {
+    "Conservative": {"sl_mult": 2.5, "tp_mults": [1.0, 2.0, 4.0]},
+    "Balanced":     {"sl_mult": 1.5, "tp_mults": [1.0, 2.0, 3.0]},
+    "Aggressive":   {"sl_mult": 1.0, "tp_mults": [1.5, 2.5, 4.0]},
+    "Scalping":     {"sl_mult": 0.8, "tp_mults": [0.8, 1.5, 2.0]},
+}
+
+
+def build_risk_levels(entry_price: float, atr_val: float, signal_type: str, preset: str):
+    """
+    Calcula SL y TP1/TP2/TP3 según el preset de riesgo elegido.
+    SL = entry -/+ (sl_mult × ATR). TP_n = entry +/- (tp_mult_n × distancia_SL).
+    """
+    cfg = RISK_PRESETS[preset]
+    is_long = signal_type == "ALCISTA"
+    sl_distance = atr_val * cfg["sl_mult"]
+
+    sl = entry_price - sl_distance if is_long else entry_price + sl_distance
+    tps = []
+    for i, mult in enumerate(cfg["tp_mults"], start=1):
+        tp_price = entry_price + sl_distance * mult if is_long else entry_price - sl_distance * mult
+        tps.append({"label": f"TP{i}", "price": tp_price, "rr": mult})
+
+    return {"sl": sl, "sl_distance": sl_distance, "tps": tps}
 
 
 def compute_base_indicators(df: pd.DataFrame, cfg) -> pd.DataFrame:
