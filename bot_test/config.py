@@ -78,7 +78,7 @@ SKIP_CHOPPY_SIGNALS = False     # si True, descarta señales cuando el régimen 
 #  GESTIÓN DE RIESGO
 # ============================================================
 # Presets disponibles: "Conservative", "Balanced", "Aggressive", "Scalping"
-RISK_PRESET = "Scalping"
+RISK_PRESET = "Balanced"
 USE_BREAK_EVEN = True    # mover el SL a la entrada tras alcanzar TP1
 
 # --- Persistencia de estado ---
@@ -88,7 +88,7 @@ STATE_FILE = "state.json"
 # Solo aplica si corres `python bot.py` sin --once (modo bucle local).
 # En GitHub Actions (--once) esto no se usa: la frecuencia real la marca
 # quien dispare el workflow (cron-job.org) — debe apuntar cada 3 min.
-CHECK_INTERVAL_SECONDS = 180
+CHECK_INTERVAL_SECONDS = 60
 
 # ============================================================
 #  RESUMEN DIARIO DE ESTADÍSTICAS
@@ -100,4 +100,4 @@ SEND_DAILY_SUMMARY = True
 DAILY_SUMMARY_HOUR_UTC = 0  # 0 = medianoche UTC
 
 # --- Etiqueta para identificar los mensajes de Telegram de esta versión ---
-STRATEGY_LABEL = "TEST (Synapse Trail: régimen + quality score + posición viva)"
+STRATEGY_LABEL = "RODRI (Bot Rodri v1.1)"
