@@ -1,32 +1,5 @@
 {
   "positions": {
-    "AVAX/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 6.602,
-      "entry_candle": "2026-07-28T22:00:00+00:00",
-      "sl": 6.582392857142858,
-      "tp1": 6.621607142857143,
-      "tp2": 6.641214285714287,
-      "tp3": 6.660821428571429,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 94,
-      "prob": 0.82,
-      "strategies": [
-        "TREND_PULLBACK"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
     "ICP/USDT:USDT": {
       "dir": "BAJISTA",
       "entry": 2.125,
@@ -58,7 +31,7 @@
   "cooldowns": {
     "BTC/USDT:USDT": "2026-07-29T02:01:15.617770+00:00",
     "BCH/USDT:USDT": "2026-07-29T01:05:11.732632+00:00",
-    "AVAX/USDT:USDT": "2026-07-28T19:25:47.091631+00:00",
+    "AVAX/USDT:USDT": "2026-07-29T02:18:39.385591+00:00",
     "INJ/USDT:USDT": "2026-07-28T14:25:49.085762+00:00",
     "LTC/USDT:USDT": "2026-07-28T14:31:53.591253+00:00",
     "ICP/USDT:USDT": "2026-07-28T14:37:43.398989+00:00",
@@ -80,7 +53,6 @@
   },
   "recent_results": [
     true,
-    true,
     false,
     true,
     true,
@@ -88,6 +60,7 @@
     false,
     true,
     true,
+    false,
     false
   ],
   "dynamic_min_score": 50,
@@ -97,15 +70,15 @@
     "red_signals": 2,
     "long_signals": 15,
     "short_signals": 13,
-    "sl_hits": 19,
+    "sl_hits": 20,
     "tp1_hits": 13,
     "tp2_hits": 8,
     "tp3_hits": 2,
     "flips": 5,
     "wins": 13,
-    "losses": 13,
+    "losses": 14,
     "be_saves": 9,
-    "r_sum": 0.06666666666666687
+    "r_sum": -0.9333333333333331
   },
   "last_daily_summary_date": "2026-07-28",
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T22:15:00+00:00",
