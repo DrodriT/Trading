@@ -62,6 +62,9 @@ VP_LOOKBACK = 100          # velas para construir el Volume Profile
 VP_BINS = 24
 
 # --- Ensemble / Score / Probabilidad ---
+MAX_SOLO_SCORE = 70            # techo de score cuando dispara UNA sola estrategia (sin confluencia)
+MIN_CONFLUENCE_FOR_NORMAL = 2  # una señal "normal" (tamaño completo) necesita >=2 estrategias de acuerdo;
+                                # con solo 1 estrategia, la señal SIEMPRE se trata como "roja" como mucho
 CONFLUENCE_BONUS = 5           # puntos extra por cada estrategia adicional en la misma dirección
 PROB_AT_SCORE_0 = 0.30         # probabilidad heurística cuando score=0
 PROB_AT_SCORE_100 = 0.85       # probabilidad heurística cuando score=100
@@ -105,6 +108,7 @@ LEV_ATR_PCT_LOW = 0.3       # ATR%/precio <= esto -> leverage máximo
 LEV_ATR_PCT_HIGH = 2.0      # ATR%/precio >= esto -> leverage mínimo
 
 # --- Persistencia y ritmo ---
+TRADE_LOG_MAX = 300           # nº máximo de operaciones cerradas que se guardan en el historial
 STATE_FILE = "state_rodri.json"
 CHECK_INTERVAL_SECONDS = 60   # solo aplica en modo bucle local (sin --once)
 
