@@ -46,6 +46,7 @@ def default_state():
         "red_signals_today": {"date": None, "count": 0},
         "recent_results": [],
         "dynamic_min_score": config.MIN_SCORE,
+        "trade_log": [],
         "stats": {},
         "last_daily_summary_date": None,
     }
@@ -218,8 +219,16 @@ def classify_closed_position(pos, close_reason, was_be_at_start):
 
 
 def classify_signal_quality(signal, dynamic_min_score):
-    """Devuelve 'normal', 'roja' o 'descartada'."""
-    if signal["score"] >= dynamic_min_score and signal["prob"] >= config.MIN_PROB:
+    """
+    Devuelve 'normal', 'roja' o 'descartada'.
+    Una señal solo puede ser 'normal' (tamaño completo) si además de superar
+    el score/prob mínimos, tiene confluencia de varias estrategias
+    (MIN_CONFLUENCE_FOR_NORMAL). Con una sola estrategia disparando, como
+    mucho se trata como 'roja' — nunca se abre a tamaño completo con la
+    palabra de una sola de las 6 estrategias.
+    """
+    has_confluence = signal["confluence"] >= config.MIN_CONFLUENCE_FOR_NORMAL
+    if has_confluence and signal["score"] >= dynamic_min_score and signal["prob"] >= config.MIN_PROB:
         return "normal"
     if signal["prob"] >= config.RED_MIN_PROB:
         return "roja"
@@ -267,6 +276,27 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
 
     state.setdefault("positions", {}).pop(symbol, None)
     set_cooldown(state, symbol, now)
+
+    log = state.setdefault("trade_log", [])
+    log.append({
+        "symbol": symbol,
+        "dir": pos["dir"],
+        "strategies": pos["strategies"],
+        "confluence": pos["confluence"],
+        "score": pos["score"],
+        "prob": pos["prob"],
+        "is_red": pos.get("is_red", False),
+        "leverage": pos.get("leverage"),
+        "entry": pos["entry"],
+        "exit": last_price,
+        "r_result": round(r_total, 4),
+        "is_win": is_win,
+        "close_reason": reason_label,
+        "entry_candle": pos["entry_candle"],
+        "closed_at": now.isoformat(),
+    })
+    if len(log) > config.TRADE_LOG_MAX:
+        del log[:len(log) - config.TRADE_LOG_MAX]
 
 
 # ══════════════════════════════════════════════════════════
