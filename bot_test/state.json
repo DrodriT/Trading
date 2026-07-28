@@ -5,28 +5,6 @@
   "active_positions": {},
   "updated_at": null,
   "positions": {
-    "DOGE/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 0.06996,
-      "entry_candle": "2026-07-28T04:27:00+00:00",
-      "sl": 0.07007423076923076,
-      "tp1": 0.06984576923076923,
-      "tp2": 0.06973153846153844,
-      "tp3": 0.06961730769230767,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "grade": "A",
-      "score": 80,
-      "regime_label": "Mixed",
-      "regime_score": 38.00691144856354
-    },
     "XRP/USDT:USDT": {
       "dir": "BAJISTA",
       "entry": 1.0563,
@@ -57,15 +35,15 @@
     "grade_a": 5,
     "grade_b": 0,
     "grade_c": 1,
-    "sl_hits": 4,
+    "sl_hits": 5,
     "tp1_hits": 1,
     "tp2_hits": 0,
     "tp3_hits": 0,
     "flips": 0,
     "wins": 1,
-    "losses": 3,
+    "losses": 4,
     "be_saves": 1,
-    "r_sum": -2.666666666666667
+    "r_sum": -3.666666666666667
   },
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T04:54:00+00:00",
   "ETH/USDT:USDT_last_processed_candle": "2026-07-28T04:54:00+00:00",
