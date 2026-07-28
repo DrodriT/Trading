@@ -1,32 +1,5 @@
 {
   "positions": {
-    "ICP/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 2.125,
-      "entry_candle": "2026-07-28T22:00:00+00:00",
-      "sl": 2.125,
-      "tp1": 2.121464285714286,
-      "tp2": 2.1179285714285716,
-      "tp3": 2.1143928571428576,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 100,
-      "prob": 0.85,
-      "strategies": [
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
     "ADA/USDT:USDT": {
       "dir": "BAJISTA",
       "entry": 0.1626,
@@ -61,7 +34,7 @@
     "AVAX/USDT:USDT": "2026-07-29T02:18:39.385591+00:00",
     "INJ/USDT:USDT": "2026-07-28T14:25:49.085762+00:00",
     "LTC/USDT:USDT": "2026-07-28T14:31:53.591253+00:00",
-    "ICP/USDT:USDT": "2026-07-28T14:37:43.398989+00:00",
+    "ICP/USDT:USDT": "2026-07-29T02:51:00.926944+00:00",
     "HBAR/USDT:USDT": "2026-07-28T14:40:52.996208+00:00",
     "XRP/USDT:USDT": "2026-07-29T01:01:12.273229+00:00",
     "ETH/USDT:USDT": "2026-07-28T23:35:46.453965+00:00",
@@ -79,7 +52,6 @@
     "count": 2
   },
   "recent_results": [
-    true,
     false,
     true,
     true,
@@ -88,7 +60,8 @@
     true,
     true,
     false,
-    false
+    false,
+    true
   ],
   "dynamic_min_score": 50,
   "stats": {
@@ -100,31 +73,51 @@
     "sl_hits": 20,
     "tp1_hits": 15,
     "tp2_hits": 9,
-    "tp3_hits": 2,
+    "tp3_hits": 3,
     "flips": 5,
-    "wins": 13,
+    "wins": 14,
     "losses": 14,
     "be_saves": 9,
-    "r_sum": -0.9333333333333331
+    "r_sum": 1.0666666666666669
   },
   "last_daily_summary_date": "2026-07-28",
-  "BTC/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "ETH/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "SOL/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "XRP/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "BCH/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "SUI/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "XLM/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "INJ/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "HBAR/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "ADA/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "AVAX/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "LTC/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "AAVE/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "ICP/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "OP/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "NEAR/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "XMR/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "DOGE/USDT:USDT_last_processed_candle": "2026-07-28T22:45:00+00:00",
-  "trade_log": []
+  "BTC/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "ETH/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "SOL/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "XRP/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "BCH/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "SUI/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "XLM/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "INJ/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "HBAR/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "ADA/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "AVAX/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "LTC/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "AAVE/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "ICP/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "OP/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "NEAR/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "XMR/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "DOGE/USDT:USDT_last_processed_candle": "2026-07-28T22:50:00+00:00",
+  "trade_log": [
+    {
+      "symbol": "ICP/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 1,
+      "score": 100,
+      "prob": 0.85,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 2.125,
+      "exit": 2.115,
+      "r_result": 2.0,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-28T22:00:00+00:00",
+      "closed_at": "2026-07-28T22:51:00.926944+00:00"
+    }
+  ]
 }
