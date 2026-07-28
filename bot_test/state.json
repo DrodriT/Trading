@@ -26,28 +26,6 @@
       "score": 77,
       "regime_label": "Choppy",
       "regime_score": 33.57868726090138
-    },
-    "ETH/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 1879.52,
-      "entry_candle": "2026-07-28T06:09:00+00:00",
-      "sl": 1879.52,
-      "tp1": 1878.018438095238,
-      "tp2": 1876.7045714285714,
-      "tp3": 1875.7660952380952,
-      "tp_rr": [
-        0.8,
-        1.5,
-        2.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "grade": "A",
-      "score": 78,
-      "regime_label": "Mixed",
-      "regime_score": 41.63433840985473
     }
   },
   "stats": {
@@ -57,15 +35,15 @@
     "grade_a": 7,
     "grade_b": 0,
     "grade_c": 1,
-    "sl_hits": 6,
+    "sl_hits": 7,
     "tp1_hits": 3,
     "tp2_hits": 1,
     "tp3_hits": 0,
     "flips": 0,
-    "wins": 1,
+    "wins": 2,
     "losses": 5,
-    "be_saves": 1,
-    "r_sum": -4.666666666666667
+    "be_saves": 2,
+    "r_sum": -4.4
   },
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T06:12:00+00:00",
   "ETH/USDT:USDT_last_processed_candle": "2026-07-28T06:12:00+00:00",
