@@ -14,7 +14,7 @@
         3.0
       ],
       "tp1_reached": true,
-      "tp2_reached": false,
+      "tp2_reached": true,
       "tp3_reached": false,
       "be_active": true,
       "score": 100,
@@ -24,33 +24,6 @@
       ],
       "confluence": 1,
       "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
-    "DOGE/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 0.06937,
-      "entry_candle": "2026-07-28T14:20:00+00:00",
-      "sl": 0.06937,
-      "tp1": 0.06974392857142857,
-      "tp2": 0.07011785714285715,
-      "tp3": 0.07049178571428572,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 84,
-      "prob": 0.76,
-      "strategies": [
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 1,
-      "leverage": 19,
       "is_red": false,
       "size_factor": 1.0
     }
@@ -69,14 +42,14 @@
     "NEAR/USDT:USDT": "2026-07-28T16:02:42.157685+00:00",
     "XMR/USDT:USDT": "2026-07-28T17:31:40.069999+00:00",
     "XLM/USDT:USDT": "2026-07-28T17:32:50.391250+00:00",
-    "SOL/USDT:USDT": "2026-07-28T18:16:48.356159+00:00"
+    "SOL/USDT:USDT": "2026-07-28T18:16:48.356159+00:00",
+    "DOGE/USDT:USDT": "2026-07-28T19:21:41.243642+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-28",
     "count": 2
   },
   "recent_results": [
-    true,
     false,
     true,
     true,
@@ -85,6 +58,7 @@
     true,
     false,
     false,
+    true,
     true
   ],
   "dynamic_min_score": 75,
@@ -96,13 +70,13 @@
     "short_signals": 5,
     "sl_hits": 13,
     "tp1_hits": 9,
-    "tp2_hits": 5,
-    "tp3_hits": 1,
+    "tp2_hits": 6,
+    "tp3_hits": 2,
     "flips": 2,
-    "wins": 7,
+    "wins": 8,
     "losses": 9,
     "be_saves": 6,
-    "r_sum": -1.5999999999999999
+    "r_sum": 0.40000000000000013
   },
   "last_daily_summary_date": "2026-07-28",
   "BTC/USDT:USDT_last_processed_candle": "2026-07-28T15:20:00+00:00",
