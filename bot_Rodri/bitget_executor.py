@@ -1,14 +1,87 @@
 """
-bitget_executor.py — Ejecución de operaciones en Bitget demo.
-Abre posición con SL, permite cierres parciales y mover SL a BE.
+bitget_executor.py — Ejecución de operaciones en la cuenta DEMO de Bitget
+para la estrategia Rodri v1.0.
+
+Recibe las órdenes de strategy_rodri/bot_rodri (dirección, entrada, SL,
+TP1/TP2/TP3, leverage) y las ejecuta en Bitget:
+  1. Fija el apalancamiento.
+  2. Calcula el tamaño de la posición según un % de riesgo del balance
+     demo (distancia al SL = 100% del riesgo asumido).
+  3. Abre la posición a mercado.
+  4. Coloca el SL y los 3 TP como órdenes REALES reduceOnly en el propio
+     Bitget (no las vigila el bot con polling): si el bot se cae o pierde
+     conexión, el SL y los TP se ejecutan igual, porque viven en el
+     exchange.
+  5. Permite mover el SL a break-even (cancela la orden vieja, coloca una
+     nueva) y cerrar/limpiar lo que quede de la posición (usado en un flip
+     o como red de seguridad al cerrar).
+
+╔══════════════════════════════════════════════════════════════════════╗
+║ LÉEME ANTES DE USAR — IMPORTANTE                                      ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ 1. El modo demo de Bitget usa tus claves API REALES, pero necesita la ║
+║    cabecera 'PAPTRADING: 1' en cada petición para operar con USDT     ║
+║    virtual en vez de fondos reales. Este módulo la añade solo, pero   ║
+║    aun así verifica en la app de Bitget que estás en la cuenta demo   ║
+║    (3000 USDT virtuales) antes de dejarlo corriendo desatendido.      ║
+║                                                                        ║
+║ 2. Este código NO ha podido probarse contra la API real de Bitget     ║
+║    (sin acceso de red a api.bitget.com desde donde se escribió).      ║
+║    Antes de confiar en él, prueba cada función a mano con importes    ║
+║    pequeños: abre una posición, comprueba que aparecen el SL y los 3  ║
+║    TP en la app, fuerza un TP1 y comprueba que el SL se mueve a BE.   ║
+║                                                                        ║
+║ 3. Si tu cuenta de Bitget está en modo "hedge" (posiciones long/short ║
+║    independientes) en vez de "one-way", es posible que Bitget exija   ║
+║    un parámetro adicional 'holdSide': 'long'/'short' en las órdenes.  ║
+║    Si ves errores de tipo "posición no encontrada" o similar al       ║
+║    colocar el SL/TP, ese es el primer sitio donde mirar.              ║
+╚══════════════════════════════════════════════════════════════════════╝
 """
 import ccxt
-import time
-import logging
 
-logger = logging.getLogger(__name__)
+
+class SymbolUnavailableError(Exception):
+    """El símbolo no está disponible para operar en el entorno demo de Bitget."""
+    pass
+
+
+class MinSizeTooLargeError(Exception):
+    """El tamaño mínimo que exige Bitget para este símbolo superaría el riesgo permitido."""
+    pass
+
+
+def ensure_position_settings(exchange, symbol: str, margin_mode: str = "crossed"):
+    """
+    Fuerza el modo one-way (sin hedge) y el modo de margen ANTES de operar.
+    Es idempotente: si ya estaban puestos así, Bitget puede devolver un
+    error de "ya está configurado así" que aquí se ignora sin más.
+
+    El parámetro 'productType' se pasa explícito porque hay un bug conocido
+    de ccxt con el modo demo de Bitget: sin él, algunas versiones mandan
+    'SUSDT-FUTURES' en vez de 'USDT-FUTURES' y la llamada falla.
+
+    Esto es lo que corrige errores del tipo {"code":"25236","msg":"Incorrect
+    position open type"} — normalmente un desajuste entre el modo de
+    posición/margen de la cuenta y el que asume la orden.
+    """
+    try:
+        exchange.set_position_mode(False, symbol, params={"productType": "USDT-FUTURES"})
+    except Exception as e:
+        print(f"[bitget_executor] Aviso (position mode) en {symbol}: {e}")
+    try:
+        exchange.set_margin_mode(margin_mode, symbol, params={"productType": "USDT-FUTURES"})
+    except Exception as e:
+        print(f"[bitget_executor] Aviso (margin mode) en {symbol}: {e}")
+
 
 def create_demo_exchange(api_key: str, api_secret: str, api_password: str):
+    """
+    Crea una instancia de ccxt.bitget apuntando al entorno DEMO.
+    Se usa la cabecera 'PAPTRADING' explícita en vez del set_sandbox_mode()
+    de ccxt, que ha tenido bugs conocidos y mal documentados para Bitget
+    (mezcla las dos formas de "demo" que existen en su API).
+    """
     exchange = ccxt.bitget({
         "apiKey": api_key,
         "secret": api_secret,
@@ -20,191 +93,190 @@ def create_demo_exchange(api_key: str, api_secret: str, api_password: str):
     exchange.headers["PAPTRADING"] = "1"
     return exchange
 
+
 def get_usdt_balance(exchange) -> float:
-    balance = exchange.fetch_balance(params={"type": "swap"})
+    """Balance disponible en USDT (virtual, en la cuenta demo) para futuros."""
+    balance = exchange.fetch_balance(params={"type": "swap", "productType": "USDT-FUTURES"})
     usdt = balance.get("USDT", {})
-    return float(usdt.get("free", 0.0) or 0.0)
+    value = usdt.get("free", None)
+    if value is None:
+        value = usdt.get("total", 0.0)
+    return float(value or 0.0)
+
 
 def set_leverage(exchange, symbol: str, leverage: int):
     try:
-        exchange.set_leverage(leverage, symbol)
+        exchange.set_leverage(leverage, symbol, params={"productType": "USDT-FUTURES"})
     except Exception as e:
         print(f"[bitget_executor] Aviso: no se pudo fijar leverage {leverage}x en {symbol}: {e}")
 
+
 def calculate_position_size(balance: float, entry_price: float, sl_price: float,
                              risk_pct: float) -> float:
+    """
+    Tamaño de posición (en unidades del activo base, ej. nº de BTC) para
+    arriesgar 'risk_pct' % del balance demo si el precio llega al SL.
+    NOTA: esto es el tamaño de la POSICIÓN (no el margen). El margen real
+    usado = tamaño × precio / leverage — con leverage alto, el margen
+    bloqueado es menor, pero el riesgo en USDT si salta el SL es el mismo
+    (por eso el cálculo de tamaño no depende del leverage).
+    """
     risk_amount = balance * (risk_pct / 100.0)
     sl_distance = abs(entry_price - sl_price)
     if sl_distance <= 0:
         return 0.0
     return risk_amount / sl_distance
 
-def get_open_position_info(exchange, symbol: str):
-    """Devuelve (size, entry_price) de la posición abierta para el símbolo."""
+
+def get_open_position_size(exchange, symbol: str) -> float:
+    """Contratos abiertos actualmente en el exchange para ese símbolo (0 si no hay posición)."""
     try:
-        positions = exchange.fetch_positions([symbol])
+        positions = exchange.fetch_positions([symbol], params={"productType": "USDT-FUTURES"})
         for p in positions:
             contracts = p.get("contracts") or 0
             if contracts:
-                return float(contracts), float(p.get("entryPrice", 0))
+                return float(contracts)
     except Exception as e:
-        print(f"[bitget_executor] Aviso: no se pudo consultar la posición en {symbol}: {e}")
-    return 0.0, None
+        print(f"[bitget_executor] Aviso: no se pudo consultar la posición abierta en {symbol}: {e}")
+    return 0.0
 
-def place_sl_order(exchange, symbol, direction, sl_price, size):
-    """Orden stop-market reduceOnly para el SL."""
-    side = 'sell' if direction == "ALCISTA" else 'buy'
-    order = exchange.create_order(
-        symbol=symbol,
-        type='stop',
-        side=side,
-        amount=size,
-        price=None,
-        params={
-            'stopPrice': sl_price,
-            'reduceOnly': True,
-            'orderType': 'market',
-        }
-    )
-    return order
-
-def open_position(exchange, symbol: str, direction: str, leverage: int,
-                   entry_price: float, sl_price: float, risk_pct: float) -> dict:
-    """
-    Abre la posición con orden LIMIT y coloca SL con reintentos y temporizador.
-    """
-    is_long = direction == "ALCISTA"
-    entry_side = "buy" if is_long else "sell"
-
-    set_leverage(exchange, symbol, leverage)
-
-    balance = get_usdt_balance(exchange)
-    raw_size = calculate_position_size(balance, entry_price, sl_price, risk_pct)
-    size = float(exchange.amount_to_precision(symbol, raw_size))
-    if size <= 0:
-        raise ValueError(f"Tamaño de posición calculado es 0 para {symbol} (balance={balance:.2f} USDT)")
-
-    # 1. ORDEN DE ENTRADA (límite)
-    entry_order = exchange.create_order(
-        symbol=symbol,
-        type='limit',
-        side=entry_side,
-        amount=size,
-        price=entry_price,
-    )
-    print(f"[bitget_executor] Orden de entrada enviada. ID: {entry_order.get('id')}")
-
-    # 2. Colocar SL con temporizador y reintentos (máx 10s)
-    start_time = time.time()
-    timeout = 10  # segundos
-    sl_order = None
-    attempt = 0
-
-    while time.time() - start_time < timeout:
-        attempt += 1
-        try:
-            sl_order = place_sl_order(exchange, symbol, direction, sl_price, size)
-            print(f"[bitget_executor] SL colocado en intento {attempt}")
-            break
-        except Exception as e:
-            error_msg = str(e)
-            if "No position available to close" in error_msg:
-                print(f"[bitget_executor] Intento {attempt}: posición aún no disponible, esperando 0.5s...")
-                time.sleep(0.5)
-            else:
-                print(f"[bitget_executor] Intento {attempt} falló con error inesperado: {e}")
-                # Si es otro error, reintentamos igualmente
-                time.sleep(0.5)
-
-    if sl_order is None:
-        # Si no se pudo colocar el SL, cancelamos la orden de entrada para no dejar posición sin protección
-        try:
-            exchange.cancel_order(entry_order.get('id'), symbol)
-            print("[bitget_executor] Orden de entrada cancelada por fallo en SL.")
-        except:
-            pass
-        raise RuntimeError("No se pudo colocar el SL después de varios intentos (timeout).")
-
-    # Verificar que la posición realmente se abrió
-    current_size, actual_entry = get_open_position_info(exchange, symbol)
-    if current_size <= 0:
-        print("[bitget_executor] Advertencia: no se detectó posición abierta aunque el SL se colocó.")
-        # Podríamos cancelar SL y lanzar error, pero quizás la posición se abrirá después
-        # Por ahora, continuamos y confiamos en que la orden se ejecutará.
-
-    return {
-        "entry_order_id": entry_order.get("id"),
-        "size": size,
-        "sl_order_id": sl_order.get("id"),
-        "sl_price": sl_price,
-        "entry_price": entry_price,
-        "direction": direction,
-        "symbol": symbol,
-    }
 
 def cancel_order_safe(exchange, symbol: str, order_id):
     if not order_id:
         return
     try:
-        exchange.cancel_order(order_id, symbol)
+        exchange.cancel_order(order_id, symbol, params={"productType": "USDT-FUTURES"})
     except Exception as e:
         print(f"[bitget_executor] Aviso: no se pudo cancelar la orden {order_id} en {symbol}: {e}")
 
-def move_sl_to_be(exchange, state):
-    """Mueve el SL a break-even (precio de entrada) para la cantidad restante."""
-    current_size, _ = get_open_position_info(exchange, state["symbol"])
-    if current_size <= 0:
-        print("[bitget_executor] No hay posición abierta, no se puede mover SL.")
-        return None
 
-    cancel_order_safe(exchange, state["symbol"], state["sl_order_id"])
+def open_position(exchange, symbol: str, direction: str, leverage: int,
+                   entry_price: float, sl_price: float, tp_prices: list,
+                   risk_pct: float, tp_split=(1 / 3, 1 / 3, 1 / 3),
+                   max_min_size_risk_multiplier: float = 3.0,
+                   margin_mode: str = "crossed") -> dict:
+    """
+    Abre la posición en Bitget demo y coloca SL + 3 TP como órdenes reales
+    reduceOnly. Devuelve un dict con los IDs de las órdenes y el tamaño
+    real usado, para que el bot lo guarde en su estado y pueda gestionarlo
+    después (ej. mover el SL a BE, cancelar al cerrar).
+
+    Comprobaciones antes de operar:
+      1. El símbolo debe estar disponible para operar en el entorno demo
+         (algunos símbolos con datos de mercado normales no lo están) ->
+         SymbolUnavailableError si no.
+      2. Si el tamaño calculado por riesgo es menor que el mínimo que
+         exige Bitget para ese contrato, se sube al mínimo — PERO solo si
+         eso no dispara el riesgo real por encima de
+         'max_min_size_risk_multiplier' veces el riesgo objetivo (por
+         defecto 3x); si lo supera, se descarta con MinSizeTooLargeError
+         en vez de arriesgar de más en silencio.
+      3. Se fuerza el modo one-way + el modo de margen antes de operar,
+         para evitar errores de "tipo de apertura de posición incorrecto".
+    """
+    is_long = direction == "ALCISTA"
+    entry_side = "buy" if is_long else "sell"
+    close_side = "sell" if is_long else "buy"
+
+    exchange.load_markets()
+    if symbol not in exchange.markets:
+        raise SymbolUnavailableError(f"{symbol} no está disponible para operar en Bitget demo")
+
+    ensure_position_settings(exchange, symbol, margin_mode)
+    set_leverage(exchange, symbol, leverage)
+
+    balance = get_usdt_balance(exchange)
+    raw_size = calculate_position_size(balance, entry_price, sl_price, risk_pct)
+    size = float(exchange.amount_to_precision(symbol, raw_size))
+
+    market = exchange.market(symbol)
+    min_amount = ((market.get("limits") or {}).get("amount") or {}).get("min")
+    size_bumped_to_minimum = False
+    if min_amount and size < min_amount:
+        implied_risk_pct = risk_pct * (min_amount / raw_size) if raw_size > 0 else float("inf")
+        if implied_risk_pct > risk_pct * max_min_size_risk_multiplier:
+            raise MinSizeTooLargeError(
+                f"tamaño mínimo de {symbol} ({min_amount}) implicaría arriesgar "
+                f"~{implied_risk_pct:.2f}% en vez del {risk_pct}% configurado "
+                f"(supera el límite de x{max_min_size_risk_multiplier})"
+            )
+        size = min_amount
+        size_bumped_to_minimum = True
+
+    if size <= 0:
+        raise ValueError(f"Tamaño de posición calculado es 0 para {symbol} (balance={balance:.2f} USDT)")
+
+    entry_order = exchange.create_order(
+        symbol, "market", entry_side, size, params={"productType": "USDT-FUTURES"}
+    )
+
+    sl_order = exchange.create_order(
+        symbol, "market", close_side, size,
+        params={"stopLossPrice": sl_price, "reduceOnly": True, "productType": "USDT-FUTURES"},
+    )
+
+    tp_orders = []
+    remaining = size
+    last_i = len(tp_prices) - 1
+    for i, (tp_price, split) in enumerate(zip(tp_prices, tp_split)):
+        tp_size = round(remaining, 8) if i == last_i else float(exchange.amount_to_precision(symbol, size * split))
+        remaining = round(remaining - tp_size, 8)
+        tp_order = exchange.create_order(
+            symbol, "market", close_side, tp_size,
+            params={"takeProfitPrice": tp_price, "reduceOnly": True, "productType": "USDT-FUTURES"},
+        )
+        tp_orders.append({"order_id": tp_order.get("id"), "price": tp_price, "size": tp_size})
+
+    return {
+        "entry_order_id": entry_order.get("id"),
+        "size": size,
+        "size_bumped_to_minimum": size_bumped_to_minimum,
+        "sl_order_id": sl_order.get("id"),
+        "tp_orders": tp_orders,
+    }
+
+
+def move_sl_to_be(exchange, symbol: str, direction: str, old_sl_order_id, new_sl_price: float,
+                   size: float):
+    """
+    Cancela la orden de SL anterior y coloca una nueva en break-even.
+    Devuelve el ID de la nueva orden de SL (o None si algo falla).
+    """
+    is_long = direction == "ALCISTA"
+    close_side = "sell" if is_long else "buy"
+
+    cancel_order_safe(exchange, symbol, old_sl_order_id)
 
     try:
-        new_sl = place_sl_order(exchange, state["symbol"], state["direction"],
-                                 state["entry_price"], current_size)
-        state["sl_order_id"] = new_sl.get("id")
-        state["sl_price"] = state["entry_price"]
-        return new_sl.get("id")
+        new_sl_order = exchange.create_order(
+            symbol, "market", close_side, size,
+            params={"stopLossPrice": new_sl_price, "reduceOnly": True, "productType": "USDT-FUTURES"},
+        )
+        return new_sl_order.get("id")
     except Exception as e:
-        print(f"[bitget_executor] Error al mover SL a BE: {e}")
+        print(f"[bitget_executor] ERROR moviendo SL a BE en {symbol}: {e}")
         return None
 
-def close_partial(exchange, state, amount, move_sl_to_be_after=False):
-    """Cierra una cantidad parcial y opcionalmente mueve SL a BE."""
-    current_size, _ = get_open_position_info(exchange, state["symbol"])
-    if current_size <= 0:
-        print("[bitget_executor] No hay posición abierta para cerrar.")
-        return None
 
-    if amount > current_size:
-        print(f"[bitget_executor] Advertencia: se intenta cerrar {amount} pero solo hay {current_size}. Se cerrará todo.")
-        amount = current_size
+def close_remaining_position(exchange, symbol: str, direction: str,
+                              sl_order_id=None, tp_order_ids=None):
+    """
+    Red de seguridad al cerrar un trade (flip, SL o TP3): cancela las
+    órdenes de SL/TP que sigan pendientes y, si queda tamaño abierto en el
+    exchange (ej. por un flip, o porque el SL/TP del propio Bitget aún no
+    se ha ejecutado), lo cierra a mercado.
+    """
+    close_side = "sell" if direction == "ALCISTA" else "buy"
 
-    close_side = "sell" if state["direction"] == "ALCISTA" else "buy"
-    try:
-        order = exchange.create_order(state["symbol"], "market", close_side, amount,
-                                      params={"reduceOnly": True})
-        new_size = current_size - amount
-        state["size"] = new_size
+    cancel_order_safe(exchange, symbol, sl_order_id)
+    for tp_id in (tp_order_ids or []):
+        cancel_order_safe(exchange, symbol, tp_id)
 
-        if move_sl_to_be_after and new_size > 0:
-            move_sl_to_be(exchange, state)
-        return order
-    except Exception as e:
-        print(f"[bitget_executor] ERROR al cerrar parcial: {e}")
-        return None
-
-def close_remaining_position(exchange, state):
-    """Cierra toda la posición restante y cancela el SL."""
-    cancel_order_safe(exchange, state["symbol"], state["sl_order_id"])
-    current_size, _ = get_open_position_info(exchange, state["symbol"])
-    if current_size > 0:
-        close_side = "sell" if state["direction"] == "ALCISTA" else "buy"
+    remaining = get_open_position_size(exchange, symbol)
+    if remaining > 0:
         try:
-            order = exchange.create_order(state["symbol"], "market", close_side, current_size,
-                                          params={"reduceOnly": True})
-            state["size"] = 0
-            return order
+            return exchange.create_order(symbol, "market", close_side, remaining,
+                                          params={"reduceOnly": True, "productType": "USDT-FUTURES"})
         except Exception as e:
-            print(f"[bitget_executor] ERROR cerrando el resto de la posición: {e}")
+            print(f"[bitget_executor] ERROR cerrando el resto de la posición en {symbol}: {e}")
     return None

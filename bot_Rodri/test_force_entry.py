@@ -1,20 +1,44 @@
 """
-test_force_entry.py — Prueba de apertura de posición con SL y cierre parcial (TP1) con SL a BE.
+test_force_entry.py — Forzar una entrada de prueba en Bitget demo.
+
+Sirve para comprobar que la conexión con Bitget funciona de verdad (abre
+posición, coloca SL + 3 TP como órdenes reales) SIN depender de que el
+motor de señales de Rodri dispare una señal real.
+
+Edita los valores de abajo (símbolo, dirección, entrada, SL, TPs,
+leverage) — por defecto están puestos los de tu captura de OPUSDT LONG —
+y ejecútalo:
+
+    python3 test_force_entry.py
+
+Después de correrlo, VE A LA APP DE BITGET (cuenta demo) y comprueba:
+  1. Que se abrió la posición con el tamaño/leverage esperado.
+  2. Que aparecen 4 órdenes pendientes: el SL y los 3 TP.
+  3. Los precios de esas órdenes coinciden con los de abajo.
 """
 import config_rodri as config
 import bitget_executor as bx
-import time
 
+# ── EDITA ESTO con los valores que quieras forzar ──
+# Valores basados en el precio de mercado de BTC/USDT a 29 jul 2026 (~64,000 USDT),
+# con SL/TPs calculados igual que el preset "Balanced" (SL 1.5xATR, TPs 1R/2R/3R,
+# ATR aproximado ~180 USDT para este rango de volatilidad).
 SYMBOL = "BTC/USDT:USDT"
-DIRECTION = "ALCISTA"
+DIRECTION = "ALCISTA"       # "ALCISTA" (long) o "BAJISTA" (short)
 ENTRY_PRICE = 64000.0
 SL_PRICE = 63730.0
+TP1_PRICE = 64270.0
+TP2_PRICE = 64540.0
+TP3_PRICE = 64810.0
 LEVERAGE = 10
+# ────────────────────────────────────────────────────
+
 
 def _mask(val: str) -> str:
     if not val:
         return "(VACÍO)"
     return f"longitud={len(val)} | empieza_por='{val[:3]}' | termina_en='{val[-3:]}'"
+
 
 def main():
     missing = [
@@ -25,62 +49,65 @@ def main():
         ] if not val or "PON_AQUI" in val
     ]
     if missing:
-        print(f"[ERROR] Faltan/están vacías estas claves de Bitget: {', '.join(missing)}")
+        print(f"[ERROR] Faltan/están vacías estas claves de Bitget: {', '.join(missing)}. "
+              f"Revisa que los nombres de los secrets en GitHub coincidan EXACTAMENTE con los "
+              f"que usa el workflow (env: BITGET_API_KEY/BITGET_API_SECRET/BITGET_API_PASSWORD).")
         return
 
-    print("Diagnóstico de credenciales:")
+    print("Diagnóstico de credenciales recibidas (nunca se muestran completas):")
     print(f"  BITGET_API_KEY:      {_mask(config.BITGET_API_KEY)}")
     print(f"  BITGET_API_SECRET:   {_mask(config.BITGET_API_SECRET)}")
     print(f"  BITGET_API_PASSWORD: {_mask(config.BITGET_API_PASSWORD)}")
-    print()
+    print("(Si alguna longitud te sorprende -ej. de más por un espacio o salto de línea pegado-, ahí está el fallo)\n")
 
     print("Conectando a Bitget demo...")
     exchange = bx.create_demo_exchange(
         config.BITGET_API_KEY, config.BITGET_API_SECRET, config.BITGET_API_PASSWORD
     )
 
-    print("Probando llamada pública...")
+    print("Probando primero una llamada PÚBLICA (sin autenticación) para aislar el problema...")
     try:
         markets = exchange.load_markets()
-        print(f"  OK: {len(markets)} mercados cargados.")
+        print(f"  OK: {len(markets)} mercados cargados. La conexión base y la cabecera PAPTRADING funcionan.")
     except Exception as e:
-        print(f"  ERROR: {e}")
+        print(f"  ERROR incluso en la llamada pública: {e}")
+        print("  Esto NO sería un problema de credenciales, sino de conectividad/cabecera. Avisa con este error.")
         return
 
-    print("\nProbando fetch_balance...")
+    print("\nProbando ahora una llamada PRIVADA (fetch_balance, requiere firma con tus claves)...")
+
+    for product_type in ("USDT-FUTURES", "SUSDT-FUTURES"):
+        try:
+            raw_balance = exchange.fetch_balance(params={"type": "swap", "productType": product_type})
+            print(f"\n🔍 fetch_balance con productType='{product_type}':")
+            print(f"  raw_balance.get('USDT'): {raw_balance.get('USDT')}")
+            print(f"  raw_balance.get('info'): {raw_balance.get('info')}")
+        except Exception as e:
+            print(f"\n🔍 fetch_balance con productType='{product_type}' -> ERROR: {e}")
+
     balance = bx.get_usdt_balance(exchange)
-    print(f"Balance demo: {balance:.2f} USDT")
+    print(f"\nBalance demo disponible (según get_usdt_balance, con USDT-FUTURES): {balance:.2f} USDT")
 
-    print(f"\nAbriendo posición: {SYMBOL} | {DIRECTION} | Entrada {ENTRY_PRICE} | "
-          f"SL {SL_PRICE} | Leverage {LEVERAGE}x | Riesgo {config.RISK_PCT_PER_TRADE}%")
+    print(f"\nForzando entrada: {SYMBOL} | {DIRECTION} | Entrada {ENTRY_PRICE} | "
+          f"SL {SL_PRICE} | Leverage {LEVERAGE}x | Riesgo {config.RISK_PCT_PER_TRADE}% del balance")
 
-    # Abrir posición solo con SL
-    state = bx.open_position(
+    result = bx.open_position(
         exchange, SYMBOL, DIRECTION, LEVERAGE,
         entry_price=ENTRY_PRICE, sl_price=SL_PRICE,
-        risk_pct=config.RISK_PCT_PER_TRADE,
+        tp_prices=[TP1_PRICE, TP2_PRICE, TP3_PRICE],
+        risk_pct=config.RISK_PCT_PER_TRADE, tp_split=config.TP_SPLIT,
     )
 
-    print("\n✅ Posición abierta:")
-    print(f"  Tamaño: {state['size']}")
-    print(f"  ID entrada: {state['entry_order_id']}")
-    print(f"  ID SL: {state['sl_order_id']}")
-    print(f"  Precio entrada: {state['entry_price']}")
-    print(f"  SL price: {state['sl_price']}")
+    print("\n✅ Resultado de la apertura:")
+    print(f"  Tamaño de la posición: {result['size']}")
+    print(f"  ID orden de entrada:   {result['entry_order_id']}")
+    print(f"  ID orden SL:           {result['sl_order_id']}")
+    for i, tp in enumerate(result["tp_orders"], start=1):
+        print(f"  ID orden TP{i}:          {tp['order_id']} (precio {tp['price']}, tamaño {tp['size']})")
 
-    # Simular que se alcanza TP1: cerrar 1/3 de la posición y mover SL a BE
-    time.sleep(2)  # espera para que la orden se haya procesado
-    print("\n🔔 Simulando TP1: cerrando 1/3 de la posición y moviendo SL a BE...")
-    tp1_amount = state["size"] * (1/3)
-    tp1_order = bx.close_partial(exchange, state, tp1_amount, move_sl_to_be_after=True)
-    if tp1_order:
-        print(f"   Cerrado {tp1_amount} en orden {tp1_order.get('id')}")
-        print(f"   Nuevo tamaño: {state['size']}")
-        print(f"   Nuevo SL ID: {state['sl_order_id']} (BE)")
+    print("\n👉 Ahora ve a la app de Bitget (cuenta DEMO) y comprueba que todo "
+          "esto aparece exactamente así.")
 
-    # Ahora la posición restante tiene SL en BE. Podemos seguir simulando TP2, TP3 o cerrar todo.
-    print("\n👉 Puedes llamar a bx.close_remaining_position(exchange, state) para cerrar todo.")
-    print("   O seguir cerrando parcialmente con bx.close_partial(exchange, state, amount)")
 
 if __name__ == "__main__":
     main()
