@@ -31,8 +31,9 @@ import requests
 import config_rodri as config
 from strategy_rodri import (
     compute_base_indicators, compute_ensemble_signal, suggest_leverage,
-    cap_tp_at_r, build_risk_levels
+    cap_tp_at_r, build_risk_levels, STRATEGY_NAMES
 )
+from chart_rodri import generate_signal_chart
 
 
 # ══════════════════════════════════════════════════════════
@@ -49,6 +50,7 @@ def default_state():
         "trade_log": [],
         "stats": {},
         "last_daily_summary_date": None,
+        "startup_notified": False,
     }
 
 
@@ -100,6 +102,45 @@ def send_telegram(message: str):
             print(f"[ERROR Telegram] {resp.status_code}: {resp.text}")
     except Exception as e:
         print(f"[ERROR Telegram] {e}")
+
+
+def send_telegram_photo(image_path: str, caption: str = ""):
+    """Manda una foto (el gráfico de la señal) con el texto como caption."""
+    if "PON_AQUI" in config.TELEGRAM_TOKEN or "PON_AQUI" in config.TELEGRAM_CHAT_ID:
+        print("[AVISO] Configura TELEGRAM_TOKEN y TELEGRAM_CHAT_ID en config.py")
+        print(caption)
+        return
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_TOKEN}/sendPhoto"
+    try:
+        with open(image_path, "rb") as photo:
+            resp = requests.post(url, data={
+                "chat_id": config.TELEGRAM_CHAT_ID,
+                "caption": caption,
+                "parse_mode": "Markdown",
+            }, files={"photo": photo}, timeout=20)
+        if resp.status_code != 200:
+            print(f"[ERROR Telegram photo] {resp.status_code}: {resp.text}")
+    except Exception as e:
+        print(f"[ERROR Telegram photo] {e}")
+
+
+def send_startup_message():
+    """Mensaje de arranque con el resumen de la config activa (estilo V9)."""
+    threshold_mode = "DYNAMIC" if config.USE_DYNAMIC_THRESHOLD else "FIXED"
+    msg = (
+        f"🤖 Bot \"{config.STRATEGY_LABEL}\" iniciado.\n"
+        f"Activos: {len(config.SYMBOLS)} | Estrategias: {', '.join(STRATEGY_NAMES)}\n"
+        f"Exchange: {config.EXCHANGE_ID} ({config.MARKET_TYPE})\n"
+        f"Threshold mode: {threshold_mode}\n"
+        f"Escaneo: {config.TIMEFRAME} | Seguimiento: {config.MONITOR_TIMEFRAME}\n"
+        f"MIN_SCORE={config.MIN_SCORE} | MIN_PROB={config.MIN_PROB}\n"
+        f"Multi: max {config.MAX_CONCURRENT_TRADES} trades | 1 por activo | "
+        f"cooldown {config.COOLDOWN_HOURS}h\n"
+        f"Rojas: x{config.RED_SIZE_FACTOR}, max {config.RED_MAX_PER_DAY}/día, "
+        f"prob≥{config.RED_MIN_PROB}, TP cap {config.RED_TP_CAP_R}R\n"
+        f"Ensemble: bonus por confluencia ({config.CONFLUENCE_BONUS} pts/estrategia extra)"
+    )
+    send_telegram(msg)
 
 
 def display_symbol(symbol: str) -> str:
@@ -247,11 +288,6 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
         stats["flips"] += 1
     register_result(state, is_win)
 
-    closed_trades = stats["wins"] + stats["losses"]
-    win_rate = stats["wins"] / closed_trades * 100 if closed_trades else 0
-    avg_r = stats["r_sum"] / closed_trades if closed_trades else 0
-    close_pct = pct_from_entry(pos["entry"], last_price)
-
     icon_map = {"flip": "🔄", "tp3": "💠", "sl_be": "🔒", "sl": "🛑"}
     reason_label = close_reason
     if close_reason == "sl" and was_be:
@@ -265,13 +301,13 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
     }
     reason_text = text_map.get(reason_label, "Trade cerrado.")
 
+    # Mensaje corto: solo el valor del activo (entrada/cierre) y el
+    # resultado, sin el bloque de estadísticas globales (eso queda para
+    # el resumen diario).
     send_telegram(
         f"{icon} *{display_symbol(symbol)}* — {reason_text}{extra_note}\n"
-        f"Entrada: `{pos['entry']:.4f}` | Cierre: `{last_price:.4f}`{close_pct}\n"
-        f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
-        f"{context_line(pos)}\n\n"
-        f"📈 Cerradas: {closed_trades} | WR {win_rate:.1f}% | R medio {avg_r:+.2f} "
-        f"| BE saves: {stats['be_saves']} | Flips: {stats['flips']}"
+        f"Entrada: `{pos['entry']:.4f}` | Cierre: `{last_price:.4f}`\n"
+        f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)"
     )
 
     state.setdefault("positions", {}).pop(symbol, None)
@@ -385,7 +421,17 @@ def check_symbol(exchange, symbol, state, now):
             f"🎯 TP3: `{pos['tp3']:.4f}`{pct_from_entry(pos['entry'], pos['tp3'])} · RR {pos['tp_rr'][2]:.2f}\n\n"
             f"⏱ {symbol} · {config.TIMEFRAME} · {last_candle_time}"
         )
-        send_telegram(msg)
+        try:
+            chart_path = generate_signal_chart(
+                df, symbol, signal["direction"], pos["score"], pos["prob"],
+                pos["strategies"], pos["entry"], pos["sl"],
+                [pos["tp1"], pos["tp2"], pos["tp3"]],
+                lookback_candles=config.CHART_LOOKBACK_CANDLES,
+            )
+            send_telegram_photo(chart_path, msg)
+        except Exception as e:
+            print(f"[ERROR gráfico] {e}")
+            send_telegram(msg)
         print(msg.replace("*", "").replace("`", ""))
 
     # ── 4. Comprobar hits de SL/TP en timeframe de seguimiento (1m) ──
@@ -409,27 +455,24 @@ def check_symbol(exchange, symbol, state, now):
             if tp1_first:
                 pos["tp1_reached"] = True
                 stats["tp1_hits"] += 1
-                tp1_pct = pct_from_entry(pos["entry"], pos["tp1"])
                 if config.USE_BREAK_EVEN and not pos["be_active"]:
                     pos["sl"] = pos["entry"]
                     pos["be_active"] = True
                     send_telegram(
-                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct}).\n"
-                        f"🔒 SL movido a BE (`{pos['entry']:.4f}`).\n{context_line(pos)}"
+                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`).\n"
+                        f"🔒 SL movido a BE (`{pos['entry']:.4f}`)."
                     )
                 else:
                     send_telegram(
-                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct}).\n"
-                        f"{context_line(pos)}"
+                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`)."
                     )
 
             if tp2_first:
                 pos["tp2_reached"] = True
                 stats["tp2_hits"] += 1
-                tp2_pct = pct_from_entry(pos["entry"], pos["tp2"])
                 send_telegram(
                     f"🔥 *{display_symbol(symbol)}* — TP2 alcanzado. Runner hacia TP3.\n"
-                    f"`{pos['tp2']:.4f}`{tp2_pct}\n{context_line(pos)}"
+                    f"`{pos['tp2']:.4f}`"
                 )
 
             if sl_hit or tp3_first:
@@ -513,9 +556,24 @@ def run_once():
     save_state(state)
 
 
+def notify_startup_once():
+    """
+    Manda el mensaje de arranque (resumen de config) solo la primera vez
+    que el bot corre — se recuerda en state_rodri.json, así que en modo
+    --once (GitHub Actions, un proceso nuevo cada vez) no se repite en
+    cada ejecución programada.
+    """
+    state = load_state()
+    if not state.get("startup_notified"):
+        send_startup_message()
+        state["startup_notified"] = True
+        save_state(state)
+
+
 def main():
     print(f"[{config.STRATEGY_LABEL}] Bot iniciado {datetime.now(timezone.utc).isoformat()} | "
           f"Símbolos: {config.SYMBOLS} | Timeframe: {config.TIMEFRAME}")
+    notify_startup_once()
 
     if "--once" in sys.argv:
         run_once()

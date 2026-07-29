@@ -107,6 +107,9 @@ LEVERAGE_MAX = 20
 LEV_ATR_PCT_LOW = 0.3       # ATR%/precio <= esto -> leverage máximo
 LEV_ATR_PCT_HIGH = 2.0      # ATR%/precio >= esto -> leverage mínimo
 
+# --- Gráfico de señal (imagen adjunta al mensaje de apertura, estilo V9) ---
+CHART_LOOKBACK_CANDLES = 150   # nº de velas mostradas en el gráfico de cada señal
+
 # --- Persistencia y ritmo ---
 TRADE_LOG_MAX = 300           # nº máximo de operaciones cerradas que se guardan en el historial
 STATE_FILE = "state_rodri.json"
