@@ -70,7 +70,7 @@
     false,
     false
   ],
-  "dynamic_min_score": 70,
+  "dynamic_min_score": 75,
   "stats": {
     "total_signals": 5,
     "normal_signals": 3,
