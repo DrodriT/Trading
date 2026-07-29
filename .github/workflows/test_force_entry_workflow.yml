@@ -25,6 +25,6 @@ jobs:
         working-directory: bot_Rodri
         env:
           BITGET_API_KEY: ${{ secrets.BITGET_API_KEY }}
-          BITGET_API_SECRET: ${{ secrets.BITGET_API_SECRET }}
-          BITGET_API_PASSWORD: ${{ secrets.BITGET_API_PASSWORD }}
+          BITGET_API_SECRET: ${{ secrets.BITGET_SECRET_KEY }}
+          BITGET_API_PASSWORD: ${{ secrets.BITGET_PASSPHRASE }}
         run: python test_force_entry.py
