@@ -1,33 +1,5 @@
 {
   "positions": {
-    "SUI/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 0.6834,
-      "entry_candle": "2026-07-29T16:30:00+00:00",
-      "sl": 0.6808392857142858,
-      "tp1": 0.6859607142857143,
-      "tp2": 0.6885214285714285,
-      "tp3": 0.6910821428571428,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 68,
-      "prob": 0.67,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
     "XRP/USDT:USDT": {
       "dir": "BAJISTA",
       "entry": 1.0684,
@@ -59,13 +31,15 @@
   "cooldowns": {
     "BTC/USDT:USDT": "2026-07-29T18:25:50.028312+00:00",
     "SOL/USDT:USDT": "2026-07-29T20:31:08.771309+00:00",
-    "ETH/USDT:USDT": "2026-07-29T20:36:06.973912+00:00"
+    "ETH/USDT:USDT": "2026-07-29T20:36:06.973912+00:00",
+    "SUI/USDT:USDT": "2026-07-29T20:43:39.483531+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-29",
     "count": 2
   },
   "recent_results": [
+    false,
     false,
     false,
     false
@@ -77,15 +51,15 @@
     "red_signals": 2,
     "long_signals": 4,
     "short_signals": 1,
-    "sl_hits": 0,
+    "sl_hits": 1,
     "tp1_hits": 0,
     "tp2_hits": 0,
     "tp3_hits": 0,
     "flips": 3,
     "wins": 0,
-    "losses": 3,
+    "losses": 4,
     "be_saves": 0,
-    "r_sum": -2.3
+    "r_sum": -3.3
   },
   "last_daily_summary_date": "2026-07-29",
   "trade_log": [
@@ -147,6 +121,26 @@
       "close_reason": "flip",
       "entry_candle": "2026-07-29T14:20:00+00:00",
       "closed_at": "2026-07-29T16:36:06.973912+00:00"
+    },
+    {
+      "symbol": "SUI/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 68,
+      "prob": 0.67,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 0.6834,
+      "exit": 0.6801,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-07-29T16:30:00+00:00",
+      "closed_at": "2026-07-29T16:43:39.483531+00:00"
     }
   ],
   "BTC/USDT:USDT_last_processed_candle": "2026-07-29T16:40:00+00:00",
