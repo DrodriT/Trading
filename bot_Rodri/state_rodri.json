@@ -1,33 +1,5 @@
 {
   "positions": {
-    "ETH/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 1896.79,
-      "entry_candle": "2026-07-29T03:45:00+00:00",
-      "sl": 1889.8107142857143,
-      "tp1": 1903.7692857142856,
-      "tp2": 1910.7485714285713,
-      "tp3": 1917.727857142857,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 65,
-      "prob": 0.66,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
     "LTC/USDT:USDT": {
       "dir": "ALCISTA",
       "entry": 45.15,
@@ -66,7 +38,7 @@
     "ICP/USDT:USDT": "2026-07-29T07:50:53.472157+00:00",
     "HBAR/USDT:USDT": "2026-07-29T04:54:40.814814+00:00",
     "XRP/USDT:USDT": "2026-07-29T06:27:38.587237+00:00",
-    "ETH/USDT:USDT": "2026-07-28T23:35:46.453965+00:00",
+    "ETH/USDT:USDT": "2026-07-29T08:02:42.563762+00:00",
     "OP/USDT:USDT": "2026-07-28T15:27:42.467825+00:00",
     "NEAR/USDT:USDT": "2026-07-29T04:38:39.207234+00:00",
     "XMR/USDT:USDT": "2026-07-29T04:05:44.826140+00:00",
@@ -83,7 +55,6 @@
   },
   "recent_results": [
     true,
-    true,
     false,
     false,
     true,
@@ -91,6 +62,7 @@
     false,
     true,
     true,
+    false,
     false
   ],
   "dynamic_min_score": 50,
@@ -100,15 +72,15 @@
     "red_signals": 4,
     "long_signals": 21,
     "short_signals": 19,
-    "sl_hits": 29,
+    "sl_hits": 30,
     "tp1_hits": 19,
     "tp2_hits": 12,
     "tp3_hits": 4,
     "flips": 5,
     "wins": 19,
-    "losses": 19,
+    "losses": 20,
     "be_saves": 13,
-    "r_sum": 2.1333333333333337
+    "r_sum": 1.1333333333333337
   },
   "last_daily_summary_date": "2026-07-29",
   "BTC/USDT:USDT_last_processed_candle": "2026-07-29T04:00:00+00:00",
@@ -345,6 +317,26 @@
       "close_reason": "sl",
       "entry_candle": "2026-07-29T03:45:00+00:00",
       "closed_at": "2026-07-29T03:50:53.472157+00:00"
+    },
+    {
+      "symbol": "ETH/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 65,
+      "prob": 0.66,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 1896.79,
+      "exit": 1889.37,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-07-29T03:45:00+00:00",
+      "closed_at": "2026-07-29T04:02:42.563762+00:00"
     }
   ]
 }
