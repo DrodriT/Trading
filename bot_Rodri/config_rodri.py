@@ -107,16 +107,6 @@ LEVERAGE_MAX = 20
 LEV_ATR_PCT_LOW = 0.3       # ATR%/precio <= esto -> leverage máximo
 LEV_ATR_PCT_HIGH = 2.0      # ATR%/precio >= esto -> leverage mínimo
 
-# --- Ejecución real en Bitget demo ---
-ENABLE_BITGET_EXECUTION = True   # False = solo modo papel (como hasta ahora), sin tocar Bitget
-BITGET_API_KEY = os.environ.get("BITGET_API_KEY", "PON_AQUI_TU_API_KEY")
-BITGET_API_SECRET = os.environ.get("BITGET_API_SECRET", "PON_AQUI_TU_SECRET")
-BITGET_API_PASSWORD = os.environ.get("BITGET_API_PASSWORD", "PON_AQUI_TU_PASSPHRASE")
-RISK_PCT_PER_TRADE = 1.0        # % del balance demo arriesgado por operación (según distancia al SL)
-TP_SPLIT = (1 / 3, 1 / 3, 1 / 3)  # reparto del tamaño de la posición entre TP1 / TP2 / TP3
-MAX_MIN_SIZE_RISK_MULTIPLIER = 3.0  # si el tamaño mínimo del contrato implica arriesgar más de esto x el % objetivo, se descarta la apertura
-MARGIN_MODE = "crossed"          # "crossed" o "isolated" — modo de margen a forzar antes de operar
-
 # --- Persistencia y ritmo ---
 TRADE_LOG_MAX = 300           # nº máximo de operaciones cerradas que se guardan en el historial
 STATE_FILE = "state_rodri.json"
@@ -126,4 +116,4 @@ CHECK_INTERVAL_SECONDS = 60   # solo aplica en modo bucle local (sin --once)
 SEND_DAILY_SUMMARY = True
 DAILY_SUMMARY_HOUR_UTC = 0
 
-STRATEGY_LABEL = "Rodri v1.0 (Multi-estrategia)"
+STRATEGY_LABEL = "Rodri v1.0 (ensemble: SMC + Breakout + Trend Pullback + RSI Div + VP Mean Revert + Liquidity Grab)"
