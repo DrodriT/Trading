@@ -20,7 +20,7 @@ import config_rodri as config
 import bitget_executor as bx
 
 # ── EDITA ESTO con los valores que quieras forzar ──
-SYMBOL = "OP/USDT:USDT"
+SYMBOL = "BTC/USDT:USDT"
 DIRECTION = "ALCISTA"       # "ALCISTA" (long) o "BAJISTA" (short)
 ENTRY_PRICE = 0.0893
 SL_PRICE = 0.0852
