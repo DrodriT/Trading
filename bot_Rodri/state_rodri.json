@@ -1,33 +1,5 @@
 {
   "positions": {
-    "BTC/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 63662.5,
-      "entry_candle": "2026-07-29T04:20:00+00:00",
-      "sl": 63662.5,
-      "tp1": 63802.75,
-      "tp2": 63900.925,
-      "tp3": 63900.925,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 57,
-      "prob": 0.61,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": true,
-      "size_factor": 0.3
-    },
     "ETH/USDT:USDT": {
       "dir": "ALCISTA",
       "entry": 1889.0,
@@ -42,7 +14,7 @@
         3.0
       ],
       "tp1_reached": true,
-      "tp2_reached": false,
+      "tp2_reached": true,
       "tp3_reached": false,
       "be_active": true,
       "score": 82,
@@ -57,12 +29,16 @@
       "size_factor": 1.0
     }
   },
-  "cooldowns": {},
+  "cooldowns": {
+    "BTC/USDT:USDT": "2026-07-29T08:38:41.513813+00:00"
+  },
   "red_signals_today": {
     "date": "2026-07-29",
     "count": 1
   },
-  "recent_results": [],
+  "recent_results": [
+    true
+  ],
   "dynamic_min_score": 60,
   "stats": {
     "total_signals": 2,
@@ -72,16 +48,37 @@
     "short_signals": 0,
     "sl_hits": 0,
     "tp1_hits": 2,
-    "tp2_hits": 0,
-    "tp3_hits": 0,
+    "tp2_hits": 2,
+    "tp3_hits": 1,
     "flips": 0,
-    "wins": 0,
+    "wins": 1,
     "losses": 0,
     "be_saves": 0,
-    "r_sum": 0.0
+    "r_sum": 0.43999999999999995
   },
   "last_daily_summary_date": "2026-07-29",
-  "trade_log": [],
+  "trade_log": [
+    {
+      "symbol": "BTC/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 57,
+      "prob": 0.61,
+      "is_red": true,
+      "leverage": 20,
+      "entry": 63662.5,
+      "exit": 63918.7,
+      "r_result": 0.44,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-29T04:20:00+00:00",
+      "closed_at": "2026-07-29T04:38:41.513813+00:00"
+    }
+  ],
   "BTC/USDT:USDT_last_processed_candle": "2026-07-29T04:35:00+00:00",
   "ETH/USDT:USDT_last_processed_candle": "2026-07-29T04:35:00+00:00",
   "SOL/USDT:USDT_last_processed_candle": "2026-07-29T04:35:00+00:00",
