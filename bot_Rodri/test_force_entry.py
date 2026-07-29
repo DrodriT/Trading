@@ -20,30 +20,73 @@ import config_rodri as config
 import bitget_executor as bx
 
 # ── EDITA ESTO con los valores que quieras forzar ──
-SYMBOL = "OP/USDT:USDT"
+# Valores basados en el precio de mercado de BTC/USDT a 29 jul 2026 (~64,000 USDT),
+# con SL/TPs calculados igual que el preset "Balanced" (SL 1.5xATR, TPs 1R/2R/3R,
+# ATR aproximado ~180 USDT para este rango de volatilidad).
+SYMBOL = "BTC/USDT:USDT"
 DIRECTION = "ALCISTA"       # "ALCISTA" (long) o "BAJISTA" (short)
-ENTRY_PRICE = 0.0893
-SL_PRICE = 0.0852
-TP1_PRICE = 0.0934
-TP2_PRICE = 0.09627
-TP3_PRICE = 0.09955
-LEVERAGE = 2
+ENTRY_PRICE = 64000.0
+SL_PRICE = 63730.0
+TP1_PRICE = 64270.0
+TP2_PRICE = 64540.0
+TP3_PRICE = 64810.0
+LEVERAGE = 10
 # ────────────────────────────────────────────────────
 
 
+def _mask(val: str) -> str:
+    if not val:
+        return "(VACÍO)"
+    return f"longitud={len(val)} | empieza_por='{val[:3]}' | termina_en='{val[-3:]}'"
+
+
 def main():
-    if "PON_AQUI" in config.BITGET_API_KEY:
-        print("[ERROR] Faltan las claves de Bitget en config_rodri.py "
-              "(BITGET_API_KEY / BITGET_API_SECRET / BITGET_API_PASSWORD).")
+    missing = [
+        name for name, val in [
+            ("BITGET_API_KEY", config.BITGET_API_KEY),
+            ("BITGET_API_SECRET", config.BITGET_API_SECRET),
+            ("BITGET_API_PASSWORD", config.BITGET_API_PASSWORD),
+        ] if not val or "PON_AQUI" in val
+    ]
+    if missing:
+        print(f"[ERROR] Faltan/están vacías estas claves de Bitget: {', '.join(missing)}. "
+              f"Revisa que los nombres de los secrets en GitHub coincidan EXACTAMENTE con los "
+              f"que usa el workflow (env: BITGET_API_KEY/BITGET_API_SECRET/BITGET_API_PASSWORD).")
         return
 
-    print(f"Conectando a Bitget demo...")
+    print("Diagnóstico de credenciales recibidas (nunca se muestran completas):")
+    print(f"  BITGET_API_KEY:      {_mask(config.BITGET_API_KEY)}")
+    print(f"  BITGET_API_SECRET:   {_mask(config.BITGET_API_SECRET)}")
+    print(f"  BITGET_API_PASSWORD: {_mask(config.BITGET_API_PASSWORD)}")
+    print("(Si alguna longitud te sorprende -ej. de más por un espacio o salto de línea pegado-, ahí está el fallo)\n")
+
+    print("Conectando a Bitget demo...")
     exchange = bx.create_demo_exchange(
         config.BITGET_API_KEY, config.BITGET_API_SECRET, config.BITGET_API_PASSWORD
     )
 
+    print("Probando primero una llamada PÚBLICA (sin autenticación) para aislar el problema...")
+    try:
+        markets = exchange.load_markets()
+        print(f"  OK: {len(markets)} mercados cargados. La conexión base y la cabecera PAPTRADING funcionan.")
+    except Exception as e:
+        print(f"  ERROR incluso en la llamada pública: {e}")
+        print("  Esto NO sería un problema de credenciales, sino de conectividad/cabecera. Avisa con este error.")
+        return
+
+    print("\nProbando ahora una llamada PRIVADA (fetch_balance, requiere firma con tus claves)...")
+
+    for product_type in ("USDT-FUTURES", "SUSDT-FUTURES"):
+        try:
+            raw_balance = exchange.fetch_balance(params={"type": "swap", "productType": product_type})
+            print(f"\n🔍 fetch_balance con productType='{product_type}':")
+            print(f"  raw_balance.get('USDT'): {raw_balance.get('USDT')}")
+            print(f"  raw_balance.get('info'): {raw_balance.get('info')}")
+        except Exception as e:
+            print(f"\n🔍 fetch_balance con productType='{product_type}' -> ERROR: {e}")
+
     balance = bx.get_usdt_balance(exchange)
-    print(f"Balance demo disponible: {balance:.2f} USDT")
+    print(f"\nBalance demo disponible (según get_usdt_balance, con USDT-FUTURES): {balance:.2f} USDT")
 
     print(f"\nForzando entrada: {SYMBOL} | {DIRECTION} | Entrada {ENTRY_PRICE} | "
           f"SL {SL_PRICE} | Leverage {LEVERAGE}x | Riesgo {config.RISK_PCT_PER_TRADE}% del balance")
