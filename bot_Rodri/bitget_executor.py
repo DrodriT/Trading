@@ -30,50 +30,55 @@ def create_demo_exchange(api_key, api_secret, api_password):
 def get_usdt_balance(exchange):
     """
     Obtiene el saldo disponible en USDT (o USD) de la cuenta de futuros.
-    Maneja diferentes estructuras de respuesta de Bitget.
-    Retorna float con el balance, o 0.0 si no se encuentra.
+    Intenta múltiples formas y muestra el raw para depurar.
     """
-    try:
-        # Intentamos obtener balance con tipo 'swap' sin productType específico
-        raw = exchange.fetch_balance(params={'type': 'swap'})
-        print("DEBUG get_usdt_balance - raw completo:", raw)  # Línea de depuración
+    # Lista de combinaciones de parámetros a probar
+    attempts = [
+        {},  # sin parámetros
+        {'type': 'swap'},
+        {'type': 'swap', 'productType': 'USDT-FUTURES'},
+        {'productType': 'USDT-FUTURES'},  # a veces funciona sin type
+        {'type': 'swap', 'productType': 'USDT-FUTURES', 'subProductType': 'USDT'},  # variante
+    ]
 
-        # 1. Buscar en 'total' o 'free' por moneda USDT/USD
-        for key in ['total', 'free']:
-            if key in raw and raw[key]:
-                for currency in ['USDT', 'USD']:
-                    if currency in raw[key]:
-                        val = raw[key][currency]
-                        if val is not None:
-                            return float(val)
+    for params in attempts:
+        try:
+            raw = exchange.fetch_balance(params=params)
+            print(f"DEBUG fetch_balance con {params}: {raw}")  # Muestra la respuesta
 
-        # 2. Buscar en 'info' (estructura anidada típica de Bitget)
-        if 'info' in raw and raw['info']:
-            info = raw['info']
-            # Si info es una lista, cada elemento tiene 'coin' y 'available'
-            if isinstance(info, list) and len(info) > 0:
-                for item in info:
-                    if item.get('coin') in ['USDT', 'USD']:
-                        return float(item.get('available', 0.0))
-            # Si info es un dict con 'data' -> 'list' (otro formato común)
-            elif isinstance(info, dict) and 'data' in info:
-                data = info.get('data', {})
-                if isinstance(data, dict) and 'list' in data:
-                    for item in data['list']:
+            # 1. Buscar en total/free
+            for key in ['total', 'free']:
+                if key in raw and raw[key]:
+                    for currency in ['USDT', 'USD']:
+                        if currency in raw[key] and raw[key][currency] is not None:
+                            return float(raw[key][currency])
+
+            # 2. Buscar en info (estructura anidada)
+            if 'info' in raw and raw['info']:
+                info = raw['info']
+                if isinstance(info, list) and len(info) > 0:
+                    for item in info:
                         if item.get('coin') in ['USDT', 'USD']:
                             return float(item.get('available', 0.0))
-                elif isinstance(data, list):  # a veces data es directamente lista
-                    for item in data:
-                        if item.get('coin') in ['USDT', 'USD']:
-                            return float(item.get('available', 0.0))
+                elif isinstance(info, dict):
+                    if 'data' in info:
+                        data = info['data']
+                        if isinstance(data, dict) and 'list' in data:
+                            for item in data['list']:
+                                if item.get('coin') in ['USDT', 'USD']:
+                                    return float(item.get('available', 0.0))
+                        elif isinstance(data, list):
+                            for item in data:
+                                if item.get('coin') in ['USDT', 'USD']:
+                                    return float(item.get('available', 0.0))
+            # Si no se encuentra, seguir con el siguiente intento
+        except Exception as e:
+            print(f"Error con params {params}: {e}")
+            continue
 
-        # Si no se encuentra, devolvemos 0
-        print("No se pudo extraer el balance de USDT/USD. Revisa la estructura de raw.")
-        return 0.0
-
-    except Exception as e:
-        print(f"Error en get_usdt_balance: {e}")
-        return 0.0
+    # Si todos fallan, devolvemos 0
+    print("No se pudo extraer el balance en ningún intento.")
+    return 0.0
 
 
 def place_sl_order(exchange, symbol, direction, entry_price, sl_price, size, leverage):
@@ -193,8 +198,7 @@ def open_position(exchange, symbol, direction, leverage, entry_price, sl_price,
     # Aplicar precisión del exchange (número de decimales)
     size_precise = float(exchange.amount_to_precision(symbol, raw_size))
 
-    # ---- Orden de entrada (market o limit) ----
-    # Usamos una orden limit para fijar el precio de entrada
+    # ---- Orden de entrada (limit) ----
     side = 'buy' if direction.upper() == 'ALCISTA' else 'sell'
     try:
         entry_order = exchange.create_order(
@@ -211,9 +215,7 @@ def open_position(exchange, symbol, direction, leverage, entry_price, sl_price,
         raise
 
     # ---- SL y TP ----
-    # Para SL, usamos una orden stop (reduceOnly)
     sl_order = place_sl_order(exchange, symbol, direction, entry_price, sl_price, size_precise, leverage)
-    # Para TPs, órdenes límite (reduceOnly)
     tp_orders = place_tp_orders(exchange, symbol, direction, entry_price, tp_prices, size_precise, leverage)
 
     # Retornar información
@@ -227,5 +229,4 @@ def open_position(exchange, symbol, direction, leverage, entry_price, sl_price,
 
 # Ejemplo de uso (para pruebas rápidas)
 if __name__ == "__main__":
-    # Aquí puedes poner un test rápido si lo deseas
     pass

@@ -35,8 +35,9 @@ LEVERAGE = 10
 
 # ── OPCIÓN: forzar un tamaño fijo (en BTC) en lugar de calcularlo desde el balance ──
 # Si es None, se usará el cálculo basado en riesgo y balance.
-# Si pones un número (ej. 0.001), se usará ESE tamaño, ignorando el balance.
-FORCE_SIZE = 0.001   # <-- Cambia a 0.001 si quieres probar sin fondos
+# Si pones un número (ej. 0.0001), se usará ESE tamaño, ignorando el balance.
+# Prueba con un tamaño muy pequeño si hay problemas de margen.
+FORCE_SIZE = 0.0001   # <-- Cambia a None si quieres usar el balance real
 # ────────────────────────────────────────────────────
 
 
@@ -83,20 +84,17 @@ def main():
     print("\nProbando ahora una llamada PRIVADA (fetch_balance, requiere firma con tus claves)...")
 
     # ── Mostramos la respuesta CRUDA para depurar ──
-    raw_balance = None
     for product_type in ("USDT-FUTURES", "SUSDT-FUTURES"):
         try:
             raw = exchange.fetch_balance(params={"type": "swap", "productType": product_type})
             print(f"\n🔍 fetch_balance con productType='{product_type}' (RESPUESTA COMPLETA):")
             print(raw)
-            # Guardamos la última para análisis
-            raw_balance = raw
         except Exception as e:
             print(f"\n🔍 fetch_balance con productType='{product_type}' -> ERROR: {e}")
 
-    # Intentamos obtener el balance con la función existente
+    # Intentamos obtener el balance con la función mejorada
     balance_usdt = bx.get_usdt_balance(exchange)
-    print(f"\nBalance demo disponible (según get_usdt_balance, con USDT-FUTURES): {balance_usdt:.2f} USDT")
+    print(f"\nBalance demo disponible (según get_usdt_balance): {balance_usdt:.2f} USDT")
 
     # ── Si el balance es cero y no hay tamaño forzado, no podemos continuar ──
     if balance_usdt <= 0 and FORCE_SIZE is None:
@@ -106,16 +104,12 @@ def main():
         print("     2. Busca la sección de fondos/cuenta demo y recarga saldo (suelen tener un botón de 'reset' o 'recargar').")
         print("     3. Vuelve a ejecutar este script.")
         print("   O bien, si solo quieres probar la apertura sin fondos, edita la variable FORCE_SIZE al inicio del script")
-        print("   (por ejemplo, FORCE_SIZE = 0.001) para usar un tamaño fijo.")
+        print("   (por ejemplo, FORCE_SIZE = 0.0001) para usar un tamaño fijo.")
         sys.exit(1)
 
     # ── Mostramos qué tamaño se va a usar ──
     if FORCE_SIZE is not None:
         print(f"\n⚠️  Se usará un tamaño FORZADO de {FORCE_SIZE} BTC (ignorando el balance y el riesgo).")
-        # Nota: open_position debe aceptar un parámetro 'size'. 
-        # Si no lo acepta, tendremos que modificar el executor.
-        # Asumimos que sí (en bitget_executor.py se puede añadir).
-        # Por si acaso, pasamos el parámetro extra.
         kwargs = {'size': FORCE_SIZE}
     else:
         kwargs = {}
@@ -139,6 +133,9 @@ def main():
         if "amount must be greater than minimum" in str(e):
             print("   Esto indica que el tamaño calculado es cero o menor que el lote mínimo.")
             print("   Si estás usando FORCE_SIZE, asegúrate de que sea >= 0.0001 BTC.")
+        elif "Insufficient margin" in str(e):
+            print("   La cuenta no tiene margen suficiente. Revisa que la API key tenga permisos de futuros")
+            print("   y que la cuenta demo tenga saldo. Si usas FORCE_SIZE, prueba un tamaño más pequeño.")
         sys.exit(1)
 
     print("\n✅ Resultado de la apertura:")
