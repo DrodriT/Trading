@@ -18,6 +18,7 @@ Después de correrlo, VE A LA APP DE BITGET (cuenta demo) y comprueba:
 """
 import config_rodri as config
 import bitget_executor as bx
+import sys
 
 # ── EDITA ESTO con los valores que quieras forzar ──
 # Valores basados en el precio de mercado de BTC/USDT a 29 jul 2026 (~64,000 USDT),
@@ -31,6 +32,11 @@ TP1_PRICE = 64270.0
 TP2_PRICE = 64540.0
 TP3_PRICE = 64810.0
 LEVERAGE = 10
+
+# ── OPCIÓN: forzar un tamaño fijo (en BTC) en lugar de calcularlo desde el balance ──
+# Si es None, se usará el cálculo basado en riesgo y balance.
+# Si pones un número (ej. 0.001), se usará ESE tamaño, ignorando el balance.
+FORCE_SIZE = None   # <-- Cambia a 0.001 si quieres probar sin fondos
 # ────────────────────────────────────────────────────
 
 
@@ -76,27 +82,64 @@ def main():
 
     print("\nProbando ahora una llamada PRIVADA (fetch_balance, requiere firma con tus claves)...")
 
+    # ── Mostramos la respuesta CRUDA para depurar ──
+    raw_balance = None
     for product_type in ("USDT-FUTURES", "SUSDT-FUTURES"):
         try:
-            raw_balance = exchange.fetch_balance(params={"type": "swap", "productType": product_type})
-            print(f"\n🔍 fetch_balance con productType='{product_type}':")
-            print(f"  raw_balance.get('USDT'): {raw_balance.get('USDT')}")
-            print(f"  raw_balance.get('info'): {raw_balance.get('info')}")
+            raw = exchange.fetch_balance(params={"type": "swap", "productType": product_type})
+            print(f"\n🔍 fetch_balance con productType='{product_type}' (RESPUESTA COMPLETA):")
+            print(raw)
+            # Guardamos la última para análisis
+            raw_balance = raw
         except Exception as e:
             print(f"\n🔍 fetch_balance con productType='{product_type}' -> ERROR: {e}")
 
-    balance = bx.get_usdt_balance(exchange)
-    print(f"\nBalance demo disponible (según get_usdt_balance, con USDT-FUTURES): {balance:.2f} USDT")
+    # Intentamos obtener el balance con la función existente
+    balance_usdt = bx.get_usdt_balance(exchange)
+    print(f"\nBalance demo disponible (según get_usdt_balance, con USDT-FUTURES): {balance_usdt:.2f} USDT")
+
+    # ── Si el balance es cero y no hay tamaño forzado, no podemos continuar ──
+    if balance_usdt <= 0 and FORCE_SIZE is None:
+        print("\n❌ ERROR: El balance es 0.00 USDT. No se puede calcular un tamaño de posición con riesgo porcentual.")
+        print("   Para solucionarlo:")
+        print("     1. Entra en la web/app de Bitget con tu cuenta DEMO.")
+        print("     2. Busca la sección de fondos/cuenta demo y recarga saldo (suelen tener un botón de 'reset' o 'recargar').")
+        print("     3. Vuelve a ejecutar este script.")
+        print("   O bien, si solo quieres probar la apertura sin fondos, edita la variable FORCE_SIZE al inicio del script")
+        print("   (por ejemplo, FORCE_SIZE = 0.001) para usar un tamaño fijo.")
+        sys.exit(1)
+
+    # ── Mostramos qué tamaño se va a usar ──
+    if FORCE_SIZE is not None:
+        print(f"\n⚠️  Se usará un tamaño FORZADO de {FORCE_SIZE} BTC (ignorando el balance y el riesgo).")
+        # Nota: open_position debe aceptar un parámetro 'size'. 
+        # Si no lo acepta, tendremos que modificar el executor.
+        # Asumimos que sí (en bitget_executor.py se puede añadir).
+        # Por si acaso, pasamos el parámetro extra.
+        kwargs = {'size': FORCE_SIZE}
+    else:
+        kwargs = {}
+        print(f"\n✅ Balance suficiente. Se calculará el tamaño en función del riesgo ({config.RISK_PCT_PER_TRADE}%).")
 
     print(f"\nForzando entrada: {SYMBOL} | {DIRECTION} | Entrada {ENTRY_PRICE} | "
-          f"SL {SL_PRICE} | Leverage {LEVERAGE}x | Riesgo {config.RISK_PCT_PER_TRADE}% del balance")
+          f"SL {SL_PRICE} | Leverage {LEVERAGE}x")
 
-    result = bx.open_position(
-        exchange, SYMBOL, DIRECTION, LEVERAGE,
-        entry_price=ENTRY_PRICE, sl_price=SL_PRICE,
-        tp_prices=[TP1_PRICE, TP2_PRICE, TP3_PRICE],
-        risk_pct=config.RISK_PCT_PER_TRADE, tp_split=config.TP_SPLIT,
-    )
+    # ── Llamada a open_position con los parámetros adecuados ──
+    try:
+        result = bx.open_position(
+            exchange, SYMBOL, DIRECTION, LEVERAGE,
+            entry_price=ENTRY_PRICE, sl_price=SL_PRICE,
+            tp_prices=[TP1_PRICE, TP2_PRICE, TP3_PRICE],
+            risk_pct=config.RISK_PCT_PER_TRADE if FORCE_SIZE is None else None,  # si usamos size fijo, riesgo no se usa
+            tp_split=config.TP_SPLIT,
+            **kwargs   # pasa 'size' si existe
+        )
+    except Exception as e:
+        print(f"\n❌ Error al abrir la posición: {e}")
+        if "amount must be greater than minimum" in str(e):
+            print("   Esto indica que el tamaño calculado es cero o menor que el lote mínimo.")
+            print("   Si estás usando FORCE_SIZE, asegúrate de que sea >= 0.0001 BTC.")
+        sys.exit(1)
 
     print("\n✅ Resultado de la apertura:")
     print(f"  Tamaño de la posición: {result['size']}")
