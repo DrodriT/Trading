@@ -1,21 +1,15 @@
 """
-test_force_entry.py — Prueba de apertura, TP1 y mover SL a BE.
+test_force_entry.py — Prueba de apertura de posición con SL y cierre parcial (TP1) con SL a BE.
 """
 import config_rodri as config
 import bitget_executor as bx
 import time
-import sys
 
 SYMBOL = "BTC/USDT:USDT"
 DIRECTION = "ALCISTA"
 ENTRY_PRICE = 64000.0
 SL_PRICE = 63730.0
 LEVERAGE = 10
-
-# Definimos los tamaños de TP (ej. 1/3 cada uno)
-TP1_FRACTION = 1/3
-TP2_FRACTION = 1/3
-TP3_FRACTION = 1/3
 
 def _mask(val: str) -> str:
     if not val:
@@ -33,6 +27,12 @@ def main():
     if missing:
         print(f"[ERROR] Faltan/están vacías estas claves de Bitget: {', '.join(missing)}")
         return
+
+    print("Diagnóstico de credenciales:")
+    print(f"  BITGET_API_KEY:      {_mask(config.BITGET_API_KEY)}")
+    print(f"  BITGET_API_SECRET:   {_mask(config.BITGET_API_SECRET)}")
+    print(f"  BITGET_API_PASSWORD: {_mask(config.BITGET_API_PASSWORD)}")
+    print()
 
     print("Conectando a Bitget demo...")
     exchange = bx.create_demo_exchange(
@@ -54,42 +54,33 @@ def main():
     print(f"\nAbriendo posición: {SYMBOL} | {DIRECTION} | Entrada {ENTRY_PRICE} | "
           f"SL {SL_PRICE} | Leverage {LEVERAGE}x | Riesgo {config.RISK_PCT_PER_TRADE}%")
 
-    result = bx.open_position(
+    # Abrir posición solo con SL
+    state = bx.open_position(
         exchange, SYMBOL, DIRECTION, LEVERAGE,
         entry_price=ENTRY_PRICE, sl_price=SL_PRICE,
         risk_pct=config.RISK_PCT_PER_TRADE,
     )
 
     print("\n✅ Posición abierta:")
-    print(f"  Tamaño: {result['size']}")
-    print(f"  ID entrada: {result['entry_order_id']}")
-    print(f"  ID SL: {result['sl_order_id']}")
-    print(f"  Precio SL: {result['sl_price']}")
-    print(f"  Precio entrada: {result['entry_price']}")
+    print(f"  Tamaño: {state['size']}")
+    print(f"  ID entrada: {state['entry_order_id']}")
+    print(f"  ID SL: {state['sl_order_id']}")
+    print(f"  Precio entrada: {state['entry_price']}")
+    print(f"  SL price: {state['sl_price']}")
 
-    # Simulación: esperar 10 segundos y luego ejecutar TP1
-    print("\nSimulación: esperando 10 segundos y ejecutando TP1 (cierre de 1/3)...")
-    time.sleep(10)
+    # Simular que se alcanza TP1: cerrar 1/3 de la posición y mover SL a BE
+    time.sleep(2)  # espera para que la orden se haya procesado
+    print("\n🔔 Simulando TP1: cerrando 1/3 de la posición y moviendo SL a BE...")
+    tp1_amount = state["size"] * (1/3)
+    tp1_order = bx.close_partial(exchange, state, tp1_amount, move_sl_to_be_after=True)
+    if tp1_order:
+        print(f"   Cerrado {tp1_amount} en orden {tp1_order.get('id')}")
+        print(f"   Nuevo tamaño: {state['size']}")
+        print(f"   Nuevo SL ID: {state['sl_order_id']} (BE)")
 
-    tp1_amount = result['size'] * TP1_FRACTION
-    # Redondear a la precisión del exchange
-    tp1_amount = float(exchange.amount_to_precision(SYMBOL, tp1_amount))
-
-    update = bx.close_tp1_and_move_sl_to_be(
-        exchange, SYMBOL, DIRECTION,
-        tp1_amount=tp1_amount,
-        entry_price=result['entry_price'],
-        old_sl_order_id=result['sl_order_id'],
-        old_sl_price=result['sl_price']
-    )
-
-    print("\n✅ TP1 ejecutado y SL movido a BE:")
-    print(f"  Cerrado TP1: {update['closed']}")
-    print(f"  Posición restante: {update['remaining']}")
-    print(f"  Nuevo ID SL: {update['new_sl_id']} (debería ser BE = {result['entry_price']})")
-
-    # Opcional: cerrar todo al final
-    # bx.close_remaining_position(exchange, SYMBOL, DIRECTION, update['new_sl_id'])
+    # Ahora la posición restante tiene SL en BE. Podemos seguir simulando TP2, TP3 o cerrar todo.
+    print("\n👉 Puedes llamar a bx.close_remaining_position(exchange, state) para cerrar todo.")
+    print("   O seguir cerrando parcialmente con bx.close_partial(exchange, state, amount)")
 
 if __name__ == "__main__":
     main()
