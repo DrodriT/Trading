@@ -549,18 +549,9 @@ def run_once():
 
     exec_exchange = None
     if config.ENABLE_BITGET_EXECUTION:
-        missing = [
-            name for name, val in [
-                ("BITGET_API_KEY", config.BITGET_API_KEY),
-                ("BITGET_API_SECRET", config.BITGET_API_SECRET),
-                ("BITGET_API_PASSWORD", config.BITGET_API_PASSWORD),
-            ] if not val or "PON_AQUI" in val
-        ]
-        if missing:
-            print(f"[AVISO] ENABLE_BITGET_EXECUTION=True pero faltan/están vacías estas claves: "
-                  f"{', '.join(missing)}. Revisa que los nombres de los secrets en GitHub coincidan "
-                  f"EXACTAMENTE con los que usa el workflow (env: BITGET_API_KEY/BITGET_API_SECRET/"
-                  f"BITGET_API_PASSWORD). Corriendo en modo papel.")
+        if "PON_AQUI" in config.BITGET_API_KEY or "PON_AQUI" in config.BITGET_API_SECRET:
+            print("[AVISO] ENABLE_BITGET_EXECUTION=True pero faltan las claves de Bitget demo "
+                  "(BITGET_API_KEY / BITGET_API_SECRET / BITGET_API_PASSWORD). Corriendo en modo papel.")
         else:
             exec_exchange = bx.create_demo_exchange(
                 config.BITGET_API_KEY, config.BITGET_API_SECRET, config.BITGET_API_PASSWORD

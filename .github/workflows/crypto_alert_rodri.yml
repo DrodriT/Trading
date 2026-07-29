@@ -34,8 +34,8 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           BITGET_API_KEY: ${{ secrets.BITGET_API_KEY }}
-          BITGET_API_SECRET: ${{ secrets.BITGET_SECRET_KEY }}
-          BITGET_API_PASSWORD: ${{ secrets.BITGET_PASSPHRASE }}
+          BITGET_API_SECRET: ${{ secrets.BITGET_API_SECRET }}
+          BITGET_API_PASSWORD: ${{ secrets.BITGET_API_PASSWORD }}
         run: python bot_rodri.py --once
 
       - name: Guardar el estado actualizado (bot_Rodri/state_rodri.json)
