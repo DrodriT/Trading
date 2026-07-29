@@ -1,33 +1,5 @@
 {
   "positions": {
-    "ETH/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 1889.0,
-      "entry_candle": "2026-07-29T04:20:00+00:00",
-      "sl": 1889.0,
-      "tp1": 1897.055,
-      "tp2": 1905.1100000000001,
-      "tp3": 1913.1650000000002,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 82,
-      "prob": 0.75,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
     "SOL/USDT:USDT": {
       "dir": "ALCISTA",
       "entry": 73.384,
@@ -57,13 +29,15 @@
     }
   },
   "cooldowns": {
-    "BTC/USDT:USDT": "2026-07-29T08:38:41.513813+00:00"
+    "BTC/USDT:USDT": "2026-07-29T08:38:41.513813+00:00",
+    "ETH/USDT:USDT": "2026-07-29T09:41:40.957037+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-29",
     "count": 2
   },
   "recent_results": [
+    true,
     true
   ],
   "dynamic_min_score": 60,
@@ -76,12 +50,12 @@
     "sl_hits": 0,
     "tp1_hits": 3,
     "tp2_hits": 2,
-    "tp3_hits": 1,
+    "tp3_hits": 2,
     "flips": 0,
-    "wins": 1,
+    "wins": 2,
     "losses": 0,
     "be_saves": 0,
-    "r_sum": 0.43999999999999995
+    "r_sum": 2.44
   },
   "last_daily_summary_date": "2026-07-29",
   "trade_log": [
@@ -104,6 +78,26 @@
       "close_reason": "tp3",
       "entry_candle": "2026-07-29T04:20:00+00:00",
       "closed_at": "2026-07-29T04:38:41.513813+00:00"
+    },
+    {
+      "symbol": "ETH/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 82,
+      "prob": 0.75,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 1889.0,
+      "exit": 1912.82,
+      "r_result": 2.0,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-29T04:20:00+00:00",
+      "closed_at": "2026-07-29T05:41:40.957037+00:00"
     }
   ],
   "BTC/USDT:USDT_last_processed_candle": "2026-07-29T05:40:00+00:00",
