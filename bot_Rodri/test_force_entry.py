@@ -36,7 +36,7 @@ LEVERAGE = 10
 # ── OPCIÓN: forzar un tamaño fijo (en BTC) en lugar de calcularlo desde el balance ──
 # Si es None, se usará el cálculo basado en riesgo y balance.
 # Si pones un número (ej. 0.001), se usará ESE tamaño, ignorando el balance.
-FORCE_SIZE = None   # <-- Cambia a 0.001 si quieres probar sin fondos
+FORCE_SIZE = 0.001   # <-- Cambia a 0.001 si quieres probar sin fondos
 # ────────────────────────────────────────────────────
 
 
