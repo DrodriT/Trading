@@ -3,6 +3,7 @@ bitget_executor.py — Ejecución de operaciones en la cuenta DEMO de Bitget
 para la estrategia Rodri v1.0.
 """
 import ccxt
+import time
 
 def create_demo_exchange(api_key: str, api_secret: str, api_password: str):
     exchange = ccxt.bitget({
@@ -49,6 +50,18 @@ def get_open_position_size(exchange, symbol: str) -> float:
         print(f"[bitget_executor] Aviso: no se pudo consultar la posición abierta en {symbol}: {e}")
     return 0.0
 
+def wait_for_position(exchange, symbol: str, timeout: int = 10, interval: float = 0.5) -> bool:
+    """Espera a que la posición se abra (contracts > 0). Retorna True si se abre, False si timeout."""
+    start = time.time()
+    while time.time() - start < timeout:
+        size = get_open_position_size(exchange, symbol)
+        if size > 0:
+            print(f"[wait_for_position] Posición detectada: {size} {symbol}")
+            return True
+        time.sleep(interval)
+    print(f"[wait_for_position] Timeout esperando posición en {symbol}")
+    return False
+
 def cancel_order_safe(exchange, symbol: str, order_id):
     if not order_id:
         return
@@ -62,14 +75,14 @@ def place_sl_order(exchange, symbol, direction, sl_price, size):
     side = 'sell' if direction == "ALCISTA" else 'buy'
     order = exchange.create_order(
         symbol=symbol,
-        type='stop',           # orden condicional
+        type='stop',
         side=side,
         amount=size,
-        price=None,            # necesario para stop-market
+        price=None,
         params={
             'stopPrice': sl_price,
             'reduceOnly': True,
-            'orderType': 'market',  # ejecutar como market al activarse
+            'orderType': 'market',
         }
     )
     return order
@@ -101,13 +114,18 @@ def open_position(exchange, symbol: str, direction: str, leverage: int,
     if size <= 0:
         raise ValueError(f"Tamaño de posición calculado es 0 para {symbol} (balance={balance:.2f} USDT)")
 
-    # Entrada (market)
+    # 1. Orden de entrada (market)
     entry_order = exchange.create_order(symbol, "market", entry_side, size)
+    print(f"[open_position] Orden de entrada enviada: {entry_order.get('id')}")
 
-    # SL (stop)
+    # 2. Esperar a que la posición se abra realmente
+    if not wait_for_position(exchange, symbol, timeout=15):
+        raise RuntimeError(f"No se pudo confirmar la apertura de la posición en {symbol}")
+
+    # 3. SL (stop)
     sl_order = place_sl_order(exchange, symbol, direction, sl_price, size)
 
-    # TPs (limit)
+    # 4. TPs (limit)
     tp_orders = []
     remaining = size
     last_i = len(tp_prices) - 1
