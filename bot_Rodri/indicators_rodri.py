@@ -232,4 +232,3 @@ def rsi_divergence(df: pd.DataFrame, rsi_col: str = "RSI", lookback: int = 30):
                 return "BAJISTA", strength
 
     return None, 0.0
-
