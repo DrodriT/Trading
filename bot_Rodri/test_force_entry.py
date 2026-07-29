@@ -32,9 +32,17 @@ LEVERAGE = 2
 
 
 def main():
-    if "PON_AQUI" in config.BITGET_API_KEY:
-        print("[ERROR] Faltan las claves de Bitget en config_rodri.py "
-              "(BITGET_API_KEY / BITGET_API_SECRET / BITGET_API_PASSWORD).")
+    missing = [
+        name for name, val in [
+            ("BITGET_API_KEY", config.BITGET_API_KEY),
+            ("BITGET_API_SECRET", config.BITGET_API_SECRET),
+            ("BITGET_API_PASSWORD", config.BITGET_API_PASSWORD),
+        ] if not val or "PON_AQUI" in val
+    ]
+    if missing:
+        print(f"[ERROR] Faltan/están vacías estas claves de Bitget: {', '.join(missing)}. "
+              f"Revisa que los nombres de los secrets en GitHub coincidan EXACTAMENTE con los "
+              f"que usa el workflow (env: BITGET_API_KEY/BITGET_API_SECRET/BITGET_API_PASSWORD).")
         return
 
     print(f"Conectando a Bitget demo...")
