@@ -99,12 +99,30 @@ def send_telegram(message: str):
         }, timeout=10)
         if resp.status_code != 200:
             print(f"[ERROR Telegram] {resp.status_code}: {resp.text}")
+            print("[AVISO] Reintentando en texto plano (sin Markdown) para no perder el aviso...")
+            resp2 = requests.post(url, data={
+                "chat_id": config.TELEGRAM_CHAT_ID,
+                "text": message,
+            }, timeout=10)
+            if resp2.status_code != 200:
+                print(f"[ERROR Telegram] Reintento en texto plano también falló: {resp2.status_code}: {resp2.text}")
     except Exception as e:
         print(f"[ERROR Telegram] {e}")
 
 
 def display_symbol(symbol: str) -> str:
     return symbol.split(":")[0].replace("/", "")
+
+
+def display_strategies(strategies) -> str:
+    """
+    Los nombres de estrategia llevan guiones bajos (ej. 'VP_MEAN_REVERT'),
+    y Telegram con parse_mode=Markdown interpreta '_' como cursiva — si el
+    nº de '_' en todo el mensaje no forma parejas, Telegram RECHAZA el
+    mensaje entero (y send_telegram() se traga el error en silencio).
+    Por eso aquí se muestran sin guion bajo, solo para Telegram.
+    """
+    return " + ".join(s.replace("_", " ") for s in strategies)
 
 
 def pct_from_entry(entry: float, level: float) -> str:
@@ -125,7 +143,7 @@ def fetch_ohlcv(exchange, symbol, timeframe, limit):
 def context_line(pos: dict) -> str:
     tag = f" | ⚠️ ROJA (x{config.RED_SIZE_FACTOR})" if pos.get("is_red") else ""
     return (f"Score: *{pos['score']}* | Prob: {pos['prob'] * 100:.0f}% | "
-            f"{'+'.join(pos['strategies'])} | Lev: {pos['leverage']}x{tag}")
+            f"{display_strategies(pos['strategies'])} | Lev: {pos['leverage']}x{tag}")
 
 
 # ══════════════════════════════════════════════════════════
@@ -412,7 +430,7 @@ def check_symbol(exchange, symbol, state, now, exec_exchange=None):
 
         msg = (
             f"{emoji} *{sym} | {dir_label}*{red_tag}\n"
-            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {'+'.join(pos['strategies'])}\n\n"
+            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {display_strategies(pos['strategies'])}\n\n"
             f"💰 Entrada: `{pos['entry']:.4f}`\n"
             f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n"
             f"⚡ Apalancamiento sugerido: {leverage}x\n\n"
@@ -549,9 +567,18 @@ def run_once():
 
     exec_exchange = None
     if config.ENABLE_BITGET_EXECUTION:
-        if "PON_AQUI" in config.BITGET_API_KEY or "PON_AQUI" in config.BITGET_API_SECRET:
-            print("[AVISO] ENABLE_BITGET_EXECUTION=True pero faltan las claves de Bitget demo "
-                  "(BITGET_API_KEY / BITGET_API_SECRET / BITGET_API_PASSWORD). Corriendo en modo papel.")
+        missing = [
+            name for name, val in [
+                ("BITGET_API_KEY", config.BITGET_API_KEY),
+                ("BITGET_API_SECRET", config.BITGET_API_SECRET),
+                ("BITGET_API_PASSWORD", config.BITGET_API_PASSWORD),
+            ] if not val or "PON_AQUI" in val
+        ]
+        if missing:
+            print(f"[AVISO] ENABLE_BITGET_EXECUTION=True pero faltan/están vacías estas claves: "
+                  f"{', '.join(missing)}. Revisa que los nombres de los secrets en GitHub coincidan "
+                  f"EXACTAMENTE con los que usa el workflow (env: BITGET_API_KEY/BITGET_API_SECRET/"
+                  f"BITGET_API_PASSWORD). Corriendo en modo papel.")
         else:
             exec_exchange = bx.create_demo_exchange(
                 config.BITGET_API_KEY, config.BITGET_API_SECRET, config.BITGET_API_PASSWORD
