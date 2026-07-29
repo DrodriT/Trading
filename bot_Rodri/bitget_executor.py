@@ -87,7 +87,8 @@ def calculate_position_size(balance: float, entry_price: float, sl_price: float,
     bloqueado es menor, pero el riesgo en USDT si salta el SL es el mismo
     (por eso el cálculo de tamaño no depende del leverage).
     """
-    risk_amount = balance * (risk_pct / 100.0)
+    # risk_amount = balance * (risk_pct / 100.0)
+    risk_amount = 50
     sl_distance = abs(entry_price - sl_price)
     if sl_distance <= 0:
         return 0.0

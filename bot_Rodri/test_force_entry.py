@@ -22,11 +22,11 @@ import bitget_executor as bx
 # ── EDITA ESTO con los valores que quieras forzar ──
 SYMBOL = "BTC/USDT:USDT"
 DIRECTION = "ALCISTA"       # "ALCISTA" (long) o "BAJISTA" (short)
-ENTRY_PRICE = 0.0893
-SL_PRICE = 0.0852
-TP1_PRICE = 0.0934
-TP2_PRICE = 0.09627
-TP3_PRICE = 0.09955
+ENTRY_PRICE = 64300.0
+SL_PRICE = 64200.0
+TP1_PRICE = 64400.0
+TP2_PRICE = 64500.0
+TP3_PRICE = 64600.0
 LEVERAGE = 2
 # ────────────────────────────────────────────────────
 
