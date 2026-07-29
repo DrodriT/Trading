@@ -26,45 +26,42 @@
       "leverage": 20,
       "is_red": true,
       "size_factor": 0.3
-    },
-    "ETH/USDT:USDT": {
+    }
+  },
+  "cooldowns": {
+    "ETH/USDT:USDT": "2026-07-30T01:48:48.655925+00:00"
+  },
+  "red_signals_today": {
+    "date": "2026-07-29",
+    "count": 2
+  },
+  "recent_results": [
+    true
+  ],
+  "dynamic_min_score": 60,
+  "trade_log": [
+    {
+      "symbol": "ETH/USDT:USDT",
       "dir": "ALCISTA",
-      "entry": 1877.54,
-      "entry_candle": "2026-07-29T21:00:00+00:00",
-      "sl": 1877.54,
-      "tp1": 1886.9385714285715,
-      "tp2": 1893.5175714285715,
-      "tp3": 1893.5175714285715,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 58,
-      "prob": 0.62,
       "strategies": [
         "RSI_DIVERGENCE",
         "VP_MEAN_REVERT",
         "LIQUIDITY_GRAB"
       ],
       "confluence": 3,
-      "leverage": 20,
+      "score": 58,
+      "prob": 0.62,
       "is_red": true,
-      "size_factor": 0.3
+      "leverage": 20,
+      "entry": 1877.54,
+      "exit": 1893.02,
+      "r_result": 0.44,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-29T21:00:00+00:00",
+      "closed_at": "2026-07-29T21:48:48.655925+00:00"
     }
-  },
-  "cooldowns": {},
-  "red_signals_today": {
-    "date": "2026-07-29",
-    "count": 2
-  },
-  "recent_results": [],
-  "dynamic_min_score": 60,
-  "trade_log": [],
+  ],
   "stats": {
     "total_signals": 2,
     "normal_signals": 0,
@@ -73,13 +70,13 @@
     "short_signals": 0,
     "sl_hits": 0,
     "tp1_hits": 2,
-    "tp2_hits": 0,
-    "tp3_hits": 0,
+    "tp2_hits": 1,
+    "tp3_hits": 1,
     "flips": 0,
-    "wins": 0,
+    "wins": 1,
     "losses": 0,
     "be_saves": 0,
-    "r_sum": 0.0
+    "r_sum": 0.43999999999999995
   },
   "last_daily_summary_date": "2026-07-29",
   "startup_notified": true,
