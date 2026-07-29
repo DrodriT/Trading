@@ -29,6 +29,7 @@ import pandas as pd
 import requests
 
 import config_rodri as config
+import bitget_executor as bx
 from strategy_rodri import (
     compute_base_indicators, compute_ensemble_signal, suggest_leverage,
     cap_tp_at_r, build_risk_levels
@@ -235,8 +236,22 @@ def classify_signal_quality(signal, dynamic_min_score):
     return "descartada"
 
 
-def close_position(state, symbol, pos, last_price, close_reason, now, extra_note=""):
+def close_position(state, symbol, pos, last_price, close_reason, now, exec_exchange=None, extra_note=""):
     """Cierra una posición: registra stats, resultado, cooldown y avisa por Telegram."""
+    # Si la posición se ejecutó de verdad en Bitget demo: cancela lo que
+    # quede de SL/TP pendientes y cierra a mercado cualquier resto (red de
+    # seguridad para flips, o por si el SL/TP del propio Bitget aún no
+    # se había disparado cuando el bot lo detectó por su cuenta).
+    if config.ENABLE_BITGET_EXECUTION and exec_exchange is not None and pos.get("bitget_executed"):
+        try:
+            bx.close_remaining_position(
+                exec_exchange, symbol, pos["dir"],
+                sl_order_id=pos.get("bitget_sl_order_id"),
+                tp_order_ids=pos.get("bitget_tp_order_ids"),
+            )
+        except Exception as e:
+            print(f"[bitget_executor] ERROR limpiando posición en Bitget para {symbol}: {e}")
+
     stats = get_stats(state)
     was_be = pos.get("be_active", False)
     is_win, is_be_save, r_total = classify_closed_position(pos, close_reason, was_be)
@@ -303,7 +318,7 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
 # Lógica principal por símbolo
 # ══════════════════════════════════════════════════════════
 
-def check_symbol(exchange, symbol, state, now):
+def check_symbol(exchange, symbol, state, now, exec_exchange=None):
     limit = max(config.VP_LOOKBACK, config.SMC_LOOKBACK, config.BREAKOUT_LOOKBACK) + 100
     df = fetch_ohlcv(exchange, symbol, config.TIMEFRAME, limit)
     df = compute_base_indicators(df, config)
@@ -332,7 +347,7 @@ def check_symbol(exchange, symbol, state, now):
 
     # ── 2. Flip: señal contraria mientras hay posición abierta -> cerrar antes ──
     if actionable_signal and pos and pos["dir"] != signal["direction"]:
-        close_position(state, symbol, pos, last_price, "flip", now)
+        close_position(state, symbol, pos, last_price, "flip", now, exec_exchange)
         pos = None
 
     # ── 3. Abrir nueva posición si hay hueco y no hay ya una en este símbolo ──
@@ -363,6 +378,27 @@ def check_symbol(exchange, symbol, state, now):
         }
         positions[symbol] = new_pos
         pos = new_pos
+
+        # ── Ejecución real en Bitget demo (si está activada) ──
+        new_pos["bitget_executed"] = False
+        if config.ENABLE_BITGET_EXECUTION and exec_exchange is not None:
+            try:
+                exec_result = bx.open_position(
+                    exec_exchange, symbol, signal["direction"], leverage,
+                    entry_price=last_price, sl_price=new_pos["sl"],
+                    tp_prices=[new_pos["tp1"], new_pos["tp2"], new_pos["tp3"]],
+                    risk_pct=config.RISK_PCT_PER_TRADE, tp_split=config.TP_SPLIT,
+                )
+                new_pos["bitget_executed"] = True
+                new_pos["bitget_size"] = exec_result["size"]
+                new_pos["bitget_sl_order_id"] = exec_result["sl_order_id"]
+                new_pos["bitget_tp_order_ids"] = [tp["order_id"] for tp in exec_result["tp_orders"]]
+            except Exception as e:
+                print(f"[bitget_executor] ERROR abriendo posición real en Bitget para {symbol}: {e}")
+                send_telegram(
+                    f"⚠️ *{display_symbol(symbol)}* — La señal se registró en modo papel, pero "
+                    f"FALLÓ la apertura real en Bitget demo: `{e}`"
+                )
 
         stats["total_signals"] += 1
         stats["red_signals" if is_red else "normal_signals"] += 1
@@ -413,6 +449,18 @@ def check_symbol(exchange, symbol, state, now):
                 if config.USE_BREAK_EVEN and not pos["be_active"]:
                     pos["sl"] = pos["entry"]
                     pos["be_active"] = True
+
+                    if config.ENABLE_BITGET_EXECUTION and exec_exchange is not None and pos.get("bitget_executed"):
+                        try:
+                            new_sl_id = bx.move_sl_to_be(
+                                exec_exchange, symbol, pos["dir"],
+                                old_sl_order_id=pos.get("bitget_sl_order_id"),
+                                new_sl_price=pos["entry"], size=pos.get("bitget_size", 0.0),
+                            )
+                            pos["bitget_sl_order_id"] = new_sl_id
+                        except Exception as e:
+                            print(f"[bitget_executor] ERROR moviendo SL a BE en Bitget para {symbol}: {e}")
+
                     send_telegram(
                         f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`{tp1_pct}).\n"
                         f"🔒 SL movido a BE (`{pos['entry']:.4f}`).\n{context_line(pos)}"
@@ -436,10 +484,10 @@ def check_symbol(exchange, symbol, state, now):
                 if tp3_first:
                     pos["tp3_reached"] = True
                     stats["tp3_hits"] += 1
-                    close_position(state, symbol, pos, last_price, "tp3", now)
+                    close_position(state, symbol, pos, last_price, "tp3", now, exec_exchange)
                 else:
                     stats["sl_hits"] += 1
-                    close_position(state, symbol, pos, last_price, "sl", now)
+                    close_position(state, symbol, pos, last_price, "sl", now, exec_exchange)
 
     state[last_processed_key] = last_candle_time
 
@@ -498,6 +546,17 @@ def run_once():
         "enableRateLimit": True,
         "options": {"defaultType": config.MARKET_TYPE},
     })
+
+    exec_exchange = None
+    if config.ENABLE_BITGET_EXECUTION:
+        if "PON_AQUI" in config.BITGET_API_KEY or "PON_AQUI" in config.BITGET_API_SECRET:
+            print("[AVISO] ENABLE_BITGET_EXECUTION=True pero faltan las claves de Bitget demo "
+                  "(BITGET_API_KEY / BITGET_API_SECRET / BITGET_API_PASSWORD). Corriendo en modo papel.")
+        else:
+            exec_exchange = bx.create_demo_exchange(
+                config.BITGET_API_KEY, config.BITGET_API_SECRET, config.BITGET_API_PASSWORD
+            )
+
     state = load_state()
     now = datetime.now(timezone.utc)
 
@@ -505,7 +564,7 @@ def run_once():
 
     for symbol in config.SYMBOLS:
         try:
-            check_symbol(exchange, symbol, state, now)
+            check_symbol(exchange, symbol, state, now, exec_exchange)
         except Exception as e:
             print(f"[ERROR] {symbol}: {e}")
 
