@@ -96,7 +96,7 @@ def create_demo_exchange(api_key: str, api_secret: str, api_password: str):
 
 def get_usdt_balance(exchange) -> float:
     """Balance disponible en USDT (virtual, en la cuenta demo) para futuros."""
-    balance = exchange.fetch_balance(params={"type": "swap"})
+    balance = exchange.fetch_balance(params={"type": "swap", "productType": "USDT-FUTURES"})
     usdt = balance.get("USDT", {})
     value = usdt.get("free", None)
     if value is None:
@@ -106,7 +106,7 @@ def get_usdt_balance(exchange) -> float:
 
 def set_leverage(exchange, symbol: str, leverage: int):
     try:
-        exchange.set_leverage(leverage, symbol)
+        exchange.set_leverage(leverage, symbol, params={"productType": "USDT-FUTURES"})
     except Exception as e:
         print(f"[bitget_executor] Aviso: no se pudo fijar leverage {leverage}x en {symbol}: {e}")
 
@@ -131,7 +131,7 @@ def calculate_position_size(balance: float, entry_price: float, sl_price: float,
 def get_open_position_size(exchange, symbol: str) -> float:
     """Contratos abiertos actualmente en el exchange para ese símbolo (0 si no hay posición)."""
     try:
-        positions = exchange.fetch_positions([symbol])
+        positions = exchange.fetch_positions([symbol], params={"productType": "USDT-FUTURES"})
         for p in positions:
             contracts = p.get("contracts") or 0
             if contracts:
@@ -145,7 +145,7 @@ def cancel_order_safe(exchange, symbol: str, order_id):
     if not order_id:
         return
     try:
-        exchange.cancel_order(order_id, symbol)
+        exchange.cancel_order(order_id, symbol, params={"productType": "USDT-FUTURES"})
     except Exception as e:
         print(f"[bitget_executor] Aviso: no se pudo cancelar la orden {order_id} en {symbol}: {e}")
 
@@ -206,11 +206,13 @@ def open_position(exchange, symbol: str, direction: str, leverage: int,
     if size <= 0:
         raise ValueError(f"Tamaño de posición calculado es 0 para {symbol} (balance={balance:.2f} USDT)")
 
-    entry_order = exchange.create_order(symbol, "market", entry_side, size)
+    entry_order = exchange.create_order(
+        symbol, "market", entry_side, size, params={"productType": "USDT-FUTURES"}
+    )
 
     sl_order = exchange.create_order(
         symbol, "market", close_side, size,
-        params={"stopLossPrice": sl_price, "reduceOnly": True},
+        params={"stopLossPrice": sl_price, "reduceOnly": True, "productType": "USDT-FUTURES"},
     )
 
     tp_orders = []
@@ -221,7 +223,7 @@ def open_position(exchange, symbol: str, direction: str, leverage: int,
         remaining = round(remaining - tp_size, 8)
         tp_order = exchange.create_order(
             symbol, "market", close_side, tp_size,
-            params={"takeProfitPrice": tp_price, "reduceOnly": True},
+            params={"takeProfitPrice": tp_price, "reduceOnly": True, "productType": "USDT-FUTURES"},
         )
         tp_orders.append({"order_id": tp_order.get("id"), "price": tp_price, "size": tp_size})
 
@@ -248,7 +250,7 @@ def move_sl_to_be(exchange, symbol: str, direction: str, old_sl_order_id, new_sl
     try:
         new_sl_order = exchange.create_order(
             symbol, "market", close_side, size,
-            params={"stopLossPrice": new_sl_price, "reduceOnly": True},
+            params={"stopLossPrice": new_sl_price, "reduceOnly": True, "productType": "USDT-FUTURES"},
         )
         return new_sl_order.get("id")
     except Exception as e:
@@ -274,7 +276,7 @@ def close_remaining_position(exchange, symbol: str, direction: str,
     if remaining > 0:
         try:
             return exchange.create_order(symbol, "market", close_side, remaining,
-                                          params={"reduceOnly": True})
+                                          params={"reduceOnly": True, "productType": "USDT-FUTURES"})
         except Exception as e:
             print(f"[bitget_executor] ERROR cerrando el resto de la posición en {symbol}: {e}")
     return None
