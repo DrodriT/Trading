@@ -31,6 +31,12 @@ LEVERAGE = 2
 # ────────────────────────────────────────────────────
 
 
+def _mask(val: str) -> str:
+    if not val:
+        return "(VACÍO)"
+    return f"longitud={len(val)} | empieza_por='{val[:3]}' | termina_en='{val[-3:]}'"
+
+
 def main():
     missing = [
         name for name, val in [
@@ -45,10 +51,27 @@ def main():
               f"que usa el workflow (env: BITGET_API_KEY/BITGET_API_SECRET/BITGET_API_PASSWORD).")
         return
 
-    print(f"Conectando a Bitget demo...")
+    print("Diagnóstico de credenciales recibidas (nunca se muestran completas):")
+    print(f"  BITGET_API_KEY:      {_mask(config.BITGET_API_KEY)}")
+    print(f"  BITGET_API_SECRET:   {_mask(config.BITGET_API_SECRET)}")
+    print(f"  BITGET_API_PASSWORD: {_mask(config.BITGET_API_PASSWORD)}")
+    print("(Si alguna longitud te sorprende -ej. de más por un espacio o salto de línea pegado-, ahí está el fallo)\n")
+
+    print("Conectando a Bitget demo...")
     exchange = bx.create_demo_exchange(
         config.BITGET_API_KEY, config.BITGET_API_SECRET, config.BITGET_API_PASSWORD
     )
+
+    print("Probando primero una llamada PÚBLICA (sin autenticación) para aislar el problema...")
+    try:
+        markets = exchange.load_markets()
+        print(f"  OK: {len(markets)} mercados cargados. La conexión base y la cabecera PAPTRADING funcionan.")
+    except Exception as e:
+        print(f"  ERROR incluso en la llamada pública: {e}")
+        print("  Esto NO sería un problema de credenciales, sino de conectividad/cabecera. Avisa con este error.")
+        return
+
+    print("\nProbando ahora una llamada PRIVADA (fetch_balance, requiere firma con tus claves)...")
 
     balance = bx.get_usdt_balance(exchange)
     print(f"Balance demo disponible: {balance:.2f} USDT")
