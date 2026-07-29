@@ -40,10 +40,7 @@ def calculate_position_size(balance: float, entry_price: float, sl_price: float,
     return risk_amount / sl_distance
 
 def get_open_position_info(exchange, symbol: str):
-    """
-    Devuelve (size, entry_price) de la posición abierta para el símbolo.
-    Si no hay posición, devuelve (0, None).
-    """
+    """Devuelve (size, entry_price) de la posición abierta para el símbolo."""
     try:
         positions = exchange.fetch_positions([symbol])
         for p in positions:
@@ -74,7 +71,7 @@ def place_sl_order(exchange, symbol, direction, sl_price, size):
 def open_position(exchange, symbol: str, direction: str, leverage: int,
                    entry_price: float, sl_price: float, risk_pct: float) -> dict:
     """
-    Abre la posición con orden LIMIT y coloca SL (con reintentos).
+    Abre la posición con orden LIMIT y coloca SL con reintentos y temporizador.
     """
     is_long = direction == "ALCISTA"
     entry_side = "buy" if is_long else "sell"
@@ -95,18 +92,45 @@ def open_position(exchange, symbol: str, direction: str, leverage: int,
         amount=size,
         price=entry_price,
     )
+    print(f"[bitget_executor] Orden de entrada enviada. ID: {entry_order.get('id')}")
 
-    # 2. Colocar SL con reintentos (hasta 5 veces, esperando 1s entre intentos)
+    # 2. Colocar SL con temporizador y reintentos (máx 10s)
+    start_time = time.time()
+    timeout = 10  # segundos
     sl_order = None
-    for attempt in range(5):
+    attempt = 0
+
+    while time.time() - start_time < timeout:
+        attempt += 1
         try:
             sl_order = place_sl_order(exchange, symbol, direction, sl_price, size)
+            print(f"[bitget_executor] SL colocado en intento {attempt}")
             break
         except Exception as e:
-            print(f"[bitget_executor] Intento {attempt+1} de SL falló: {e}")
-            time.sleep(1)
+            error_msg = str(e)
+            if "No position available to close" in error_msg:
+                print(f"[bitget_executor] Intento {attempt}: posición aún no disponible, esperando 0.5s...")
+                time.sleep(0.5)
+            else:
+                print(f"[bitget_executor] Intento {attempt} falló con error inesperado: {e}")
+                # Si es otro error, reintentamos igualmente
+                time.sleep(0.5)
+
     if sl_order is None:
-        raise RuntimeError("No se pudo colocar el SL después de varios intentos.")
+        # Si no se pudo colocar el SL, cancelamos la orden de entrada para no dejar posición sin protección
+        try:
+            exchange.cancel_order(entry_order.get('id'), symbol)
+            print("[bitget_executor] Orden de entrada cancelada por fallo en SL.")
+        except:
+            pass
+        raise RuntimeError("No se pudo colocar el SL después de varios intentos (timeout).")
+
+    # Verificar que la posición realmente se abrió
+    current_size, actual_entry = get_open_position_info(exchange, symbol)
+    if current_size <= 0:
+        print("[bitget_executor] Advertencia: no se detectó posición abierta aunque el SL se colocó.")
+        # Podríamos cancelar SL y lanzar error, pero quizás la posición se abrirá después
+        # Por ahora, continuamos y confiamos en que la orden se ejecutará.
 
     return {
         "entry_order_id": entry_order.get("id"),
@@ -127,25 +151,17 @@ def cancel_order_safe(exchange, symbol: str, order_id):
         print(f"[bitget_executor] Aviso: no se pudo cancelar la orden {order_id} en {symbol}: {e}")
 
 def move_sl_to_be(exchange, state):
-    """
-    Mueve el SL a break-even (precio de entrada) para la cantidad restante.
-    state debe contener: symbol, direction, entry_price, sl_order_id, size.
-    Devuelve el nuevo ID del SL o None si falla.
-    """
-    # Obtener la cantidad actual (puede haber cambiado si se cerró parcialmente)
+    """Mueve el SL a break-even (precio de entrada) para la cantidad restante."""
     current_size, _ = get_open_position_info(exchange, state["symbol"])
     if current_size <= 0:
         print("[bitget_executor] No hay posición abierta, no se puede mover SL.")
         return None
 
-    # Cancelar SL antiguo
     cancel_order_safe(exchange, state["symbol"], state["sl_order_id"])
 
-    # Colocar nuevo SL en BE (entry_price)
     try:
         new_sl = place_sl_order(exchange, state["symbol"], state["direction"],
                                  state["entry_price"], current_size)
-        # Actualizar estado
         state["sl_order_id"] = new_sl.get("id")
         state["sl_price"] = state["entry_price"]
         return new_sl.get("id")
@@ -154,13 +170,7 @@ def move_sl_to_be(exchange, state):
         return None
 
 def close_partial(exchange, state, amount, move_sl_to_be_after=False):
-    """
-    Cierra una cantidad parcial de la posición (reduceOnly) al precio de mercado.
-    Si move_sl_to_be_after es True, mueve el SL a BE después del cierre.
-    state se actualiza en el lugar (sl_order_id, size).
-    Devuelve la orden de cierre o None.
-    """
-    # Verificar cantidad actual
+    """Cierra una cantidad parcial y opcionalmente mueve SL a BE."""
     current_size, _ = get_open_position_info(exchange, state["symbol"])
     if current_size <= 0:
         print("[bitget_executor] No hay posición abierta para cerrar.")
@@ -174,11 +184,9 @@ def close_partial(exchange, state, amount, move_sl_to_be_after=False):
     try:
         order = exchange.create_order(state["symbol"], "market", close_side, amount,
                                       params={"reduceOnly": True})
-        # Actualizar tamaño en estado (aproximado)
         new_size = current_size - amount
         state["size"] = new_size
 
-        # Si se pidió mover SL a BE y queda posición, moverlo
         if move_sl_to_be_after and new_size > 0:
             move_sl_to_be(exchange, state)
         return order
@@ -188,9 +196,7 @@ def close_partial(exchange, state, amount, move_sl_to_be_after=False):
 
 def close_remaining_position(exchange, state):
     """Cierra toda la posición restante y cancela el SL."""
-    # Cancelar SL
     cancel_order_safe(exchange, state["symbol"], state["sl_order_id"])
-    # Obtener tamaño actual
     current_size, _ = get_open_position_info(exchange, state["symbol"])
     if current_size > 0:
         close_side = "sell" if state["direction"] == "ALCISTA" else "buy"
