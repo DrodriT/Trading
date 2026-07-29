@@ -20,14 +20,17 @@ import config_rodri as config
 import bitget_executor as bx
 
 # ── EDITA ESTO con los valores que quieras forzar ──
+# Valores basados en el precio de mercado de BTC/USDT a 29 jul 2026 (~64,000 USDT),
+# con SL/TPs calculados igual que el preset "Balanced" (SL 1.5xATR, TPs 1R/2R/3R,
+# ATR aproximado ~180 USDT para este rango de volatilidad).
 SYMBOL = "BTC/USDT:USDT"
 DIRECTION = "ALCISTA"       # "ALCISTA" (long) o "BAJISTA" (short)
-ENTRY_PRICE = 64300.0
-SL_PRICE = 64200.0
-TP1_PRICE = 64400.0
-TP2_PRICE = 64500.0
-TP3_PRICE = 64600.0
-LEVERAGE = 2
+ENTRY_PRICE = 64000.0
+SL_PRICE = 63730.0
+TP1_PRICE = 64270.0
+TP2_PRICE = 64540.0
+TP3_PRICE = 64810.0
+LEVERAGE = 10
 # ────────────────────────────────────────────────────
 
 

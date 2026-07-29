@@ -41,6 +41,40 @@ TP1/TP2/TP3, leverage) y las ejecuta en Bitget:
 import ccxt
 
 
+class SymbolUnavailableError(Exception):
+    """El símbolo no está disponible para operar en el entorno demo de Bitget."""
+    pass
+
+
+class MinSizeTooLargeError(Exception):
+    """El tamaño mínimo que exige Bitget para este símbolo superaría el riesgo permitido."""
+    pass
+
+
+def ensure_position_settings(exchange, symbol: str, margin_mode: str = "crossed"):
+    """
+    Fuerza el modo one-way (sin hedge) y el modo de margen ANTES de operar.
+    Es idempotente: si ya estaban puestos así, Bitget puede devolver un
+    error de "ya está configurado así" que aquí se ignora sin más.
+
+    El parámetro 'productType' se pasa explícito porque hay un bug conocido
+    de ccxt con el modo demo de Bitget: sin él, algunas versiones mandan
+    'SUSDT-FUTURES' en vez de 'USDT-FUTURES' y la llamada falla.
+
+    Esto es lo que corrige errores del tipo {"code":"25236","msg":"Incorrect
+    position open type"} — normalmente un desajuste entre el modo de
+    posición/margen de la cuenta y el que asume la orden.
+    """
+    try:
+        exchange.set_position_mode(False, symbol, params={"productType": "USDT-FUTURES"})
+    except Exception as e:
+        print(f"[bitget_executor] Aviso (position mode) en {symbol}: {e}")
+    try:
+        exchange.set_margin_mode(margin_mode, symbol, params={"productType": "USDT-FUTURES"})
+    except Exception as e:
+        print(f"[bitget_executor] Aviso (margin mode) en {symbol}: {e}")
+
+
 def create_demo_exchange(api_key: str, api_secret: str, api_password: str):
     """
     Crea una instancia de ccxt.bitget apuntando al entorno DEMO.
@@ -87,8 +121,7 @@ def calculate_position_size(balance: float, entry_price: float, sl_price: float,
     bloqueado es menor, pero el riesgo en USDT si salta el SL es el mismo
     (por eso el cálculo de tamaño no depende del leverage).
     """
-    # risk_amount = balance * (risk_pct / 100.0)
-    risk_amount = 50
+    risk_amount = balance * (risk_pct / 100.0)
     sl_distance = abs(entry_price - sl_price)
     if sl_distance <= 0:
         return 0.0
@@ -119,22 +152,57 @@ def cancel_order_safe(exchange, symbol: str, order_id):
 
 def open_position(exchange, symbol: str, direction: str, leverage: int,
                    entry_price: float, sl_price: float, tp_prices: list,
-                   risk_pct: float, tp_split=(1 / 3, 1 / 3, 1 / 3)) -> dict:
+                   risk_pct: float, tp_split=(1 / 3, 1 / 3, 1 / 3),
+                   max_min_size_risk_multiplier: float = 3.0,
+                   margin_mode: str = "crossed") -> dict:
     """
     Abre la posición en Bitget demo y coloca SL + 3 TP como órdenes reales
     reduceOnly. Devuelve un dict con los IDs de las órdenes y el tamaño
     real usado, para que el bot lo guarde en su estado y pueda gestionarlo
     después (ej. mover el SL a BE, cancelar al cerrar).
+
+    Comprobaciones antes de operar:
+      1. El símbolo debe estar disponible para operar en el entorno demo
+         (algunos símbolos con datos de mercado normales no lo están) ->
+         SymbolUnavailableError si no.
+      2. Si el tamaño calculado por riesgo es menor que el mínimo que
+         exige Bitget para ese contrato, se sube al mínimo — PERO solo si
+         eso no dispara el riesgo real por encima de
+         'max_min_size_risk_multiplier' veces el riesgo objetivo (por
+         defecto 3x); si lo supera, se descarta con MinSizeTooLargeError
+         en vez de arriesgar de más en silencio.
+      3. Se fuerza el modo one-way + el modo de margen antes de operar,
+         para evitar errores de "tipo de apertura de posición incorrecto".
     """
     is_long = direction == "ALCISTA"
     entry_side = "buy" if is_long else "sell"
     close_side = "sell" if is_long else "buy"
 
+    exchange.load_markets()
+    if symbol not in exchange.markets:
+        raise SymbolUnavailableError(f"{symbol} no está disponible para operar en Bitget demo")
+
+    ensure_position_settings(exchange, symbol, margin_mode)
     set_leverage(exchange, symbol, leverage)
 
     balance = get_usdt_balance(exchange)
     raw_size = calculate_position_size(balance, entry_price, sl_price, risk_pct)
     size = float(exchange.amount_to_precision(symbol, raw_size))
+
+    market = exchange.market(symbol)
+    min_amount = ((market.get("limits") or {}).get("amount") or {}).get("min")
+    size_bumped_to_minimum = False
+    if min_amount and size < min_amount:
+        implied_risk_pct = risk_pct * (min_amount / raw_size) if raw_size > 0 else float("inf")
+        if implied_risk_pct > risk_pct * max_min_size_risk_multiplier:
+            raise MinSizeTooLargeError(
+                f"tamaño mínimo de {symbol} ({min_amount}) implicaría arriesgar "
+                f"~{implied_risk_pct:.2f}% en vez del {risk_pct}% configurado "
+                f"(supera el límite de x{max_min_size_risk_multiplier})"
+            )
+        size = min_amount
+        size_bumped_to_minimum = True
+
     if size <= 0:
         raise ValueError(f"Tamaño de posición calculado es 0 para {symbol} (balance={balance:.2f} USDT)")
 
@@ -160,6 +228,7 @@ def open_position(exchange, symbol: str, direction: str, leverage: int,
     return {
         "entry_order_id": entry_order.get("id"),
         "size": size,
+        "size_bumped_to_minimum": size_bumped_to_minimum,
         "sl_order_id": sl_order.get("id"),
         "tp_orders": tp_orders,
     }

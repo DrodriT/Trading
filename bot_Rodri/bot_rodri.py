@@ -399,24 +399,46 @@ def check_symbol(exchange, symbol, state, now, exec_exchange=None):
 
         # ── Ejecución real en Bitget demo (si está activada) ──
         new_pos["bitget_executed"] = False
+        unavailable_symbols = state.setdefault("bitget_unavailable_symbols", [])
         if config.ENABLE_BITGET_EXECUTION and exec_exchange is not None:
-            try:
-                exec_result = bx.open_position(
-                    exec_exchange, symbol, signal["direction"], leverage,
-                    entry_price=last_price, sl_price=new_pos["sl"],
-                    tp_prices=[new_pos["tp1"], new_pos["tp2"], new_pos["tp3"]],
-                    risk_pct=config.RISK_PCT_PER_TRADE, tp_split=config.TP_SPLIT,
-                )
-                new_pos["bitget_executed"] = True
-                new_pos["bitget_size"] = exec_result["size"]
-                new_pos["bitget_sl_order_id"] = exec_result["sl_order_id"]
-                new_pos["bitget_tp_order_ids"] = [tp["order_id"] for tp in exec_result["tp_orders"]]
-            except Exception as e:
-                print(f"[bitget_executor] ERROR abriendo posición real en Bitget para {symbol}: {e}")
-                send_telegram(
-                    f"⚠️ *{display_symbol(symbol)}* — La señal se registró en modo papel, pero "
-                    f"FALLÓ la apertura real en Bitget demo: `{e}`"
-                )
+            if symbol in unavailable_symbols:
+                pass  # ya sabemos que no está disponible en demo: no reintentamos ni avisamos de nuevo
+            else:
+                try:
+                    exec_result = bx.open_position(
+                        exec_exchange, symbol, signal["direction"], leverage,
+                        entry_price=last_price, sl_price=new_pos["sl"],
+                        tp_prices=[new_pos["tp1"], new_pos["tp2"], new_pos["tp3"]],
+                        risk_pct=config.RISK_PCT_PER_TRADE, tp_split=config.TP_SPLIT,
+                        max_min_size_risk_multiplier=config.MAX_MIN_SIZE_RISK_MULTIPLIER,
+                        margin_mode=config.MARGIN_MODE,
+                    )
+                    new_pos["bitget_executed"] = True
+                    new_pos["bitget_size"] = exec_result["size"]
+                    new_pos["bitget_sl_order_id"] = exec_result["sl_order_id"]
+                    new_pos["bitget_tp_order_ids"] = [tp["order_id"] for tp in exec_result["tp_orders"]]
+                    if exec_result.get("size_bumped_to_minimum"):
+                        send_telegram(
+                            f"ℹ️ *{display_symbol(symbol)}* — El tamaño se ajustó al mínimo que exige "
+                            f"Bitget para este contrato (por debajo del {config.RISK_PCT_PER_TRADE}% de riesgo objetivo)."
+                        )
+                except bx.SymbolUnavailableError:
+                    unavailable_symbols.append(symbol)
+                    send_telegram(
+                        f"ℹ️ *{display_symbol(symbol)}* — Este símbolo no está disponible para operar en "
+                        f"Bitget demo. Se seguirá avisando en modo papel, pero no se reintentará abrirlo ahí."
+                    )
+                except bx.MinSizeTooLargeError as e:
+                    send_telegram(
+                        f"⚠️ *{display_symbol(symbol)}* — Señal registrada en papel, pero se descarta la "
+                        f"apertura real en Bitget: {e}"
+                    )
+                except Exception as e:
+                    print(f"[bitget_executor] ERROR abriendo posición real en Bitget para {symbol}: {e}")
+                    send_telegram(
+                        f"⚠️ *{display_symbol(symbol)}* — La señal se registró en modo papel, pero "
+                        f"FALLÓ la apertura real en Bitget demo: `{e}`"
+                    )
 
         stats["total_signals"] += 1
         stats["red_signals" if is_red else "normal_signals"] += 1
