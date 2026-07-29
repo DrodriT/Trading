@@ -76,14 +76,17 @@ def main():
 
     print("\nProbando ahora una llamada PRIVADA (fetch_balance, requiere firma con tus claves)...")
 
-    raw_balance = exchange.fetch_balance(params={"type": "swap", "productType": "USDT-FUTURES"})
-    print("\n🔍 Respuesta CRUDA de fetch_balance (para diagnosticar el balance en 0):")
-    print(f"  Claves de nivel superior: {list(raw_balance.keys())}")
-    print(f"  raw_balance.get('USDT'): {raw_balance.get('USDT')}")
-    print(f"  raw_balance.get('info'): {raw_balance.get('info')}")
+    for product_type in ("USDT-FUTURES", "SUSDT-FUTURES"):
+        try:
+            raw_balance = exchange.fetch_balance(params={"type": "swap", "productType": product_type})
+            print(f"\n🔍 fetch_balance con productType='{product_type}':")
+            print(f"  raw_balance.get('USDT'): {raw_balance.get('USDT')}")
+            print(f"  raw_balance.get('info'): {raw_balance.get('info')}")
+        except Exception as e:
+            print(f"\n🔍 fetch_balance con productType='{product_type}' -> ERROR: {e}")
 
     balance = bx.get_usdt_balance(exchange)
-    print(f"\nBalance demo disponible (según get_usdt_balance): {balance:.2f} USDT")
+    print(f"\nBalance demo disponible (según get_usdt_balance, con USDT-FUTURES): {balance:.2f} USDT")
 
     print(f"\nForzando entrada: {SYMBOL} | {DIRECTION} | Entrada {ENTRY_PRICE} | "
           f"SL {SL_PRICE} | Leverage {LEVERAGE}x | Riesgo {config.RISK_PCT_PER_TRADE}% del balance")
