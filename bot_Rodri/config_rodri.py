@@ -110,8 +110,8 @@ LEV_ATR_PCT_HIGH = 2.0      # ATR%/precio >= esto -> leverage mínimo
 # --- Ejecución real en Bitget demo ---
 ENABLE_BITGET_EXECUTION = True   # False = solo modo papel (como hasta ahora), sin tocar Bitget
 BITGET_API_KEY = os.environ.get("BITGET_API_KEY", "PON_AQUI_TU_API_KEY")
-BITGET_API_SECRET = os.environ.get("BITGET_SECRET_KEY", "PON_AQUI_TU_SECRET")
-BITGET_API_PASSWORD = os.environ.get("BITGET_PASSPHRASE", "PON_AQUI_TU_PASSPHRASE")
+BITGET_API_SECRET = os.environ.get("BITGET_API_SECRET", "PON_AQUI_TU_SECRET")
+BITGET_API_PASSWORD = os.environ.get("BITGET_API_PASSWORD", "PON_AQUI_TU_PASSPHRASE")
 RISK_PCT_PER_TRADE = 1.0        # % del balance demo arriesgado por operación (según distancia al SL)
 TP_SPLIT = (1 / 3, 1 / 3, 1 / 3)  # reparto del tamaño de la posición entre TP1 / TP2 / TP3
 
