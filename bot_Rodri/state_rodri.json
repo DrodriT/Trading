@@ -1,33 +1,5 @@
 {
   "positions": {
-    "AVAX/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 6.498,
-      "entry_candle": "2026-07-30T02:35:00+00:00",
-      "sl": 6.498,
-      "tp1": 6.4725,
-      "tp2": 6.447000000000001,
-      "tp3": 6.421500000000001,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 67,
-      "prob": 0.67,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
     "BCH/USDT:USDT": {
       "dir": "BAJISTA",
       "entry": 210.49,
@@ -64,7 +36,8 @@
     "AAVE/USDT:USDT": "2026-07-30T04:02:57.276314+00:00",
     "ICP/USDT:USDT": "2026-07-30T04:10:55.984612+00:00",
     "SUI/USDT:USDT": "2026-07-30T04:20:57.419780+00:00",
-    "NEAR/USDT:USDT": "2026-07-30T04:28:44.801421+00:00"
+    "NEAR/USDT:USDT": "2026-07-30T04:28:44.801421+00:00",
+    "AVAX/USDT:USDT": "2026-07-30T09:03:41.535579+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-30",
@@ -77,6 +50,7 @@
     false,
     true,
     false,
+    true,
     true
   ],
   "dynamic_min_score": 50,
@@ -218,6 +192,26 @@
       "close_reason": "sl_be",
       "entry_candle": "2026-07-30T00:10:00+00:00",
       "closed_at": "2026-07-30T00:28:44.801421+00:00"
+    },
+    {
+      "symbol": "AVAX/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 67,
+      "prob": 0.67,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 6.498,
+      "exit": 6.417,
+      "r_result": 2.0,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-30T02:35:00+00:00",
+      "closed_at": "2026-07-30T05:03:41.535579+00:00"
     }
   ],
   "stats": {
@@ -229,12 +223,12 @@
     "sl_hits": 3,
     "tp1_hits": 7,
     "tp2_hits": 6,
-    "tp3_hits": 4,
+    "tp3_hits": 5,
     "flips": 0,
-    "wins": 5,
+    "wins": 6,
     "losses": 2,
     "be_saves": 1,
-    "r_sum": 3.68
+    "r_sum": 5.68
   },
   "last_daily_summary_date": "2026-07-30",
   "startup_notified": true,
