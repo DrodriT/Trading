@@ -27,38 +27,10 @@
       "leverage": 20,
       "is_red": false,
       "size_factor": 1.0
-    },
-    "ETH/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 1918.71,
-      "entry_candle": "2026-07-30T11:20:00+00:00",
-      "sl": 1921.4785714285715,
-      "tp1": 1915.9414285714286,
-      "tp2": 1913.1728571428573,
-      "tp3": 1910.4042857142858,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 78,
-      "prob": 0.73,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
     }
   },
   "cooldowns": {
-    "ETH/USDT:USDT": "2026-07-30T01:48:48.655925+00:00",
+    "ETH/USDT:USDT": "2026-07-30T15:37:32.042104+00:00",
     "BTC/USDT:USDT": "2026-07-30T01:53:41.593859+00:00",
     "HBAR/USDT:USDT": "2026-07-30T11:13:44.047776+00:00",
     "AAVE/USDT:USDT": "2026-07-30T04:02:57.276314+00:00",
@@ -80,14 +52,14 @@
   "recent_results": [
     true,
     true,
-    true,
     false,
     false,
     true,
     false,
     false,
     true,
-    true
+    true,
+    false
   ],
   "dynamic_min_score": 50,
   "trade_log": [
@@ -408,6 +380,26 @@
       "close_reason": "sl_be",
       "entry_candle": "2026-07-30T09:05:00+00:00",
       "closed_at": "2026-07-30T11:17:46.231518+00:00"
+    },
+    {
+      "symbol": "ETH/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 78,
+      "prob": 0.73,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 1918.71,
+      "exit": 1921.6,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-07-30T11:20:00+00:00",
+      "closed_at": "2026-07-30T11:37:32.042104+00:00"
     }
   ],
   "stats": {
@@ -416,15 +408,15 @@
     "red_signals": 4,
     "long_signals": 8,
     "short_signals": 10,
-    "sl_hits": 9,
+    "sl_hits": 10,
     "tp1_hits": 11,
     "tp2_hits": 8,
     "tp3_hits": 6,
     "flips": 1,
     "wins": 10,
-    "losses": 6,
+    "losses": 7,
     "be_saves": 3,
-    "r_sum": 5.346666666666666
+    "r_sum": 4.346666666666666
   },
   "last_daily_summary_date": "2026-07-30",
   "startup_notified": true,
