@@ -356,11 +356,11 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
     # en R, y una línea de acumulado corta (el detalle completo va en el
     # resumen diario).
     send_telegram(
-        f"{icon} *{display_symbol(symbol)}* | {dir_label}\n"
-        f"{reason_text}{extra_note}\n\n"
+        f"{icon} *{display_symbol(symbol)}* | {dir_label}\n\n"
         f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}%\n"
-        f"{md_escape('\n'.join(pos['strategies']))}\n"
-        f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
+        f"{md_escape('\n'.join(pos['strategies']))}\n\n"
+        f"🛑 {reason_text}{extra_note}\n"
+        f"Resultado: {'✅ ' if is_win else '❌ '} ({r_total:+.2f}R)\n"
         f"💰 Entrada: `{pos['entry']:.4f}` → Cierre: `{last_price:.4f}`{move_pct}{tp_line}\n\n"
         f"---------------------------------\n"
         f"Acumulado: {stats['wins']}G/{stats['losses']}P\n"
@@ -472,7 +472,7 @@ def check_symbol(exchange, symbol, state, now):
         msg = (
             f"{emoji} *{sym} | {dir_label}*{red_tag}\n"
             f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}%\n"
-             f"{md_escape('\n'.join(pos['strategies']))}\n"
+            f"{md_escape('\n'.join(pos['strategies']))}\n\n"
             f"💰 Entrada: `{pos['entry']:.4f}`\n"
             f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n"
             f"⚡ Apalancamiento sugerido: {leverage}x\n\n"
