@@ -27,38 +27,10 @@
       "leverage": 20,
       "is_red": false,
       "size_factor": 1.0
-    },
-    "ETH/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 1914.54,
-      "entry_candle": "2026-07-30T18:55:00+00:00",
-      "sl": 1914.54,
-      "tp1": 1917.3021428571428,
-      "tp2": 1920.0642857142857,
-      "tp3": 1922.8264285714286,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 56,
-      "prob": 0.61,
-      "strategies": [
-        "VP_MEAN_REVERT",
-        "LIQUIDITY_GRAB"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
     }
   },
   "cooldowns": {
-    "ETH/USDT:USDT": "2026-07-30T15:37:32.042104+00:00",
+    "ETH/USDT:USDT": "2026-07-30T23:19:39.537913+00:00",
     "BTC/USDT:USDT": "2026-07-30T01:53:41.593859+00:00",
     "HBAR/USDT:USDT": "2026-07-30T16:01:54.487292+00:00",
     "AAVE/USDT:USDT": "2026-07-30T16:07:33.006732+00:00",
@@ -81,7 +53,6 @@
     "count": 2
   },
   "recent_results": [
-    false,
     true,
     false,
     false,
@@ -90,6 +61,7 @@
     true,
     true,
     false,
+    true,
     true
   ],
   "dynamic_min_score": 50,
@@ -631,6 +603,28 @@
       "close_reason": "sl_be",
       "entry_candle": "2026-07-30T15:20:00+00:00",
       "closed_at": "2026-07-30T17:49:32.869119+00:00"
+    },
+    {
+      "symbol": "ETH/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "VP_MEAN_REVERT",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "score": 56,
+      "prob": 0.61,
+      "htf_trend": null,
+      "htf_penalized": false,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 1914.54,
+      "exit": 1922.99,
+      "r_result": 2.0,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-30T18:55:00+00:00",
+      "closed_at": "2026-07-30T19:19:39.537913+00:00"
     }
   ],
   "stats": {
@@ -642,12 +636,12 @@
     "sl_hits": 19,
     "tp1_hits": 18,
     "tp2_hits": 11,
-    "tp3_hits": 7,
+    "tp3_hits": 8,
     "flips": 1,
-    "wins": 16,
+    "wins": 17,
     "losses": 11,
     "be_saves": 8,
-    "r_sum": 5.346666666666665
+    "r_sum": 7.346666666666665
   },
   "last_daily_summary_date": "2026-07-30",
   "startup_notified": true,
