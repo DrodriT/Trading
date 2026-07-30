@@ -31,7 +31,8 @@ import requests
 import config_rodri as config
 from strategy_rodri import (
     compute_base_indicators, compute_ensemble_signal, suggest_leverage,
-    cap_tp_at_r, build_risk_levels, STRATEGY_NAMES
+    cap_tp_at_r, build_risk_levels, STRATEGY_NAMES,
+    compute_htf_context, apply_htf_confirmation,
 )
 from chart_rodri import generate_signal_chart
 
@@ -157,7 +158,10 @@ def send_startup_message():
         f"cooldown {config.COOLDOWN_HOURS}h\n"
         f"Rojas: x{config.RED_SIZE_FACTOR}, max {config.RED_MAX_PER_DAY}/día, "
         f"prob≥{config.RED_MIN_PROB}, TP cap {config.RED_TP_CAP_R}R\n"
-        f"Ensemble: bonus por confluencia ({config.CONFLUENCE_BONUS} pts/estrategia extra)"
+        f"Ensemble: bonus por confluencia ({config.CONFLUENCE_BONUS} pts/estrategia extra)\n"
+        f"Confirmación {config.CONFIRM_TIMEFRAME}: "
+        f"{'ON' if config.CONFIRM_ENABLED else 'OFF'}"
+        f"{f' (penaliza -{config.CONFIRM_SCORE_PENALTY} si ADX≥{config.CONFIRM_ADX_MIN}, bloquea si ADX≥{config.CONFIRM_BLOCK_ADX_MIN})' if config.CONFIRM_ENABLED else ''}"
     )
     send_telegram(msg)
 
@@ -358,7 +362,7 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
     send_telegram(
         f"{icon} *{display_symbol(symbol)}* | {dir_label}\n\n"
         f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}%\n"
-        f"{md_escape('\n'.join(pos['strategies']))}\n\n"
+        f"{md_escape(chr(10).join(pos['strategies']))}\n\n"
         f"🛑 {reason_text}{extra_note}\n"
         f"Resultado: {'✅ ' if is_win else '❌ '} ({r_total:+.2f}R)\n"
         f"💰 Entrada: `{pos['entry']:.4f}` → Cierre: `{last_price:.4f}`{move_pct}{tp_line}\n\n"
@@ -380,6 +384,8 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
         "confluence": pos["confluence"],
         "score": pos["score"],
         "prob": pos["prob"],
+        "htf_trend": pos.get("htf_trend"),
+        "htf_penalized": pos.get("htf_penalized", False),
         "is_red": pos.get("is_red", False),
         "leverage": pos.get("leverage"),
         "entry": pos["entry"],
@@ -413,8 +419,24 @@ def check_symbol(exchange, symbol, state, now):
     last_processed_key = f"{symbol}_last_processed_candle"
     already_processed_this_candle = state.get(last_processed_key) == last_candle_time
 
-    # ── 1. Señal ensemble sobre la última vela cerrada ──
+    # ── 1. Señal ensemble sobre la última vela cerrada (5m) ──
     signal = None if already_processed_this_candle else compute_ensemble_signal(df, config)
+
+    # ── 1b. Confirmación con el timeframe superior (15m por defecto) ──
+    # No repite las 6 estrategias en 15m: solo mira si hay una tendencia
+    # clara (EMA rápida/lenta + ADX) que respalde o contradiga la
+    # dirección detectada en 5m. Si va claramente en contra, penaliza el
+    # score o bloquea la señal directamente (ver apply_htf_confirmation).
+    if signal and config.CONFIRM_ENABLED:
+        try:
+            df_htf = fetch_ohlcv(exchange, symbol, config.CONFIRM_TIMEFRAME,
+                                  config.CONFIRM_LOOKBACK_CANDLES)
+            htf_context = compute_htf_context(df_htf, config)
+            signal = apply_htf_confirmation(signal, htf_context, config)
+        except Exception as e:
+            # Si falla la descarga/cálculo de 15m, seguimos con la señal
+            # de 5m tal cual: un fallo de red no debe bloquear el trading.
+            print(f"[AVISO] No se pudo confirmar en {config.CONFIRM_TIMEFRAME} para {symbol}: {e}")
 
     quality = None
     if signal:
@@ -452,6 +474,9 @@ def check_symbol(exchange, symbol, state, now):
             "be_active": False,
             "score": signal["score"], "prob": signal["prob"],
             "strategies": signal["strategies"], "confluence": signal["confluence"],
+            "htf_trend": signal.get("htf_trend"),
+            "htf_adx": signal.get("htf_adx"),
+            "htf_penalized": signal.get("htf_penalized", False),
             "leverage": leverage,
             "is_red": is_red,
             "size_factor": config.RED_SIZE_FACTOR if is_red else 1.0,
@@ -469,10 +494,18 @@ def check_symbol(exchange, symbol, state, now):
         sl_pct = pct_from_entry(pos["entry"], pos["sl"])
         red_tag = " ⚠️ SEÑAL ROJA (tamaño x0.30, TP cap 1.7R)" if is_red else ""
 
+        htf_line = ""
+        if config.CONFIRM_ENABLED and signal.get("htf_trend"):
+            htf_icon = "✅" if not signal.get("htf_penalized") else "⚠️"
+            htf_line = (f"{htf_icon} 15m: {signal['htf_trend']} "
+                        f"(ADX {signal['htf_adx']:.0f})"
+                        f"{' — score penalizado' if signal.get('htf_penalized') else ''}\n")
+
         msg = (
             f"{emoji} *{sym} | {dir_label}*{red_tag}\n"
             f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}%\n"
-            f"{md_escape('\n'.join(pos['strategies']))}\n\n"
+            f"{md_escape(chr(10).join(pos['strategies']))}\n"
+            f"{htf_line}\n"
             f"💰 Entrada: `{pos['entry']:.4f}`\n"
             f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n"
             f"⚡ Apalancamiento sugerido: {leverage}x\n\n"

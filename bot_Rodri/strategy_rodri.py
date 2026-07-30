@@ -1,23 +1,5 @@
 """
 Motor de estrategias ENSEMBLE — "Rodri v1.0"
-
-Inspirado en la ficha de parámetros de "Bot Portero V9 Sniper" (activos,
-umbrales, gestión de riesgo). Ese documento NO traía la lógica interna de
-cada estrategia — solo los nombres y los parámetros globales — así que las
-6 estrategias de abajo son una propuesta estándar y razonable para cada
-nombre, pensada para poder ajustarse fácilmente en cuanto veas resultados
-reales o me pases una definición más concreta de alguna de ellas.
-
-Cada detect_* función mira SOLO la última vela cerrada y devuelve:
-    (direction, score_parcial)
-donde direction está en {"ALCISTA", "BAJISTA", None} y score_parcial es la
-fuerza 0-100 de ESA señal en concreto (no el score final del ensemble).
-
-compute_ensemble_signal() las combina: agrupa por dirección, aplica un
-bonus por confluencia (varias estrategias de acuerdo), calcula el score
-final 0-100 y deriva de ahí una probabilidad heurística 0-1 (NO es una
-probabilidad estadística real: no hay backtest/modelo detrás, ver
-score_to_probability).
 """
 import pandas as pd
 
@@ -31,7 +13,6 @@ STRATEGY_NAMES = [
     "RSI_DIVERGENCE", "VP_MEAN_REVERT", "LIQUIDITY_GRAB",
 ]
 
-# ── Presets de riesgo (SL en xATR, TP1/TP2/TP3 en múltiplos-R) ──
 RISK_PRESETS = {
     "Conservative": {"sl_mult": 2.5, "tp_mults": [1.0, 2.0, 4.0]},
     "Balanced":     {"sl_mult": 1.5, "tp_mults": [1.0, 2.0, 3.0]},
@@ -41,10 +22,6 @@ RISK_PRESETS = {
 
 
 def build_risk_levels(entry_price: float, atr_val: float, signal_type: str, preset: str):
-    """
-    Calcula SL y TP1/TP2/TP3 según el preset de riesgo elegido.
-    SL = entry -/+ (sl_mult × ATR). TP_n = entry +/- (tp_mult_n × distancia_SL).
-    """
     cfg = RISK_PRESETS[preset]
     is_long = signal_type == "ALCISTA"
     sl_distance = atr_val * cfg["sl_mult"]
@@ -59,7 +36,6 @@ def build_risk_levels(entry_price: float, atr_val: float, signal_type: str, pres
 
 
 def compute_base_indicators(df: pd.DataFrame, cfg) -> pd.DataFrame:
-    """Indicadores compartidos que necesitan varias de las 6 estrategias."""
     df = add_atr(df, cfg.ATR_LEN, col_name="ATR")
     df = add_ema(df, cfg.EMA_FAST, col_name=f"EMA{cfg.EMA_FAST}")
     df = add_ema(df, cfg.EMA_SLOW, col_name=f"EMA{cfg.EMA_SLOW}")
@@ -80,66 +56,49 @@ def detect_smc_reversal(df, cfg):
     if pd.isna(atr) or atr == 0:
         return None, 0.0
 
-    # Barrido alcista: mecha por debajo del último swing low confirmado,
-    # pero cierre de vuelta por encima de ese nivel (vela de rechazo).
     pos_low, swing_low_price = last_confirmed_swing(df, "low", last_pos, cfg.SMC_LOOKBACK)
     if (pos_low is not None and last["low"] < swing_low_price
             and last["close"] > swing_low_price and last["close"] > last["open"]):
-        # Confirmación de cambio de estructura (CHoCH simplificado): el
-        # cierre supera el swing high previo a ese swing low.
         _, swing_high_price = last_confirmed_swing(df, "high", pos_low, cfg.SMC_LOOKBACK)
         structure_shift = swing_high_price is not None and last["close"] > swing_high_price
 
-        # ===== Score por componentes =====
-        # 1) Sweep (0-40)
         wick = swing_low_price - last["low"]
-        sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT  # 40.0
+        sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT
 
-        # 2) Rechazo (0-20)
         rejection = max(last["close"] - swing_low_price, 0.0)
-        rejection_score = min(rejection / atr, 1.0) * cfg.SMC_REJECTION_WEIGHT  # 20.0
+        rejection_score = min(rejection / atr, 1.0) * cfg.SMC_REJECTION_WEIGHT
 
-        # 3) Fuerza del cuerpo (0-15)
         body = abs(last["close"] - last["open"])
-        body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT  # 15.0
+        body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT
 
-        # 4) CHoCH (0 ó 15)
         choch_score = cfg.SMC_CHOCH_WEIGHT if structure_shift else 0.0
 
-        # 5) Volumen (0-10)
         vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
-        volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT  # 10.0
+        volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT
 
         strength = min(sweep_score + rejection_score + body_score + choch_score + volume_score, 100.0)
 
         return "ALCISTA", strength
 
-    # Barrido bajista simétrico
     pos_high, swing_high_price = last_confirmed_swing(df, "high", last_pos, cfg.SMC_LOOKBACK)
     if (pos_high is not None and last["high"] > swing_high_price
             and last["close"] < swing_high_price and last["close"] < last["open"]):
         _, swing_low_price2 = last_confirmed_swing(df, "low", pos_high, cfg.SMC_LOOKBACK)
         structure_shift = swing_low_price2 is not None and last["close"] < swing_low_price2
 
-        # ===== Score por componentes =====
-        # 1) Sweep (0-40)
         wick = last["high"] - swing_high_price
-        sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT  # 40.0
+        sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT
 
-        # 2) Rechazo (0-20)
         rejection = max(swing_high_price - last["close"], 0.0)
-        rejection_score = min(rejection / atr, 1.0) * cfg.SMC_REJECTION_WEIGHT  # 20.0
+        rejection_score = min(rejection / atr, 1.0) * cfg.SMC_REJECTION_WEIGHT
 
-        # 3) Fuerza del cuerpo (0-15)
         body = abs(last["close"] - last["open"])
-        body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT  # 15.0
+        body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT
 
-        # 4) CHoCH (0 ó 15)
         choch_score = cfg.SMC_CHOCH_WEIGHT if structure_shift else 0.0
 
-        # 5) Volumen (0-10)
         vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
-        volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT  # 10.0
+        volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT
 
         strength = min(sweep_score + rejection_score + body_score + choch_score + volume_score, 100.0)
 
@@ -147,9 +106,9 @@ def detect_smc_reversal(df, cfg):
 
     return None, 0.0
 
+
 # ─────────────────────────────────────────────────────────
-# 2. LIQUIDITY_GRAB — barrido simple de un extremo reciente
-#    (versión más corta/rápida que SMC_REVERSAL, sin exigir CHoCH)
+# 2. LIQUIDITY_GRAB
 # ─────────────────────────────────────────────────────────
 def detect_liquidity_grab(df, cfg):
     if len(df) < cfg.LG_LOOKBACK + 2:
@@ -159,7 +118,7 @@ def detect_liquidity_grab(df, cfg):
     if pd.isna(atr) or atr == 0:
         return None, 0.0
 
-    window = df.iloc[-(cfg.LG_LOOKBACK + 1):-1]  # excluye la vela actual
+    window = df.iloc[-(cfg.LG_LOOKBACK + 1):-1]
     recent_low = window["low"].min()
     recent_high = window["high"].max()
 
@@ -177,7 +136,7 @@ def detect_liquidity_grab(df, cfg):
 
 
 # ─────────────────────────────────────────────────────────
-# 3. BREAKOUT — ruptura de rango con confirmación de volumen
+# 3. BREAKOUT
 # ─────────────────────────────────────────────────────────
 def detect_breakout(df, cfg):
     if len(df) < cfg.BREAKOUT_LOOKBACK + 2:
@@ -208,7 +167,7 @@ def detect_breakout(df, cfg):
 
 
 # ─────────────────────────────────────────────────────────
-# 4. TREND_PULLBACK — retroceso a favor de una tendencia establecida
+# 4. TREND_PULLBACK
 # ─────────────────────────────────────────────────────────
 def detect_trend_pullback(df, cfg):
     if len(df) < 3:
@@ -224,8 +183,6 @@ def detect_trend_pullback(df, cfg):
     is_uptrend = last[ema_fast_col] > last[ema_slow_col] and adx >= cfg.TREND_ADX_MIN
     is_downtrend = last[ema_fast_col] < last[ema_slow_col] and adx >= cfg.TREND_ADX_MIN
 
-    # Uptrend: la vela anterior tocó/perforó la EMA rápida (retroceso) y la
-    # última vela cierra de nuevo por encima, en verde -> continuación.
     if (is_uptrend and prev["low"] <= prev[ema_fast_col]
             and last["close"] > last[ema_fast_col] and last["close"] > last["open"]):
         strength = min(adx / 50.0, 1.0) * 100.0
@@ -247,7 +204,7 @@ def detect_rsi_divergence(df, cfg):
 
 
 # ─────────────────────────────────────────────────────────
-# 6. VP_MEAN_REVERT — reversión hacia el POC del Volume Profile
+# 6. VP_MEAN_REVERT
 # ─────────────────────────────────────────────────────────
 def detect_vp_mean_revert(df, cfg):
     if len(df) < cfg.VP_LOOKBACK:
@@ -285,44 +242,25 @@ DETECTORS = {
 
 
 def run_all_strategies(df, cfg):
-    """
-    Ejecuta las 6 estrategias sobre la última vela cerrada.
-    Devuelve una lista de dicts {"name", "direction", "score"} — solo las
-    que efectivamente dispararon señal.
-    """
     hits = []
     for name, fn in DETECTORS.items():
         direction, score = fn(df, cfg)
         if direction:
-           weight = cfg.STRATEGY_WEIGHTS.get(name, 1.0)
-           hits.append({"name": name,"direction": direction,"score": round(score, 1),"weight": weight,"weighted_score": round(score * weight, 1),})
+            weight = cfg.STRATEGY_WEIGHTS.get(name, 1.0)
+            hits.append({
+                "name": name, "direction": direction, "score": round(score, 1),
+                "weight": weight, "weighted_score": round(score * weight, 1),
+            })
     return hits
 
 
 def score_to_probability(score: float, cfg) -> float:
-    """
-    Transformación heurística score -> probabilidad. IMPORTANTE: no hay
-    backtest ni modelo estadístico detrás (a diferencia de un "Prob" real
-    calculado sobre histórico); es solo una segunda medida de confianza,
-    correlacionada con el score, igual que muestra el V9 en sus mensajes.
-    Lineal entre PROB_AT_SCORE_0 y PROB_AT_SCORE_100.
-    """
     p0, p100 = cfg.PROB_AT_SCORE_0, cfg.PROB_AT_SCORE_100
     prob = p0 + (score / 100.0) * (p100 - p0)
     return max(0.0, min(1.0, prob))
 
 
 def compute_ensemble_signal(df, cfg):
-    """
-    Combina las 6 estrategias:
-      1. Agrupa los hits por dirección.
-      2. Si ambas direcciones dispararon a la vez, gana la de mayor score
-         combinado (no tiene sentido abrir long y short a la vez).
-      3. score_final = media de los scores parciales de esa dirección
-         + CONFLUENCE_BONUS por cada estrategia extra de acuerdo.
-      4. Probabilidad derivada del score (ver score_to_probability).
-    Devuelve None si no hay ninguna señal, o un dict con toda la info.
-    """
     hits = run_all_strategies(df, cfg)
     if not hits:
         return None
@@ -335,10 +273,6 @@ def compute_ensemble_signal(df, cfg):
         if not hs:
             return -1.0
         if len(hs) == 1:
-            # Sin confluencia: se capa el score, ninguna estrategia sola
-            # puede alcanzar el máximo (evita falsa sensación de "Score 100"
-            # cuando en realidad solo hay UNA señal detrás, sin confirmación
-            # de ninguna otra).
             return min(hs[0]["score"], cfg.MAX_SOLO_SCORE)
         total_weight = sum(h["weight"] for h in hs)
         avg = (sum(h["weighted_score"] for h in hs) / total_weight)
@@ -368,13 +302,77 @@ def compute_ensemble_signal(df, cfg):
     }
 
 
+# ─────────────────────────────────────────────────────────
+# Confirmación de timeframe superior (15m por defecto)
+# ─────────────────────────────────────────────────────────
+def compute_htf_context(df_htf: pd.DataFrame, cfg) -> dict:
+    """
+    Calcula el contexto de tendencia en el timeframe superior de
+    confirmación (por defecto 15m): EMA rápida/lenta + ADX. No repite las
+    6 estrategias en 15m, solo determina si hay una tendencia clara y en
+    qué dirección, para poder confirmar o penalizar las señales que ya
+    detectó el ensemble de 5m.
+
+    Devuelve {"trend": "ALCISTA"/"BAJISTA"/"NEUTRAL", "adx": float}.
+    """
+    df_htf = add_ema(df_htf, cfg.CONFIRM_EMA_FAST, col_name="HTF_EMA_FAST")
+    df_htf = add_ema(df_htf, cfg.CONFIRM_EMA_SLOW, col_name="HTF_EMA_SLOW")
+    df_htf = add_adx(df_htf, cfg.CONFIRM_ADX_PERIOD, prefix="HTF_ADX")
+
+    last = df_htf.iloc[-1]
+    ema_fast, ema_slow, adx = last["HTF_EMA_FAST"], last["HTF_EMA_SLOW"], last["HTF_ADX"]
+
+    if pd.isna(ema_fast) or pd.isna(ema_slow) or pd.isna(adx):
+        return {"trend": "NEUTRAL", "adx": 0.0}
+
+    if ema_fast > ema_slow and adx >= cfg.CONFIRM_ADX_MIN:
+        trend = "ALCISTA"
+    elif ema_fast < ema_slow and adx >= cfg.CONFIRM_ADX_MIN:
+        trend = "BAJISTA"
+    else:
+        trend = "NEUTRAL"
+
+    return {"trend": trend, "adx": round(float(adx), 1)}
+
+
+def apply_htf_confirmation(signal: dict, htf: dict, cfg) -> dict:
+    """
+    Ajusta (o bloquea) la señal de 5m según el contexto de 15m:
+      - 15m NEUTRAL o a favor de la señal -> no se toca nada.
+      - 15m claramente EN CONTRA:
+          - ADX 15m >= CONFIRM_BLOCK_ADX_MIN -> tendencia demasiado fuerte
+            en contra, se BLOQUEA la señal entera (devuelve None).
+          - ADX 15m >= CONFIRM_ADX_MIN (pero por debajo del umbral de
+            bloqueo) -> tendencia moderada en contra, se PENALIZA el score
+            (CONFIRM_SCORE_PENALTY puntos) y se recalcula la probabilidad.
+    Añade "htf_trend"/"htf_adx" a la señal para poder mostrarlos en el
+    mensaje de Telegram.
+    """
+    if signal is None or not cfg.CONFIRM_ENABLED:
+        return signal
+
+    signal["htf_trend"] = htf["trend"]
+    signal["htf_adx"] = htf["adx"]
+    signal["htf_penalized"] = False
+
+    is_against = (
+        (signal["direction"] == "ALCISTA" and htf["trend"] == "BAJISTA") or
+        (signal["direction"] == "BAJISTA" and htf["trend"] == "ALCISTA")
+    )
+    if not is_against:
+        return signal
+
+    if htf["adx"] >= cfg.CONFIRM_BLOCK_ADX_MIN:
+        return None  # tendencia de 15m demasiado fuerte en contra -> se descarta
+
+    penalized_score = max(0, signal["score"] - cfg.CONFIRM_SCORE_PENALTY)
+    signal["score"] = penalized_score
+    signal["prob"] = round(score_to_probability(penalized_score, cfg), 2)
+    signal["htf_penalized"] = True
+    return signal
+
+
 def suggest_leverage(df, cfg) -> int:
-    """
-    Apalancamiento sugerido según volatilidad relativa (ATR% sobre precio):
-    más volátil -> leverage más bajo. Interpolación lineal invertida entre
-    LEVERAGE_MAX (a ATR% <= LEV_ATR_PCT_LOW) y LEVERAGE_MIN (a ATR% >=
-    LEV_ATR_PCT_HIGH).
-    """
     last = df.iloc[-1]
     if not last["close"] or pd.isna(last["ATR"]):
         return cfg.LEVERAGE_MIN
@@ -393,10 +391,6 @@ def suggest_leverage(df, cfg) -> int:
 
 
 def cap_tp_at_r(risk: dict, entry_price: float, signal_type: str, cap_rr: float) -> dict:
-    """
-    Para señales "rojas": recalcula los TP para que ningún RR supere
-    cap_rr (ej. 1.7R), manteniendo el mismo SL/sl_distance.
-    """
     is_long = signal_type == "ALCISTA"
     sl_distance = risk["sl_distance"]
     capped_tps = []
