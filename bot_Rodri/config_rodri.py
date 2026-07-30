@@ -61,6 +61,22 @@ DIVERGENCE_LOOKBACK = 30   # ventana para buscar los 2 swings de la divergencia
 VP_LOOKBACK = 100          # velas para construir el Volume Profile
 VP_BINS = 24
 
+STRATEGY_WEIGHTS = {
+    "SMC_REVERSAL":     1.40,
+    "BREAKOUT":         1.10,
+    "TREND_PULLBACK":   1.25,
+    "RSI_DIVERGENCE":   0.80,
+    "VP_MEAN_REVERT":   0.70,
+    "LIQUIDITY_GRAB":   1.00,
+}
+
+# SMC REVERSAL
+SMC_SWEEP_WEIGHT      = 40.0
+SMC_REJECTION_WEIGHT  = 20.0
+SMC_BODY_WEIGHT       = 15.0
+SMC_CHOCH_WEIGHT      = 15.0
+SMC_VOLUME_WEIGHT     = 10.0
+
 # --- Ensemble / Score / Probabilidad ---
 MAX_SOLO_SCORE = 70            # techo de score cuando dispara UNA sola estrategia (sin confluencia)
 MIN_CONFLUENCE_FOR_NORMAL = 2  # una señal "normal" (tamaño completo) necesita >=2 estrategias de acuerdo;

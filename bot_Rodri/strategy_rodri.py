@@ -89,10 +89,29 @@ def detect_smc_reversal(df, cfg):
         # cierre supera el swing high previo a ese swing low.
         _, swing_high_price = last_confirmed_swing(df, "high", pos_low, cfg.SMC_LOOKBACK)
         structure_shift = swing_high_price is not None and last["close"] > swing_high_price
+
+        # ===== Score por componentes =====
+        # 1) Sweep (0-40)
         wick = swing_low_price - last["low"]
-        strength = min(wick / atr, 2.0) / 2.0 * 100.0
-        if structure_shift:
-            strength = min(100.0, strength + 20.0)
+        sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT  # 40.0
+
+        # 2) Rechazo (0-20)
+        rejection = max(last["close"] - swing_low_price, 0.0)
+        rejection_score = min(rejection / atr, 1.0) * cfg.SMC_REJECTION_WEIGHT  # 20.0
+
+        # 3) Fuerza del cuerpo (0-15)
+        body = abs(last["close"] - last["open"])
+        body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT  # 15.0
+
+        # 4) CHoCH (0 ó 15)
+        choch_score = cfg.SMC_CHOCH_WEIGHT if structure_shift else 0.0
+
+        # 5) Volumen (0-10)
+        vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
+        volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT  # 10.0
+
+        strength = min(sweep_score + rejection_score + body_score + choch_score + volume_score, 100.0)
+
         return "ALCISTA", strength
 
     # Barrido bajista simétrico
@@ -101,14 +120,32 @@ def detect_smc_reversal(df, cfg):
             and last["close"] < swing_high_price and last["close"] < last["open"]):
         _, swing_low_price2 = last_confirmed_swing(df, "low", pos_high, cfg.SMC_LOOKBACK)
         structure_shift = swing_low_price2 is not None and last["close"] < swing_low_price2
+
+        # ===== Score por componentes =====
+        # 1) Sweep (0-40)
         wick = last["high"] - swing_high_price
-        strength = min(wick / atr, 2.0) / 2.0 * 100.0
-        if structure_shift:
-            strength = min(100.0, strength + 20.0)
+        sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT  # 40.0
+
+        # 2) Rechazo (0-20)
+        rejection = max(swing_high_price - last["close"], 0.0)
+        rejection_score = min(rejection / atr, 1.0) * cfg.SMC_REJECTION_WEIGHT  # 20.0
+
+        # 3) Fuerza del cuerpo (0-15)
+        body = abs(last["close"] - last["open"])
+        body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT  # 15.0
+
+        # 4) CHoCH (0 ó 15)
+        choch_score = cfg.SMC_CHOCH_WEIGHT if structure_shift else 0.0
+
+        # 5) Volumen (0-10)
+        vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
+        volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT  # 10.0
+
+        strength = min(sweep_score + rejection_score + body_score + choch_score + volume_score, 100.0)
+
         return "BAJISTA", strength
 
     return None, 0.0
-
 
 # ─────────────────────────────────────────────────────────
 # 2. LIQUIDITY_GRAB — barrido simple de un extremo reciente
@@ -257,7 +294,8 @@ def run_all_strategies(df, cfg):
     for name, fn in DETECTORS.items():
         direction, score = fn(df, cfg)
         if direction:
-            hits.append({"name": name, "direction": direction, "score": round(score, 1)})
+           weight = cfg.STRATEGY_WEIGHTS.get(name, 1.0)
+           hits.append({"name": name,"direction": direction,"score": round(score, 1),"weight": weight,"weighted_score": round(score * weight, 1),})
     return hits
 
 
@@ -302,7 +340,8 @@ def compute_ensemble_signal(df, cfg):
             # cuando en realidad solo hay UNA señal detrás, sin confirmación
             # de ninguna otra).
             return min(hs[0]["score"], cfg.MAX_SOLO_SCORE)
-        avg = sum(h["score"] for h in hs) / len(hs)
+        total_weight = sum(h["weight"] for h in hs)
+        avg = (sum(h["weighted_score"] for h in hs) / total_weight)
         bonus = cfg.CONFLUENCE_BONUS * (len(hs) - 1)
         return min(100.0, avg + bonus)
 
