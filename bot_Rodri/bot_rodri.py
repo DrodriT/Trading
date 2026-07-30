@@ -100,6 +100,15 @@ def send_telegram(message: str):
         }, timeout=10)
         if resp.status_code != 200:
             print(f"[ERROR Telegram] {resp.status_code}: {resp.text}")
+            # Red de seguridad: si el error es de parseo de Markdown (p.ej.
+            # un carácter especial que se nos escapó), reintenta en texto
+            # plano para que el aviso llegue igualmente en vez de perderse.
+            resp2 = requests.post(url, data={
+                "chat_id": config.TELEGRAM_CHAT_ID,
+                "text": message,
+            }, timeout=10)
+            if resp2.status_code != 200:
+                print(f"[ERROR Telegram, reintento plano] {resp2.status_code}: {resp2.text}")
     except Exception as e:
         print(f"[ERROR Telegram] {e}")
 
@@ -120,6 +129,16 @@ def send_telegram_photo(image_path: str, caption: str = ""):
             }, files={"photo": photo}, timeout=20)
         if resp.status_code != 200:
             print(f"[ERROR Telegram photo] {resp.status_code}: {resp.text}")
+            # Red de seguridad: reintenta la misma foto sin parse_mode si
+            # el fallo fue por el formato del caption, para no perder el
+            # aviso de apertura en silencio.
+            with open(image_path, "rb") as photo:
+                resp2 = requests.post(url, data={
+                    "chat_id": config.TELEGRAM_CHAT_ID,
+                    "caption": caption,
+                }, files={"photo": photo}, timeout=20)
+            if resp2.status_code != 200:
+                print(f"[ERROR Telegram photo, reintento plano] {resp2.status_code}: {resp2.text}")
     except Exception as e:
         print(f"[ERROR Telegram photo] {e}")
 
@@ -129,7 +148,7 @@ def send_startup_message():
     threshold_mode = "DYNAMIC" if config.USE_DYNAMIC_THRESHOLD else "FIXED"
     msg = (
         f"🤖 Bot \"{config.STRATEGY_LABEL}\" iniciado.\n"
-        f"Activos: {len(config.SYMBOLS)} | Estrategias: {', '.join(STRATEGY_NAMES)}\n"
+        f"Activos: {len(config.SYMBOLS)} | Estrategias: {md_escape(', '.join(STRATEGY_NAMES))}\n"
         f"Exchange: {config.EXCHANGE_ID} ({config.MARKET_TYPE})\n"
         f"Threshold mode: {threshold_mode}\n"
         f"Escaneo: {config.TIMEFRAME} | Seguimiento: {config.MONITOR_TIMEFRAME}\n"
@@ -145,6 +164,21 @@ def send_startup_message():
 
 def display_symbol(symbol: str) -> str:
     return symbol.split(":")[0].replace("/", "")
+
+
+def md_escape(text: str) -> str:
+    """
+    Escapa los caracteres especiales del Markdown "legacy" de Telegram
+    (_ * ` [ ). Es imprescindible para los nombres de estrategia
+    (SMC_REVERSAL, TREND_PULLBACK, RSI_DIVERGENCE, LIQUIDITY_GRAB...): al
+    llevar un número impar de "_", Telegram no puede emparejar la cursiva
+    y devuelve un error 400 "can't parse entities" — y como send_telegram
+    solo registra el error sin lanzar excepción, el mensaje se pierde en
+    silencio (nunca llega, aunque el bot siga funcionando con normalidad).
+    """
+    for ch in ("_", "*", "`", "["):
+        text = text.replace(ch, f"\\{ch}")
+    return text
 
 
 def pct_from_entry(entry: float, level: float) -> str:
@@ -165,7 +199,7 @@ def fetch_ohlcv(exchange, symbol, timeframe, limit):
 def context_line(pos: dict) -> str:
     tag = f" | ⚠️ ROJA (x{config.RED_SIZE_FACTOR})" if pos.get("is_red") else ""
     return (f"Score: *{pos['score']}* | Prob: {pos['prob'] * 100:.0f}% | "
-            f"{'+'.join(pos['strategies'])} | Lev: {pos['leverage']}x{tag}")
+            f"{md_escape('+'.join(pos['strategies']))} | Lev: {pos['leverage']}x{tag}")
 
 
 # ══════════════════════════════════════════════════════════
@@ -294,20 +328,39 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
         reason_label = "sl_be"
     icon = icon_map.get(reason_label, "🛑")
     text_map = {
-        "flip": "Flip de señal. Trade cerrado.",
-        "tp3": "TP3 alcanzado. Trade cerrado.",
-        "sl_be": "BE stop-out. Trade cerrado.",
-        "sl": "SL alcanzado. Trade cerrado.",
+        "flip": "Flip de señal",
+        "tp3": "TP3 alcanzado",
+        "sl_be": "BE stop-out",
+        "sl": "SL alcanzado",
     }
-    reason_text = text_map.get(reason_label, "Trade cerrado.")
+    reason_text = text_map.get(reason_label, "Trade cerrado")
 
-    # Mensaje corto: solo el valor del activo (entrada/cierre) y el
-    # resultado, sin el bloque de estadísticas globales (eso queda para
-    # el resumen diario).
+    dir_label = "LONG" if pos["dir"] == "ALCISTA" else "SHORT"
+    move_pct = pct_from_entry(pos["entry"], last_price)
+
+    tp_flags = []
+    if pos.get("tp1_reached"):
+        tp_flags.append("TP1✅")
+    if pos.get("tp2_reached"):
+        tp_flags.append("TP2✅")
+    if pos.get("tp3_reached"):
+        tp_flags.append("TP3✅")
+    tp_line = f"\n🎯 {' '.join(tp_flags)}" if tp_flags else ""
+
+    closed_trades = stats["wins"] + stats["losses"]
+    win_rate = stats["wins"] / closed_trades * 100 if closed_trades else 0
+
+    # Mensaje de cierre: qué se cerró y por qué, con qué señal se abrió
+    # (score/prob/estrategia — útil para luego evaluar con analyze_rodri.py),
+    # el movimiento entrada->salida, los TP que llegó a tocar, el resultado
+    # en R, y una línea de acumulado corta (el detalle completo va en el
+    # resumen diario).
     send_telegram(
-        f"{icon} *{display_symbol(symbol)}* — {reason_text}{extra_note}\n"
-        f"Entrada: `{pos['entry']:.4f}` | Cierre: `{last_price:.4f}`\n"
-        f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)"
+        f"{icon} *{display_symbol(symbol)}* | {dir_label} — {reason_text}{extra_note}\n"
+        f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {md_escape('+'.join(pos['strategies']))}\n"
+        f"💰 Entrada: `{pos['entry']:.4f}` → Cierre: `{last_price:.4f}`{move_pct}{tp_line}\n"
+        f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
+        f"— Acumulado: {stats['wins']}G/{stats['losses']}P | WR {win_rate:.1f}% | R total {stats['r_sum']:+.2f}"
     )
 
     state.setdefault("positions", {}).pop(symbol, None)
@@ -412,7 +465,7 @@ def check_symbol(exchange, symbol, state, now):
 
         msg = (
             f"{emoji} *{sym} | {dir_label}*{red_tag}\n"
-            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {'+'.join(pos['strategies'])}\n\n"
+            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {md_escape('+'.join(pos['strategies']))}\n\n"
             f"💰 Entrada: `{pos['entry']:.4f}`\n"
             f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n"
             f"⚡ Apalancamiento sugerido: {leverage}x\n\n"
