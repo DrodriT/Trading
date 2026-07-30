@@ -356,11 +356,16 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
     # en R, y una línea de acumulado corta (el detalle completo va en el
     # resumen diario).
     send_telegram(
-        f"{icon} *{display_symbol(symbol)}* | {dir_label} — {reason_text}{extra_note}\n"
-        f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {md_escape('+'.join(pos['strategies']))}\n"
-        f"💰 Entrada: `{pos['entry']:.4f}` → Cierre: `{last_price:.4f}`{move_pct}{tp_line}\n"
-        f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
-        f"— Acumulado: {stats['wins']}G/{stats['losses']}P | WR {win_rate:.1f}% | R total {stats['r_sum']:+.2f}"
+        f"{icon} *{display_symbol(symbol)}* | {dir_label}\n"
+        f"{reason_text}{extra_note}\n\n"
+        f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {md_escape('+'.join(pos['strategies']))}\n\n"
+        f"💰 Entrada: `{pos['entry']:.4f}` → Cierre: `{last_price:.4f}`{move_pct}{tp_line}\n\n"
+        f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n\n"
+        f"---------------------------------\n"
+        f"Acumulado: {stats['wins']}G/{stats['losses']}P\n"
+        f"WR {win_rate:.1f}%\n"
+        f"R total {stats['r_sum']:+.2f}\n"
+        f"---------------------------------"
     )
 
     state.setdefault("positions", {}).pop(symbol, None)
@@ -469,9 +474,9 @@ def check_symbol(exchange, symbol, state, now):
             f"💰 Entrada: `{pos['entry']:.4f}`\n"
             f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n"
             f"⚡ Apalancamiento sugerido: {leverage}x\n\n"
-            f"🎯 TP1: `{pos['tp1']:.4f}`{pct_from_entry(pos['entry'], pos['tp1'])} · RR {pos['tp_rr'][0]:.2f}\n"
-            f"🎯 TP2: `{pos['tp2']:.4f}`{pct_from_entry(pos['entry'], pos['tp2'])} · RR {pos['tp_rr'][1]:.2f}\n"
-            f"🎯 TP3: `{pos['tp3']:.4f}`{pct_from_entry(pos['entry'], pos['tp3'])} · RR {pos['tp_rr'][2]:.2f}\n\n"
+            f"🎯 TP1: `{pos['tp1']:.4f}`{pct_from_entry(pos['entry'], pos['tp1'])}\n"
+            f"🎯 TP2: `{pos['tp2']:.4f}`{pct_from_entry(pos['entry'], pos['tp2'])}\n"
+            f"🎯 TP3: `{pos['tp3']:.4f}`{pct_from_entry(pos['entry'], pos['tp3'])}\n\n"
             f"⏱ {symbol} · {config.TIMEFRAME} · {last_candle_time}"
         )
         try:
