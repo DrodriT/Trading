@@ -27,34 +27,6 @@
       "leverage": 20,
       "is_red": false,
       "size_factor": 1.0
-    },
-    "SUI/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 0.701,
-      "entry_candle": "2026-07-30T16:20:00+00:00",
-      "sl": 0.7037428571428571,
-      "tp1": 0.6982571428571428,
-      "tp2": 0.6955142857142856,
-      "tp3": 0.6927714285714286,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 66,
-      "prob": 0.66,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
     }
   },
   "cooldowns": {
@@ -63,7 +35,7 @@
     "HBAR/USDT:USDT": "2026-07-30T16:01:54.487292+00:00",
     "AAVE/USDT:USDT": "2026-07-30T16:07:33.006732+00:00",
     "ICP/USDT:USDT": "2026-07-30T04:10:55.984612+00:00",
-    "SUI/USDT:USDT": "2026-07-30T15:50:51.996567+00:00",
+    "SUI/USDT:USDT": "2026-07-30T21:42:31.699737+00:00",
     "NEAR/USDT:USDT": "2026-07-30T11:02:19.179635+00:00",
     "AVAX/USDT:USDT": "2026-07-30T17:08:36.294165+00:00",
     "BCH/USDT:USDT": "2026-07-30T09:31:10.399707+00:00",
@@ -81,7 +53,6 @@
     "count": 2
   },
   "recent_results": [
-    true,
     false,
     false,
     true,
@@ -90,7 +61,8 @@
     true,
     true,
     true,
-    true
+    true,
+    false
   ],
   "dynamic_min_score": 50,
   "trade_log": [
@@ -591,6 +563,26 @@
       "close_reason": "sl_be",
       "entry_candle": "2026-07-30T14:50:00+00:00",
       "closed_at": "2026-07-30T16:03:30.262603+00:00"
+    },
+    {
+      "symbol": "SUI/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 66,
+      "prob": 0.66,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 0.701,
+      "exit": 0.7037,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-07-30T16:20:00+00:00",
+      "closed_at": "2026-07-30T17:42:31.699737+00:00"
     }
   ],
   "stats": {
@@ -599,15 +591,15 @@
     "red_signals": 4,
     "long_signals": 9,
     "short_signals": 18,
-    "sl_hits": 17,
+    "sl_hits": 18,
     "tp1_hits": 16,
     "tp2_hits": 10,
     "tp3_hits": 7,
     "flips": 1,
     "wins": 15,
-    "losses": 10,
+    "losses": 11,
     "be_saves": 7,
-    "r_sum": 6.013333333333332
+    "r_sum": 5.013333333333332
   },
   "last_daily_summary_date": "2026-07-30",
   "startup_notified": true,
