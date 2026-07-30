@@ -519,19 +519,22 @@ def check_symbol(exchange, symbol, state, now):
                     pos["sl"] = pos["entry"]
                     pos["be_active"] = True
                     send_telegram(
-                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`).\n"
+                        f"✅ *{display_symbol(symbol)}*\n\n"
+                        f"🎯 TP1 alcanzado (`{pos['tp1']:.4f}`).\n"
                         f"🔒 SL movido a BE (`{pos['entry']:.4f}`)."
                     )
                 else:
                     send_telegram(
-                        f"✅ *{display_symbol(symbol)}* — TP1 alcanzado (`{pos['tp1']:.4f}`)."
+                        f"✅ *{display_symbol(symbol)}*\n\n"
+                        f"🎯 TP1 alcanzado (`{pos['tp1']:.4f}`)."
                     )
 
             if tp2_first:
                 pos["tp2_reached"] = True
                 stats["tp2_hits"] += 1
                 send_telegram(
-                    f"🔥 *{display_symbol(symbol)}* — TP2 alcanzado. Runner hacia TP3.\n"
+                    f"✅ *{display_symbol(symbol)}*\n\n"
+                    f"🔥 TP2 alcanzado. Runner hacia TP3.\n"
                     f"`{pos['tp2']:.4f}`"
                 )
 
