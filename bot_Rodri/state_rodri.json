@@ -1,5 +1,34 @@
 {
-  "positions": {},
+  "positions": {
+    "INJ/USDT:USDT": {
+      "dir": "BAJISTA",
+      "entry": 4.727,
+      "entry_candle": "2026-07-30T05:45:00+00:00",
+      "sl": 4.746714285714286,
+      "tp1": 4.707285714285715,
+      "tp2": 4.687571428571428,
+      "tp3": 4.667857142857143,
+      "tp_rr": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "tp1_reached": false,
+      "tp2_reached": false,
+      "tp3_reached": false,
+      "be_active": false,
+      "score": 58,
+      "prob": 0.62,
+      "strategies": [
+        "VP_MEAN_REVERT",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "leverage": 20,
+      "is_red": false,
+      "size_factor": 1.0
+    }
+  },
   "cooldowns": {
     "ETH/USDT:USDT": "2026-07-30T01:48:48.655925+00:00",
     "BTC/USDT:USDT": "2026-07-30T01:53:41.593859+00:00",
@@ -208,11 +237,11 @@
     }
   ],
   "stats": {
-    "total_signals": 9,
-    "normal_signals": 5,
+    "total_signals": 10,
+    "normal_signals": 6,
     "red_signals": 4,
     "long_signals": 6,
-    "short_signals": 3,
+    "short_signals": 4,
     "sl_hits": 4,
     "tp1_hits": 7,
     "tp2_hits": 6,
