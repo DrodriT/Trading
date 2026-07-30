@@ -359,7 +359,7 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
         f"{icon} *{display_symbol(symbol)}* | {dir_label}\n"
         f"{reason_text}{extra_note}\n\n"
         f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}%\n"
-        f"{md_escape('+'.join(pos['strategies\n']))}\n"
+        f"{md_escape('\n'.join(pos['strategies']))}\n"
         f"Resultado: {'✅ GANADORA' if is_win else '❌ PERDEDORA'} ({r_total:+.2f}R)\n"
         f"💰 Entrada: `{pos['entry']:.4f}` → Cierre: `{last_price:.4f}`{move_pct}{tp_line}\n\n"
         f"---------------------------------\n"
@@ -471,7 +471,8 @@ def check_symbol(exchange, symbol, state, now):
 
         msg = (
             f"{emoji} *{sym} | {dir_label}*{red_tag}\n"
-            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {md_escape('+'.join(pos['strategies']))}\n\n"
+            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}%\n"
+             f"{md_escape('\n'.join(pos['strategies']))}\n"
             f"💰 Entrada: `{pos['entry']:.4f}`\n"
             f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n"
             f"⚡ Apalancamiento sugerido: {leverage}x\n\n"
