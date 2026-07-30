@@ -12,23 +12,23 @@ concurrency:
 
 permissions:
   contents: write
+  packages: read   # necesario para poder descargar la imagen de GHCR
 
 jobs:
   check-signals:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/drodrit/trading-bot-rodri:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Descargar el repositorio
         uses: actions/checkout@v4
 
-      - name: Instalar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: 'pip'
-          cache-dependency-path: requirements.txt
-
-      - name: Instalar dependencias
-        run: pip install -r requirements.txt
+      # Ya no hace falta "Instalar Python" ni "Instalar dependencias":
+      # la imagen ghcr.io/drodrit/trading-bot-rodri ya trae Python 3.12
+      # y todas las dependencias de requirements.txt preinstaladas.
 
       - name: Ejecutar bot_Rodri (una sola pasada)
         working-directory: bot_Rodri
@@ -42,6 +42,7 @@ jobs:
 
       - name: Guardar el estado actualizado (bot_Rodri/state_rodri.json)
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "crypto-alert-bot"
           git config user.email "bot@users.noreply.github.com"
           git add bot_Rodri/state_rodri.json
