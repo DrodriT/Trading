@@ -1,33 +1,5 @@
 {
   "positions": {
-    "DOGE/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 0.06979,
-      "entry_candle": "2026-07-30T07:55:00+00:00",
-      "sl": 0.06979,
-      "tp1": 0.06995821428571429,
-      "tp2": 0.07012642857142858,
-      "tp3": 0.07029464285714286,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 54,
-      "prob": 0.6,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
     "XRP/USDT:USDT": {
       "dir": "BAJISTA",
       "entry": 1.0803,
@@ -69,14 +41,14 @@
     "BCH/USDT:USDT": "2026-07-30T09:31:10.399707+00:00",
     "INJ/USDT:USDT": "2026-07-30T10:29:47.368149+00:00",
     "XMR/USDT:USDT": "2026-07-30T10:34:42.930581+00:00",
-    "ADA/USDT:USDT": "2026-07-30T12:17:41.338646+00:00"
+    "ADA/USDT:USDT": "2026-07-30T12:17:41.338646+00:00",
+    "DOGE/USDT:USDT": "2026-07-30T14:02:52.067012+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-30",
     "count": 2
   },
   "recent_results": [
-    true,
     false,
     true,
     true,
@@ -85,7 +57,8 @@
     false,
     true,
     false,
-    false
+    false,
+    true
   ],
   "dynamic_min_score": 50,
   "trade_log": [
@@ -366,6 +339,26 @@
       "close_reason": "sl",
       "entry_candle": "2026-07-30T07:25:00+00:00",
       "closed_at": "2026-07-30T08:17:41.338646+00:00"
+    },
+    {
+      "symbol": "DOGE/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 54,
+      "prob": 0.6,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 0.06979,
+      "exit": 0.07031,
+      "r_result": 2.0,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-30T07:55:00+00:00",
+      "closed_at": "2026-07-30T10:02:52.067012+00:00"
     }
   ],
   "stats": {
@@ -377,12 +370,12 @@
     "sl_hits": 8,
     "tp1_hits": 9,
     "tp2_hits": 7,
-    "tp3_hits": 5,
+    "tp3_hits": 6,
     "flips": 1,
-    "wins": 8,
+    "wins": 9,
     "losses": 6,
     "be_saves": 2,
-    "r_sum": 3.0133333333333328
+    "r_sum": 5.013333333333333
   },
   "last_daily_summary_date": "2026-07-30",
   "startup_notified": true,
