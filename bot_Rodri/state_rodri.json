@@ -1,13 +1,13 @@
 {
   "positions": {
-    "SOL/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 74.355,
-      "entry_candle": "2026-07-30T12:55:00+00:00",
-      "sl": 74.355,
-      "tp1": 74.1705,
-      "tp2": 73.98599999999999,
-      "tp3": 73.80149999999999,
+    "LTC/USDT:USDT": {
+      "dir": "ALCISTA",
+      "entry": 45.2,
+      "entry_candle": "2026-07-30T13:15:00+00:00",
+      "sl": 45.2,
+      "tp1": 45.29428571428572,
+      "tp2": 45.38857142857143,
+      "tp3": 45.48285714285715,
       "tp_rr": [
         1.0,
         2.0,
@@ -17,34 +17,6 @@
       "tp2_reached": false,
       "tp3_reached": false,
       "be_active": true,
-      "score": 54,
-      "prob": 0.6,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    },
-    "LTC/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 45.2,
-      "entry_candle": "2026-07-30T13:15:00+00:00",
-      "sl": 45.105714285714285,
-      "tp1": 45.29428571428572,
-      "tp2": 45.38857142857143,
-      "tp3": 45.48285714285715,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
       "score": 57,
       "prob": 0.61,
       "strategies": [
@@ -72,7 +44,8 @@
     "ADA/USDT:USDT": "2026-07-30T12:17:41.338646+00:00",
     "DOGE/USDT:USDT": "2026-07-30T14:02:52.067012+00:00",
     "XRP/USDT:USDT": "2026-07-30T15:17:46.231518+00:00",
-    "XLM/USDT:USDT": "2026-07-30T15:50:51.996567+00:00"
+    "XLM/USDT:USDT": "2026-07-30T15:50:51.996567+00:00",
+    "SOL/USDT:USDT": "2026-07-30T17:44:32.328181+00:00"
   },
   "red_signals_today": {
     "date": "2026-07-30",
@@ -80,7 +53,6 @@
   },
   "recent_results": [
     false,
-    false,
     true,
     true,
     false,
@@ -88,6 +60,7 @@
     true,
     false,
     false,
+    true,
     true
   ],
   "dynamic_min_score": 50,
@@ -529,6 +502,26 @@
       "close_reason": "tp3",
       "entry_candle": "2026-07-30T12:00:00+00:00",
       "closed_at": "2026-07-30T13:08:36.294165+00:00"
+    },
+    {
+      "symbol": "SOL/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 54,
+      "prob": 0.6,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 74.355,
+      "exit": 74.389,
+      "r_result": 0.3333,
+      "is_win": true,
+      "close_reason": "sl_be",
+      "entry_candle": "2026-07-30T12:55:00+00:00",
+      "closed_at": "2026-07-30T13:44:32.328181+00:00"
     }
   ],
   "stats": {
@@ -537,15 +530,15 @@
     "red_signals": 4,
     "long_signals": 9,
     "short_signals": 15,
-    "sl_hits": 14,
-    "tp1_hits": 13,
+    "sl_hits": 15,
+    "tp1_hits": 14,
     "tp2_hits": 9,
     "tp3_hits": 7,
     "flips": 1,
-    "wins": 12,
+    "wins": 13,
     "losses": 10,
-    "be_saves": 4,
-    "r_sum": 4.346666666666666
+    "be_saves": 5,
+    "r_sum": 4.679999999999999
   },
   "last_daily_summary_date": "2026-07-30",
   "startup_notified": true,
