@@ -1,40 +1,8 @@
 {
-  "positions": {
-    "BTC/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 65314.4,
-      "entry_candle": "2026-07-31T01:10:00+00:00",
-      "sl": 65314.4,
-      "tp1": 65151.81071428571,
-      "tp2": 64989.22142857143,
-      "tp3": 64826.63214285714,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 55,
-      "prob": 0.6,
-      "strategies": [
-        "VP_MEAN_REVERT",
-        "LIQUIDITY_GRAB"
-      ],
-      "confluence": 2,
-      "htf_trend": "ALCISTA",
-      "htf_adx": 27.4,
-      "htf_penalized": true,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "ETH/USDT:USDT": "2026-07-30T23:19:39.537913+00:00",
-    "BTC/USDT:USDT": "2026-07-30T01:53:41.593859+00:00",
+    "BTC/USDT:USDT": "2026-07-31T05:44:38.470635+00:00",
     "HBAR/USDT:USDT": "2026-07-30T23:25:38.545023+00:00",
     "AAVE/USDT:USDT": "2026-07-30T16:07:33.006732+00:00",
     "ICP/USDT:USDT": "2026-07-30T04:10:55.984612+00:00",
@@ -56,7 +24,6 @@
     "count": 2
   },
   "recent_results": [
-    false,
     true,
     true,
     true,
@@ -65,7 +32,8 @@
     true,
     true,
     true,
-    false
+    false,
+    true
   ],
   "dynamic_min_score": 50,
   "trade_log": [
@@ -782,6 +750,28 @@
       "close_reason": "sl",
       "entry_candle": "2026-07-31T01:10:00+00:00",
       "closed_at": "2026-07-31T01:25:45.309937+00:00"
+    },
+    {
+      "symbol": "BTC/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "VP_MEAN_REVERT",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "score": 55,
+      "prob": 0.6,
+      "htf_trend": "ALCISTA",
+      "htf_penalized": true,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 65314.4,
+      "exit": 64798.0,
+      "r_result": 2.0,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-31T01:10:00+00:00",
+      "closed_at": "2026-07-31T01:44:38.470635+00:00"
     }
   ],
   "stats": {
@@ -793,12 +783,12 @@
     "sl_hits": 24,
     "tp1_hits": 23,
     "tp2_hits": 15,
-    "tp3_hits": 10,
+    "tp3_hits": 11,
     "flips": 1,
-    "wins": 22,
+    "wins": 23,
     "losses": 13,
     "be_saves": 11,
-    "r_sum": 7.893333333333331
+    "r_sum": 9.89333333333333
   },
   "last_daily_summary_date": "2026-07-31",
   "startup_notified": true,
