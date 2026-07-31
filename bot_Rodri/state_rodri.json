@@ -1,68 +1,5 @@
 {
-  "positions": {
-    "NEAR/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 1.6695,
-      "entry_candle": "2026-07-31T00:45:00+00:00",
-      "sl": 1.6695,
-      "tp1": 1.676507142857143,
-      "tp2": 1.681412142857143,
-      "tp3": 1.681412142857143,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 37,
-      "prob": 0.5,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "htf_trend": "ALCISTA",
-      "htf_adx": 25.3,
-      "htf_penalized": false,
-      "leverage": 20,
-      "is_red": true,
-      "size_factor": 0.3
-    },
-    "XRP/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 1.0818,
-      "entry_candle": "2026-07-31T00:50:00+00:00",
-      "sl": 1.0818,
-      "tp1": 1.0839642857142857,
-      "tp2": 1.0854792857142859,
-      "tp3": 1.0854792857142859,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 44,
-      "prob": 0.54,
-      "strategies": [
-        "SMC_REVERSAL",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "htf_trend": "NEUTRAL",
-      "htf_adx": 11.2,
-      "htf_penalized": false,
-      "leverage": 20,
-      "is_red": true,
-      "size_factor": 0.3
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "ETH/USDT:USDT": "2026-07-30T23:19:39.537913+00:00",
     "BTC/USDT:USDT": "2026-07-30T01:53:41.593859+00:00",
@@ -70,14 +7,14 @@
     "AAVE/USDT:USDT": "2026-07-30T16:07:33.006732+00:00",
     "ICP/USDT:USDT": "2026-07-30T04:10:55.984612+00:00",
     "SUI/USDT:USDT": "2026-07-30T21:42:31.699737+00:00",
-    "NEAR/USDT:USDT": "2026-07-30T11:02:19.179635+00:00",
+    "NEAR/USDT:USDT": "2026-07-31T05:09:39.462847+00:00",
     "AVAX/USDT:USDT": "2026-07-30T17:08:36.294165+00:00",
     "BCH/USDT:USDT": "2026-07-31T04:46:35.697848+00:00",
     "INJ/USDT:USDT": "2026-07-31T01:20:48.052104+00:00",
     "XMR/USDT:USDT": "2026-07-30T10:34:42.930581+00:00",
     "ADA/USDT:USDT": "2026-07-30T12:17:41.338646+00:00",
     "DOGE/USDT:USDT": "2026-07-30T20:03:30.262603+00:00",
-    "XRP/USDT:USDT": "2026-07-30T21:49:32.869119+00:00",
+    "XRP/USDT:USDT": "2026-07-31T05:09:39.462847+00:00",
     "XLM/USDT:USDT": "2026-07-30T15:50:51.996567+00:00",
     "SOL/USDT:USDT": "2026-07-30T17:44:32.328181+00:00",
     "LTC/USDT:USDT": "2026-07-31T04:45:51.430367+00:00"
@@ -88,13 +25,13 @@
   },
   "recent_results": [
     true,
-    true,
-    true,
     false,
     true,
     true,
     true,
     false,
+    true,
+    true,
     true,
     true
   ],
@@ -747,6 +684,50 @@
       "close_reason": "sl_be",
       "entry_candle": "2026-07-30T22:15:00+00:00",
       "closed_at": "2026-07-31T00:46:35.697848+00:00"
+    },
+    {
+      "symbol": "XRP/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "SMC_REVERSAL",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 44,
+      "prob": 0.54,
+      "htf_trend": "NEUTRAL",
+      "htf_penalized": false,
+      "is_red": true,
+      "leverage": 20,
+      "entry": 1.0818,
+      "exit": 1.0878,
+      "r_result": 0.44,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-31T00:50:00+00:00",
+      "closed_at": "2026-07-31T01:09:39.462847+00:00"
+    },
+    {
+      "symbol": "NEAR/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 37,
+      "prob": 0.5,
+      "htf_trend": "ALCISTA",
+      "htf_penalized": false,
+      "is_red": true,
+      "leverage": 20,
+      "entry": 1.6695,
+      "exit": 1.6813,
+      "r_result": 0.44,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-07-31T00:45:00+00:00",
+      "closed_at": "2026-07-31T01:09:39.462847+00:00"
     }
   ],
   "stats": {
@@ -757,13 +738,13 @@
     "short_signals": 20,
     "sl_hits": 23,
     "tp1_hits": 22,
-    "tp2_hits": 12,
-    "tp3_hits": 8,
+    "tp2_hits": 14,
+    "tp3_hits": 10,
     "flips": 1,
-    "wins": 20,
+    "wins": 22,
     "losses": 12,
     "be_saves": 11,
-    "r_sum": 8.013333333333332
+    "r_sum": 8.89333333333333
   },
   "last_daily_summary_date": "2026-07-31",
   "startup_notified": true,
