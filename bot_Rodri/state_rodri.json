@@ -1,5 +1,37 @@
 {
-  "positions": {},
+  "positions": {
+    "ETH/USDT:USDT": {
+      "dir": "ALCISTA",
+      "entry": 1908.43,
+      "entry_candle": "2026-07-31T02:00:00+00:00",
+      "sl": 1899.6185714285714,
+      "tp1": 1917.2414285714287,
+      "tp2": 1926.0528571428572,
+      "tp3": 1934.8642857142859,
+      "tp_rr": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "tp1_reached": false,
+      "tp2_reached": false,
+      "tp3_reached": false,
+      "be_active": false,
+      "score": 53,
+      "prob": 0.59,
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "htf_trend": "NEUTRAL",
+      "htf_adx": 18.2,
+      "htf_penalized": false,
+      "leverage": 20,
+      "is_red": false,
+      "size_factor": 1.0
+    }
+  },
   "cooldowns": {
     "ETH/USDT:USDT": "2026-07-30T23:19:39.537913+00:00",
     "BTC/USDT:USDT": "2026-07-31T05:44:38.470635+00:00",
@@ -775,10 +807,10 @@
     }
   ],
   "stats": {
-    "total_signals": 36,
-    "normal_signals": 30,
+    "total_signals": 37,
+    "normal_signals": 31,
     "red_signals": 6,
-    "long_signals": 14,
+    "long_signals": 15,
     "short_signals": 22,
     "sl_hits": 24,
     "tp1_hits": 23,
