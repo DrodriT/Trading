@@ -386,6 +386,7 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
         "prob": pos["prob"],
         "htf_trend": pos.get("htf_trend"),
         "htf_penalized": pos.get("htf_penalized", False),
+        "used_structural_sl": pos.get("used_structural_sl", False),
         "is_red": pos.get("is_red", False),
         "leverage": pos.get("leverage"),
         "entry": pos["entry"],
@@ -455,7 +456,8 @@ def check_symbol(exchange, symbol, state, now):
     # ── 3. Abrir nueva posición si hay hueco y no hay ya una en este símbolo ──
     if actionable_signal and not pos and can_open_new_trade(state, symbol, now):
         atr_val = df.iloc[-1]["ATR"]
-        risk = build_risk_levels(last_price, atr_val, signal["direction"], config.RISK_PRESET)
+        risk = build_risk_levels(last_price, atr_val, signal["direction"], config.RISK_PRESET,
+                                  df=df, cfg=config)
         is_red = quality == "roja"
         if is_red:
             risk = cap_tp_at_r(risk, last_price, signal["direction"], config.RED_TP_CAP_R)
@@ -477,6 +479,7 @@ def check_symbol(exchange, symbol, state, now):
             "htf_trend": signal.get("htf_trend"),
             "htf_adx": signal.get("htf_adx"),
             "htf_penalized": signal.get("htf_penalized", False),
+            "used_structural_sl": risk.get("used_structural_sl", False),
             "leverage": leverage,
             "is_red": is_red,
             "size_factor": config.RED_SIZE_FACTOR if is_red else 1.0,
@@ -492,6 +495,7 @@ def check_symbol(exchange, symbol, state, now):
         dir_label = "LONG" if signal["direction"] == "ALCISTA" else "SHORT"
         sym = display_symbol(symbol)
         sl_pct = pct_from_entry(pos["entry"], pos["sl"])
+        sl_tag = " (estructural 🛡️)" if pos.get("used_structural_sl") else " (ATR)"
         red_tag = " ⚠️ SEÑAL ROJA (tamaño x0.30, TP cap 1.7R)" if is_red else ""
 
         htf_line = ""
@@ -507,7 +511,7 @@ def check_symbol(exchange, symbol, state, now):
             f"{md_escape(chr(10).join(pos['strategies']))}\n"
             f"{htf_line}\n"
             f"💰 Entrada: `{pos['entry']:.4f}`\n"
-            f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n"
+            f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}{sl_tag}\n"
             f"⚡ Apalancamiento sugerido: {leverage}x\n\n"
             f"🎯 TP1: `{pos['tp1']:.4f}`{pct_from_entry(pos['entry'], pos['tp1'])}\n"
             f"🎯 TP2: `{pos['tp2']:.4f}`{pct_from_entry(pos['entry'], pos['tp2'])}\n"

@@ -48,13 +48,14 @@ SWING_LEFT = 3             # velas a cada lado para confirmar un fractal/swing
 SWING_RIGHT = 3
 
 # --- Parámetros específicos por estrategia ---
-SMC_LOOKBACK = 50          # velas hacia atrás para buscar el swing a barrer
-LG_LOOKBACK = 20           # ventana corta para LIQUIDITY_GRAB
-BREAKOUT_LOOKBACK = 30     # ventana del rango para BREAKOUT
+SMC_LOOKBACK = 50           # velas hacia atrás para buscar el swing a barrer
+LG_LOOKBACK = 20            # ventana corta para LIQUIDITY_GRAB
+LG_MIN_WICK_ATR_RATIO = 0.3 # mínimo de mecha (relativa al ATR) para considerar el barrido válido
+BREAKOUT_LOOKBACK = 30      # ventana del rango para BREAKOUT
 BREAKOUT_VOL_THRESHOLD = 1.3
-TREND_ADX_MIN = 20         # ADX mínimo para considerar "tendencia establecida"
-DIVERGENCE_LOOKBACK = 30   # ventana para buscar los 2 swings de la divergencia
-VP_LOOKBACK = 100          # velas para construir el Volume Profile
+TREND_ADX_MIN = 20          # ADX mínimo para considerar "tendencia establecida"
+DIVERGENCE_LOOKBACK = 30    # ventana para buscar los 2 swings de la divergencia
+VP_LOOKBACK = 100           # velas para construir el Volume Profile
 VP_BINS = 24
 
 STRATEGY_WEIGHTS = {
@@ -62,7 +63,7 @@ STRATEGY_WEIGHTS = {
     "BREAKOUT":         1.10,
     "TREND_PULLBACK":   1.25,
     "RSI_DIVERGENCE":   0.80,
-    "VP_MEAN_REVERT":   0.70,
+    "VP_MEAN_REVERT":   0.50,
     "LIQUIDITY_GRAB":   1.00,
 }
 
@@ -81,7 +82,7 @@ PROB_AT_SCORE_0 = 0.30
 PROB_AT_SCORE_100 = 0.85
 
 # --- Umbrales de filtrado ---
-MIN_SCORE = 60
+MIN_SCORE = 75
 MIN_PROB = 0.40
 
 # --- Señales "rojas" (baja confianza, no descartadas del todo) ---
@@ -107,6 +108,15 @@ COOLDOWN_HOURS = 4
 # --- Riesgo / TP ---
 RISK_PRESET = "Balanced"
 USE_BREAK_EVEN = True
+
+# --- Stop Loss estructural (swing anterior en vez de ATR fijo) ---
+# Motivado por casos reales donde el SL por ATR cerraba la operación
+# justo antes de que el precio girara, mientras que un SL colocado bajo
+# el swing structural anterior la habría dejado correr hasta ganar.
+STRUCTURAL_SL_ENABLED = True
+STRUCTURAL_SL_ATR_BUFFER = 0.2     # colchón en múltiplos de ATR por debajo/encima del swing
+STRUCTURAL_SL_LOOKBACK = 50        # velas hacia atrás para buscar el swing de referencia
+STRUCTURAL_SL_MAX_ATR_MULT = 3.0   # si la distancia estructural supera esto (x ATR) -> fallback a SL por ATR
 
 # --- Apalancamiento sugerido (según volatilidad ATR%) ---
 LEVERAGE_MIN = 5

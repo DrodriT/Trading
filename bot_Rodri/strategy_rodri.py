@@ -20,19 +20,64 @@ RISK_PRESETS = {
     "Scalping":     {"sl_mult": 0.8, "tp_mults": [0.8, 1.5, 2.0]},
 }
 
-
-def build_risk_levels(entry_price: float, atr_val: float, signal_type: str, preset: str):
-    cfg = RISK_PRESETS[preset]
+def compute_structural_sl(df, entry_price: float, atr_val: float, signal_type: str, cfg):
+    """
+    Busca el último swing confirmado (low para LONG, high para SHORT) y
+    devuelve la distancia de SL correspondiente, con colchón de ATR.
+    Devuelve None si no hay swing válido o si la distancia excede
+    STRUCTURAL_SL_MAX_ATR_MULT * ATR (demasiado ancho -> fallback a ATR).
+    """
+    last_pos = len(df) - 1
     is_long = signal_type == "ALCISTA"
-    sl_distance = atr_val * cfg["sl_mult"]
+    buffer = atr_val * cfg.STRUCTURAL_SL_ATR_BUFFER
+
+    if is_long:
+        _, swing_price = last_confirmed_swing(df, "low", last_pos, cfg.STRUCTURAL_SL_LOOKBACK)
+        if swing_price is None:
+            return None
+        sl = swing_price - buffer
+        distance = entry_price - sl
+    else:
+        _, swing_price = last_confirmed_swing(df, "high", last_pos, cfg.STRUCTURAL_SL_LOOKBACK)
+        if swing_price is None:
+            return None
+        sl = swing_price + buffer
+        distance = sl - entry_price
+
+    if distance <= 0 or distance > atr_val * cfg.STRUCTURAL_SL_MAX_ATR_MULT:
+        return None
+
+    return distance
+
+
+def build_risk_levels(entry_price: float, atr_val: float, signal_type: str, preset: str, df=None, cfg=None):
+    preset_cfg = RISK_PRESETS[preset]
+    is_long = signal_type == "ALCISTA"
+
+    used_structural_sl = False
+    sl_distance = None
+
+    if df is not None and cfg is not None and cfg.STRUCTURAL_SL_ENABLED:
+        sl_distance = compute_structural_sl(df, entry_price, atr_val, signal_type, cfg)
+        if sl_distance is not None:
+            used_structural_sl = True
+
+    if sl_distance is None:
+        sl_distance = atr_val * preset_cfg["sl_mult"]
 
     sl = entry_price - sl_distance if is_long else entry_price + sl_distance
+
     tps = []
-    for i, mult in enumerate(cfg["tp_mults"], start=1):
+    for i, mult in enumerate(preset_cfg["tp_mults"], start=1):
         tp_price = entry_price + sl_distance * mult if is_long else entry_price - sl_distance * mult
         tps.append({"label": f"TP{i}", "price": tp_price, "rr": mult})
 
-    return {"sl": sl, "sl_distance": sl_distance, "tps": tps}
+    return {
+        "sl": sl,
+        "sl_distance": sl_distance,
+        "tps": tps,
+        "used_structural_sl": used_structural_sl,
+    }
 
 
 def compute_base_indicators(df: pd.DataFrame, cfg) -> pd.DataFrame:
@@ -61,7 +106,9 @@ def detect_smc_reversal(df, cfg):
             and last["close"] > swing_low_price and last["close"] > last["open"]):
         _, swing_high_price = last_confirmed_swing(df, "high", pos_low, cfg.SMC_LOOKBACK)
         structure_shift = swing_high_price is not None and last["close"] > swing_high_price
-
+        if not structure_shift:
+            return None, 0.0
+        
         wick = swing_low_price - last["low"]
         sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT
 
@@ -71,7 +118,7 @@ def detect_smc_reversal(df, cfg):
         body = abs(last["close"] - last["open"])
         body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT
 
-        choch_score = cfg.SMC_CHOCH_WEIGHT if structure_shift else 0.0
+        choch_score = cfg.SMC_CHOCH_WEIGHT 
 
         vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
         volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT
@@ -85,7 +132,9 @@ def detect_smc_reversal(df, cfg):
             and last["close"] < swing_high_price and last["close"] < last["open"]):
         _, swing_low_price2 = last_confirmed_swing(df, "low", pos_high, cfg.SMC_LOOKBACK)
         structure_shift = swing_low_price2 is not None and last["close"] < swing_low_price2
-
+        if not structure_shift:
+            return None, 0.0
+        
         wick = last["high"] - swing_high_price
         sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT
 
@@ -95,7 +144,7 @@ def detect_smc_reversal(df, cfg):
         body = abs(last["close"] - last["open"])
         body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT
 
-        choch_score = cfg.SMC_CHOCH_WEIGHT if structure_shift else 0.0
+        choch_score = cfg.SMC_CHOCH_WEIGHT 
 
         vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
         volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT
@@ -105,7 +154,6 @@ def detect_smc_reversal(df, cfg):
         return "BAJISTA", strength
 
     return None, 0.0
-
 
 # ─────────────────────────────────────────────────────────
 # 2. LIQUIDITY_GRAB
@@ -124,16 +172,19 @@ def detect_liquidity_grab(df, cfg):
 
     if last["low"] < recent_low and last["close"] > recent_low:
         wick = recent_low - last["low"]
+        if wick / atr < cfg.LG_MIN_WICK_ATR_RATIO:
+            return None, 0.0
         strength = min(wick / atr, 1.5) / 1.5 * 100.0
         return "ALCISTA", strength
 
     if last["high"] > recent_high and last["close"] < recent_high:
         wick = last["high"] - recent_high
+        if wick / atr < cfg.LG_MIN_WICK_ATR_RATIO:
+            return None, 0.0
         strength = min(wick / atr, 1.5) / 1.5 * 100.0
         return "BAJISTA", strength
 
     return None, 0.0
-
 
 # ─────────────────────────────────────────────────────────
 # 3. BREAKOUT
@@ -151,13 +202,13 @@ def detect_breakout(df, cfg):
     range_low = window["low"].min()
     vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
 
-    if last["close"] > range_high:
+    if last["close"] > range_high and vol_ratio >= cfg.BREAKOUT_VOL_THRESHOLD:
         break_dist = last["close"] - range_high
         strength = min(break_dist / atr, 1.5) / 1.5 * 60.0
         strength += min(vol_ratio / cfg.BREAKOUT_VOL_THRESHOLD, 1.0) * 40.0
         return "ALCISTA", min(strength, 100.0)
 
-    if last["close"] < range_low:
+    if last["close"] < range_low and vol_ratio >= cfg.BREAKOUT_VOL_THRESHOLD:
         break_dist = range_low - last["close"]
         strength = min(break_dist / atr, 1.5) / 1.5 * 60.0
         strength += min(vol_ratio / cfg.BREAKOUT_VOL_THRESHOLD, 1.0) * 40.0
@@ -218,12 +269,12 @@ def detect_vp_mean_revert(df, cfg):
     if vp is None:
         return None, 0.0
 
-    if last["close"] < vp["val"]:
+    if last["close"] < vp["val"] and last["close"] > last["open"]:
         dist = vp["poc"] - last["close"]
         strength = min(dist / atr, 3.0) / 3.0 * 100.0
         return "ALCISTA", strength
 
-    if last["close"] > vp["vah"]:
+    if last["close"] > vp["vah"] and last["close"] < last["open"]:
         dist = last["close"] - vp["poc"]
         strength = min(dist / atr, 3.0) / 3.0 * 100.0
         return "BAJISTA", strength
