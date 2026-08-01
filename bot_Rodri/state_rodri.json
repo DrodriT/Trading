@@ -30,6 +30,37 @@
       "leverage": 20,
       "is_red": false,
       "size_factor": 1.0
+    },
+    "LTC/USDT:USDT": {
+      "dir": "BAJISTA",
+      "entry": 44.55,
+      "entry_candle": "2026-08-01T04:00:00+00:00",
+      "sl": 44.61964285714286,
+      "tp1": 44.48035714285714,
+      "tp2": 44.41071428571428,
+      "tp3": 44.341071428571425,
+      "tp_rr": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "tp1_reached": false,
+      "tp2_reached": false,
+      "tp3_reached": false,
+      "be_active": false,
+      "score": 62,
+      "prob": 0.64,
+      "strategies": [
+        "SMC_REVERSAL",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "htf_trend": "BAJISTA",
+      "htf_adx": 27.3,
+      "htf_penalized": false,
+      "leverage": 20,
+      "is_red": false,
+      "size_factor": 1.0
     }
   },
   "cooldowns": {
@@ -1489,11 +1520,11 @@
     }
   ],
   "stats": {
-    "total_signals": 68,
-    "normal_signals": 60,
+    "total_signals": 69,
+    "normal_signals": 61,
     "red_signals": 8,
     "long_signals": 31,
-    "short_signals": 37,
+    "short_signals": 38,
     "sl_hits": 50,
     "tp1_hits": 41,
     "tp2_hits": 24,
