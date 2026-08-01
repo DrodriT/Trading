@@ -88,7 +88,7 @@ MIN_PROB = 0.40
 # --- Señales "rojas" (baja confianza, no descartadas del todo) ---
 RED_MIN_PROB = 0.40
 RED_SIZE_FACTOR = 0.30
-RED_MAX_PER_DAY = 2
+RED_MAX_PER_DAY = 0
 RED_TP_CAP_R = 1.7
 
 # --- Threshold dinámico ---
