@@ -31,44 +31,13 @@
       "leverage": 20,
       "is_red": false,
       "size_factor": 1.0
-    },
-    "ETH/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 1865.8,
-      "entry_candle": "2026-08-02T10:25:00+00:00",
-      "sl": 1860.9864285714284,
-      "tp1": 1870.6135714285715,
-      "tp2": 1875.427142857143,
-      "tp3": 1880.2407142857146,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 78,
-      "prob": 0.73,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "htf_trend": "ALCISTA",
-      "htf_adx": 33.7,
-      "htf_penalized": false,
-      "used_structural_sl": true,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
     }
   },
   "cooldowns": {
     "BCH/USDT:USDT": "2026-08-02T04:56:35.514187+00:00",
     "NEAR/USDT:USDT": "2026-08-02T05:21:35.088163+00:00",
-    "AVAX/USDT:USDT": "2026-08-02T08:53:32.366793+00:00"
+    "AVAX/USDT:USDT": "2026-08-02T08:53:32.366793+00:00",
+    "ETH/USDT:USDT": "2026-08-02T15:41:32.040165+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-02",
@@ -77,6 +46,7 @@
   "recent_results": [
     true,
     true,
+    false,
     false
   ],
   "dynamic_min_score": 60,
@@ -86,15 +56,15 @@
     "red_signals": 0,
     "long_signals": 3,
     "short_signals": 2,
-    "sl_hits": 2,
+    "sl_hits": 3,
     "tp1_hits": 2,
     "tp2_hits": 1,
     "tp3_hits": 1,
     "flips": 0,
     "wins": 2,
-    "losses": 1,
+    "losses": 2,
     "be_saves": 1,
-    "r_sum": 1.3333333333333335
+    "r_sum": 0.3333333333333335
   },
   "last_daily_summary_date": "2026-08-02",
   "trade_log": [
@@ -166,6 +136,29 @@
       "close_reason": "sl",
       "entry_candle": "2026-08-02T02:20:00+00:00",
       "closed_at": "2026-08-02T04:53:32.366793+00:00"
+    },
+    {
+      "symbol": "ETH/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 78,
+      "prob": 0.73,
+      "htf_trend": "ALCISTA",
+      "htf_penalized": false,
+      "used_structural_sl": true,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 1865.8,
+      "exit": 1860.93,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-08-02T10:25:00+00:00",
+      "closed_at": "2026-08-02T11:41:32.040165+00:00"
     }
   ],
   "startup_notified": true,
