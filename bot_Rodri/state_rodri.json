@@ -1,41 +1,9 @@
 {
-  "positions": {
-    "AVAX/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 6.327,
-      "entry_candle": "2026-08-02T02:20:00+00:00",
-      "sl": 6.351857142857143,
-      "tp1": 6.302142857142857,
-      "tp2": 6.277285714285714,
-      "tp3": 6.252428571428571,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 62,
-      "prob": 0.64,
-      "strategies": [
-        "VP_MEAN_REVERT",
-        "LIQUIDITY_GRAB"
-      ],
-      "confluence": 2,
-      "htf_trend": "BAJISTA",
-      "htf_adx": 32.1,
-      "htf_penalized": false,
-      "used_structural_sl": false,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "BCH/USDT:USDT": "2026-08-02T04:56:35.514187+00:00",
-    "NEAR/USDT:USDT": "2026-08-02T05:21:35.088163+00:00"
+    "NEAR/USDT:USDT": "2026-08-02T05:21:35.088163+00:00",
+    "AVAX/USDT:USDT": "2026-08-02T08:53:32.366793+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-02",
@@ -43,7 +11,8 @@
   },
   "recent_results": [
     true,
-    true
+    true,
+    false
   ],
   "dynamic_min_score": 60,
   "stats": {
@@ -52,15 +21,15 @@
     "red_signals": 0,
     "long_signals": 1,
     "short_signals": 2,
-    "sl_hits": 1,
+    "sl_hits": 2,
     "tp1_hits": 2,
     "tp2_hits": 1,
     "tp3_hits": 1,
     "flips": 0,
     "wins": 2,
-    "losses": 0,
+    "losses": 1,
     "be_saves": 1,
-    "r_sum": 2.3333333333333335
+    "r_sum": 1.3333333333333335
   },
   "last_daily_summary_date": "2026-08-02",
   "trade_log": [
@@ -109,6 +78,29 @@
       "close_reason": "sl_be",
       "entry_candle": "2026-08-02T01:00:00+00:00",
       "closed_at": "2026-08-02T01:21:35.088163+00:00"
+    },
+    {
+      "symbol": "AVAX/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "VP_MEAN_REVERT",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "score": 62,
+      "prob": 0.64,
+      "htf_trend": "BAJISTA",
+      "htf_penalized": false,
+      "used_structural_sl": false,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 6.327,
+      "exit": 6.432,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-08-02T02:20:00+00:00",
+      "closed_at": "2026-08-02T04:53:32.366793+00:00"
     }
   ],
   "startup_notified": true,
