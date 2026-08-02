@@ -1,5 +1,38 @@
 {
-  "positions": {},
+  "positions": {
+    "NEAR/USDT:USDT": {
+      "dir": "ALCISTA",
+      "entry": 1.6944,
+      "entry_candle": "2026-08-02T01:00:00+00:00",
+      "sl": 1.6877035714285713,
+      "tp1": 1.7010964285714285,
+      "tp2": 1.707792857142857,
+      "tp3": 1.7144892857142855,
+      "tp_rr": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "tp1_reached": false,
+      "tp2_reached": false,
+      "tp3_reached": false,
+      "be_active": false,
+      "score": 70,
+      "prob": 0.69,
+      "strategies": [
+        "BREAKOUT",
+        "TREND_PULLBACK"
+      ],
+      "confluence": 2,
+      "htf_trend": "ALCISTA",
+      "htf_adx": 26.5,
+      "htf_penalized": false,
+      "used_structural_sl": false,
+      "leverage": 20,
+      "is_red": false,
+      "size_factor": 1.0
+    }
+  },
   "cooldowns": {
     "BCH/USDT:USDT": "2026-08-02T04:56:35.514187+00:00"
   },
@@ -12,10 +45,10 @@
   ],
   "dynamic_min_score": 60,
   "stats": {
-    "total_signals": 1,
-    "normal_signals": 1,
+    "total_signals": 2,
+    "normal_signals": 2,
     "red_signals": 0,
-    "long_signals": 0,
+    "long_signals": 1,
     "short_signals": 1,
     "sl_hits": 0,
     "tp1_hits": 1,
