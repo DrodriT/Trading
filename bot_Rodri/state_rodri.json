@@ -1,44 +1,15 @@
 {
-  "positions": {
-    "BCH/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 208.42,
-      "entry_candle": "2026-08-01T23:10:00+00:00",
-      "sl": 208.42,
-      "tp1": 207.95471428571426,
-      "tp2": 207.48942857142853,
-      "tp3": 207.0241428571428,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 64,
-      "prob": 0.65,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "htf_trend": "BAJISTA",
-      "htf_adx": 29.6,
-      "htf_penalized": false,
-      "used_structural_sl": true,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    }
+  "positions": {},
+  "cooldowns": {
+    "BCH/USDT:USDT": "2026-08-02T04:56:35.514187+00:00"
   },
-  "cooldowns": {},
   "red_signals_today": {
     "date": "2026-08-02",
     "count": 0
   },
-  "recent_results": [],
+  "recent_results": [
+    true
+  ],
   "dynamic_min_score": 60,
   "stats": {
     "total_signals": 1,
@@ -49,15 +20,39 @@
     "sl_hits": 0,
     "tp1_hits": 1,
     "tp2_hits": 1,
-    "tp3_hits": 0,
+    "tp3_hits": 1,
     "flips": 0,
-    "wins": 0,
+    "wins": 1,
     "losses": 0,
     "be_saves": 0,
-    "r_sum": 0.0
+    "r_sum": 2.0
   },
   "last_daily_summary_date": "2026-08-02",
-  "trade_log": [],
+  "trade_log": [
+    {
+      "symbol": "BCH/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 64,
+      "prob": 0.65,
+      "htf_trend": "BAJISTA",
+      "htf_penalized": false,
+      "used_structural_sl": true,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 208.42,
+      "exit": 207.01,
+      "r_result": 2.0,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-08-01T23:10:00+00:00",
+      "closed_at": "2026-08-02T00:56:35.514187+00:00"
+    }
+  ],
   "startup_notified": true,
   "BTC/USDT:USDT_last_processed_candle": "2026-08-02T00:55:00+00:00",
   "ETH/USDT:USDT_last_processed_candle": "2026-08-02T00:55:00+00:00",
