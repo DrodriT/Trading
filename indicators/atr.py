@@ -14,5 +14,5 @@ def add_atr(df: pd.DataFrame, period: int = 14, col_name: str = "ATR") -> pd.Dat
         (df["high"] - prev_close).abs(),
         (df["low"] - prev_close).abs(),
     ], axis=1).max(axis=1)
-    df[col_name] = tr.rolling(window=period).mean()
+    df[col_name] = tr.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
     return df
