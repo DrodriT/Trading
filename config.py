@@ -146,7 +146,7 @@ CONFIRM_SCORE_PENALTY = 15      # puntos que se restan si el score va contra-ten
 
 # --- Persistencia y ritmo ---
 TRADE_LOG_MAX = 300
-STATE_FILE = "state_rodri.json"
+STATE_FILE = "state.json"
 CHECK_INTERVAL_SECONDS = 60
 
 # --- Resumen diario ---

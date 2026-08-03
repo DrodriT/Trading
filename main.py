@@ -3,7 +3,7 @@ Bot de alertas — Estrategia "Rodri v1.0" (ensemble multi-estrategia)
 
 Motor de 6 estrategias (SMC_REVERSAL, BREAKOUT, TREND_PULLBACK,
 RSI_DIVERGENCE, VP_MEAN_REVERT, LIQUIDITY_GRAB) combinadas en un score +
-probabilidad (ver strategy_rodri.py), con:
+probabilidad (ver strategy.py), con:
   - Gestión de posiciones multi-trade (máx N simultáneas, 1 por activo)
   - Cooldown por símbolo tras cerrar un trade
   - Señales "rojas" de baja confianza (tamaño reducido, TP capado, límite diario)
@@ -11,12 +11,12 @@ probabilidad (ver strategy_rodri.py), con:
   - Apalancamiento sugerido según volatilidad
 
 Es una versión NUEVA e independiente del bot "Synapse" (bot.py): usa su
-propio archivo de estado (state_rodri.json) y no modifica nada del bot
+propio archivo de estado (state.json) y no modifica nada del bot
 original.
 
 Uso:
-    python3 bot_rodri.py            # corre en bucle
-    python3 bot_rodri.py --once     # ejecuta una sola pasada (GitHub Actions)
+    python3 main.py            # corre en bucle
+    python3 main.py --once     # ejecuta una sola pasada (GitHub Actions)
 """
 import json
 import os
@@ -28,13 +28,13 @@ import ccxt
 import pandas as pd
 import requests
 
-import config_rodri as config
-from strategy_rodri import (
+import config
+from strategy import (
     compute_base_indicators, compute_ensemble_signal, suggest_leverage,
     cap_tp_at_r, build_risk_levels, STRATEGY_NAMES,
     compute_htf_context, apply_htf_confirmation,
 )
-from chart_rodri import generate_signal_chart
+from charting import generate_signal_chart
 
 
 # ══════════════════════════════════════════════════════════
@@ -355,7 +355,7 @@ def close_position(state, symbol, pos, last_price, close_reason, now, extra_note
     win_rate = stats["wins"] / closed_trades * 100 if closed_trades else 0
 
     # Mensaje de cierre: qué se cerró y por qué, con qué señal se abrió
-    # (score/prob/estrategia — útil para luego evaluar con analyze_rodri.py),
+    # (score/prob/estrategia — útil para luego evaluar con tools/analyze.py),
     # el movimiento entrada->salida, los TP que llegó a tocar, el resultado
     # en R, y una línea de acumulado corta (el detalle completo va en el
     # resumen diario).
@@ -659,7 +659,7 @@ def run_once():
 def notify_startup_once():
     """
     Manda el mensaje de arranque (resumen de config) solo la primera vez
-    que el bot corre — se recuerda en state_rodri.json, así que en modo
+    que el bot corre — se recuerda en state.json, así que en modo
     --once (GitHub Actions, un proceso nuevo cada vez) no se repite en
     cada ejecución programada.
     """
