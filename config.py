@@ -82,7 +82,7 @@ PROB_AT_SCORE_0 = 0.30
 PROB_AT_SCORE_100 = 0.85
 
 # --- Umbrales de filtrado ---
-MIN_SCORE = 75
+MIN_SCORE = 60
 MIN_PROB = 0.40
 
 # --- Señales "rojas" (baja confianza, no descartadas del todo) ---
