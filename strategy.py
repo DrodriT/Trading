@@ -3,7 +3,7 @@ Motor de estrategias ENSEMBLE — "Rodri v1.0"
 """
 import pandas as pd
 
-from indicators_rodri import (
+from indicators import (
     add_ema, add_atr, add_adx, add_rsi, add_volume_ratio,
     add_swings, add_volume_profile, rsi_divergence, last_confirmed_swing,
 )
