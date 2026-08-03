@@ -5,13 +5,9 @@ import pandas as pd
 
 from indicators import (
     add_ema, add_atr, add_adx, add_rsi, add_volume_ratio,
-    add_swings, add_volume_profile, rsi_divergence, last_confirmed_swing,
+    add_swings, last_confirmed_swing,
 )
-
-STRATEGY_NAMES = [
-    "SMC_REVERSAL", "BREAKOUT", "TREND_PULLBACK",
-    "RSI_DIVERGENCE", "VP_MEAN_REVERT", "LIQUIDITY_GRAB",
-]
+from strategies import DETECTORS, STRATEGY_NAMES
 
 RISK_PRESETS = {
     "Conservative": {"sl_mult": 2.5, "tp_mults": [1.0, 2.0, 4.0]},
@@ -92,217 +88,45 @@ def compute_base_indicators(df: pd.DataFrame, cfg) -> pd.DataFrame:
 
 
 # ─────────────────────────────────────────────────────────
-# 1. SMC_REVERSAL — barrido de liquidez + cambio de estructura
+# Las 6 estrategias (SMC_REVERSAL, BREAKOUT, TREND_PULLBACK,
+# RSI_DIVERGENCE, VP_MEAN_REVERT, LIQUIDITY_GRAB) viven ahora en su
+# propio paquete strategies/, cada una en su archivo, con contrato rico
+# {direction, score, confidence, reason, metadata} | None. DETECTORS se
+# importa arriba desde strategies.
 # ─────────────────────────────────────────────────────────
-def detect_smc_reversal(df, cfg):
-    last = df.iloc[-1]
-    last_pos = len(df) - 1
-    atr = last["ATR"]
-    if pd.isna(atr) or atr == 0:
-        return None, 0.0
-
-    pos_low, swing_low_price = last_confirmed_swing(df, "low", last_pos, cfg.SMC_LOOKBACK)
-    if (pos_low is not None and last["low"] < swing_low_price
-            and last["close"] > swing_low_price and last["close"] > last["open"]):
-        _, swing_high_price = last_confirmed_swing(df, "high", pos_low, cfg.SMC_LOOKBACK)
-        structure_shift = swing_high_price is not None and last["close"] > swing_high_price
-        if not structure_shift:
-            return None, 0.0
-        
-        wick = swing_low_price - last["low"]
-        sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT
-
-        rejection = max(last["close"] - swing_low_price, 0.0)
-        rejection_score = min(rejection / atr, 1.0) * cfg.SMC_REJECTION_WEIGHT
-
-        body = abs(last["close"] - last["open"])
-        body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT
-
-        choch_score = cfg.SMC_CHOCH_WEIGHT 
-
-        vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
-        volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT
-
-        strength = min(sweep_score + rejection_score + body_score + choch_score + volume_score, 100.0)
-
-        return "ALCISTA", strength
-
-    pos_high, swing_high_price = last_confirmed_swing(df, "high", last_pos, cfg.SMC_LOOKBACK)
-    if (pos_high is not None and last["high"] > swing_high_price
-            and last["close"] < swing_high_price and last["close"] < last["open"]):
-        _, swing_low_price2 = last_confirmed_swing(df, "low", pos_high, cfg.SMC_LOOKBACK)
-        structure_shift = swing_low_price2 is not None and last["close"] < swing_low_price2
-        if not structure_shift:
-            return None, 0.0
-        
-        wick = last["high"] - swing_high_price
-        sweep_score = min(wick / atr, 1.0) * cfg.SMC_SWEEP_WEIGHT
-
-        rejection = max(swing_high_price - last["close"], 0.0)
-        rejection_score = min(rejection / atr, 1.0) * cfg.SMC_REJECTION_WEIGHT
-
-        body = abs(last["close"] - last["open"])
-        body_score = min(body / atr, 1.0) * cfg.SMC_BODY_WEIGHT
-
-        choch_score = cfg.SMC_CHOCH_WEIGHT 
-
-        vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
-        volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT
-
-        strength = min(sweep_score + rejection_score + body_score + choch_score + volume_score, 100.0)
-
-        return "BAJISTA", strength
-
-    return None, 0.0
-
-# ─────────────────────────────────────────────────────────
-# 2. LIQUIDITY_GRAB
-# ─────────────────────────────────────────────────────────
-def detect_liquidity_grab(df, cfg):
-    if len(df) < cfg.LG_LOOKBACK + 2:
-        return None, 0.0
-    last = df.iloc[-1]
-    atr = last["ATR"]
-    if pd.isna(atr) or atr == 0:
-        return None, 0.0
-
-    window = df.iloc[-(cfg.LG_LOOKBACK + 1):-1]
-    recent_low = window["low"].min()
-    recent_high = window["high"].max()
-
-    if last["low"] < recent_low and last["close"] > recent_low:
-        wick = recent_low - last["low"]
-        if wick / atr < cfg.LG_MIN_WICK_ATR_RATIO:
-            return None, 0.0
-        strength = min(wick / atr, 1.5) / 1.5 * 100.0
-        return "ALCISTA", strength
-
-    if last["high"] > recent_high and last["close"] < recent_high:
-        wick = last["high"] - recent_high
-        if wick / atr < cfg.LG_MIN_WICK_ATR_RATIO:
-            return None, 0.0
-        strength = min(wick / atr, 1.5) / 1.5 * 100.0
-        return "BAJISTA", strength
-
-    return None, 0.0
-
-# ─────────────────────────────────────────────────────────
-# 3. BREAKOUT
-# ─────────────────────────────────────────────────────────
-def detect_breakout(df, cfg):
-    if len(df) < cfg.BREAKOUT_LOOKBACK + 2:
-        return None, 0.0
-    last = df.iloc[-1]
-    atr = last["ATR"]
-    if pd.isna(atr) or atr == 0:
-        return None, 0.0
-
-    window = df.iloc[-(cfg.BREAKOUT_LOOKBACK + 1):-1]
-    range_high = window["high"].max()
-    range_low = window["low"].min()
-    vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
-
-    if last["close"] > range_high and vol_ratio >= cfg.BREAKOUT_VOL_THRESHOLD:
-        break_dist = last["close"] - range_high
-        strength = min(break_dist / atr, 1.5) / 1.5 * 60.0
-        strength += min(vol_ratio / cfg.BREAKOUT_VOL_THRESHOLD, 1.0) * 40.0
-        return "ALCISTA", min(strength, 100.0)
-
-    if last["close"] < range_low and vol_ratio >= cfg.BREAKOUT_VOL_THRESHOLD:
-        break_dist = range_low - last["close"]
-        strength = min(break_dist / atr, 1.5) / 1.5 * 60.0
-        strength += min(vol_ratio / cfg.BREAKOUT_VOL_THRESHOLD, 1.0) * 40.0
-        return "BAJISTA", min(strength, 100.0)
-
-    return None, 0.0
-
-
-# ─────────────────────────────────────────────────────────
-# 4. TREND_PULLBACK
-# ─────────────────────────────────────────────────────────
-def detect_trend_pullback(df, cfg):
-    if len(df) < 3:
-        return None, 0.0
-    last = df.iloc[-1]
-    prev = df.iloc[-2]
-    ema_fast_col = f"EMA{cfg.EMA_FAST}"
-    ema_slow_col = f"EMA{cfg.EMA_SLOW}"
-    adx = last["ADX"]
-    if pd.isna(adx) or pd.isna(last[ema_fast_col]) or pd.isna(prev[ema_fast_col]):
-        return None, 0.0
-
-    is_uptrend = last[ema_fast_col] > last[ema_slow_col] and adx >= cfg.TREND_ADX_MIN
-    is_downtrend = last[ema_fast_col] < last[ema_slow_col] and adx >= cfg.TREND_ADX_MIN
-
-    if (is_uptrend and prev["low"] <= prev[ema_fast_col]
-            and last["close"] > last[ema_fast_col] and last["close"] > last["open"]):
-        strength = min(adx / 50.0, 1.0) * 100.0
-        return "ALCISTA", strength
-
-    if (is_downtrend and prev["high"] >= prev[ema_fast_col]
-            and last["close"] < last[ema_fast_col] and last["close"] < last["open"]):
-        strength = min(adx / 50.0, 1.0) * 100.0
-        return "BAJISTA", strength
-
-    return None, 0.0
-
-
-# ─────────────────────────────────────────────────────────
-# 5. RSI_DIVERGENCE
-# ─────────────────────────────────────────────────────────
-def detect_rsi_divergence(df, cfg):
-    return rsi_divergence(df, "RSI", cfg.DIVERGENCE_LOOKBACK)
-
-
-# ─────────────────────────────────────────────────────────
-# 6. VP_MEAN_REVERT
-# ─────────────────────────────────────────────────────────
-def detect_vp_mean_revert(df, cfg):
-    if len(df) < cfg.VP_LOOKBACK:
-        return None, 0.0
-    last = df.iloc[-1]
-    atr = last["ATR"]
-    if pd.isna(atr) or atr == 0:
-        return None, 0.0
-
-    vp = add_volume_profile(df, cfg.VP_LOOKBACK, cfg.VP_BINS)
-    if vp is None:
-        return None, 0.0
-
-    if last["close"] < vp["val"] and last["close"] > last["open"]:
-        dist = vp["poc"] - last["close"]
-        strength = min(dist / atr, 3.0) / 3.0 * 100.0
-        return "ALCISTA", strength
-
-    if last["close"] > vp["vah"] and last["close"] < last["open"]:
-        dist = last["close"] - vp["poc"]
-        strength = min(dist / atr, 3.0) / 3.0 * 100.0
-        return "BAJISTA", strength
-
-    return None, 0.0
-
-
-DETECTORS = {
-    "SMC_REVERSAL": detect_smc_reversal,
-    "BREAKOUT": detect_breakout,
-    "TREND_PULLBACK": detect_trend_pullback,
-    "RSI_DIVERGENCE": detect_rsi_divergence,
-    "VP_MEAN_REVERT": detect_vp_mean_revert,
-    "LIQUIDITY_GRAB": detect_liquidity_grab,
-}
 
 
 def run_all_strategies(df, cfg):
+    """
+    Ejecuta las 6 estrategias sobre el DataFrame ya indicadorizado y
+    devuelve la lista de "hits" (una por cada estrategia que disparó),
+    con el peso y el score ponderado ya aplicados para el ensemble.
+
+    Cada detector devuelve {direction, score, confidence, reason,
+    metadata} o None (contrato rico). Aquí solo se usa "direction" y
+    "score" para el cálculo del ensemble (igual que antes); confidence,
+    reason y metadata se conservan en el hit para inspección/depuración
+    (p. ej. desde tools/analyze.py) pero no alteran el score ni el
+    resultado del ensemble.
+    """
     hits = []
     for name, fn in DETECTORS.items():
-        direction, score = fn(df, cfg)
-        if direction:
-            weight = cfg.STRATEGY_WEIGHTS.get(name, 1.0)
-            hits.append({
-                "name": name, "direction": direction, "score": round(score, 1),
-                "weight": weight, "weighted_score": round(score * weight, 1),
-            })
+        result = fn(df, cfg)
+        if result is None:
+            continue
+        direction = result["direction"]
+        score = result["score"]
+        weight = cfg.STRATEGY_WEIGHTS.get(name, 1.0)
+        hits.append({
+            "name": name, "direction": direction, "score": round(score, 1),
+            "weight": weight, "weighted_score": round(score * weight, 1),
+            "confidence": result.get("confidence"),
+            "reason": result.get("reason"),
+            "metadata": result.get("metadata"),
+        })
     return hits
+
+
 
 
 def score_to_probability(score: float, cfg) -> float:

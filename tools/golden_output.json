@@ -22,14 +22,28 @@
       "direction": "ALCISTA",
       "score": 100.0,
       "weight": 1.1,
-      "weighted_score": 110.0
+      "weighted_score": 110.0,
+      "confidence": 1.0,
+      "reason": "Ruptura alcista del rango reciente con volumen por encima del umbral",
+      "metadata": {
+        "range_high": 100.49928,
+        "break_dist": 1.5,
+        "vol_ratio": 2.5
+      }
     },
     {
       "name": "TREND_PULLBACK",
       "direction": "ALCISTA",
       "score": 47.8,
       "weight": 1.25,
-      "weighted_score": 59.8
+      "weighted_score": 59.8,
+      "confidence": 0.478089,
+      "reason": "Pullback a la EMA rápida con rechazo alcista dentro de tendencia alcista establecida",
+      "metadata": {
+        "adx": 23.904457,
+        "EMA20": 100.259886,
+        "EMA50": 100.11126
+      }
     }
   ],
   "ensemble_signal_pre_htf": {
