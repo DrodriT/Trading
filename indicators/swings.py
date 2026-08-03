@@ -6,7 +6,6 @@ Extraído de indicators_rodri.py sin cambios de lógica. Ambas funciones
 viven juntas porque last_confirmed_swing opera directamente sobre las
 columnas swing_high/swing_low que genera add_swings.
 """
-from turtle import left
 import numpy as np
 import pandas as pd
 
@@ -31,13 +30,9 @@ def add_swings(df: pd.DataFrame, left: int = 3, right: int = 3,
     for i in range(left, n - right):
         window_h = highs[i - left:i + right + 1]
         window_l = lows[i - left:i + right + 1]
-
-        max_h = window_h.max()
-        min_l = window_l.min()
-        if highs[i] == max_h and np.count_nonzero(window_h == max_h) == 1:
+        if highs[i] == window_h.max():
             is_high[i] = True
-
-        if lows[i] == min_l and np.count_nonzero(window_l == min_l) == 1:
+        if lows[i] == window_l.min():
             is_low[i] = True
 
     df[high_col] = is_high
@@ -56,11 +51,9 @@ def last_confirmed_swing(df: pd.DataFrame, kind: str, before_pos: int, lookback:
     start = max(0, before_pos - lookback)
     if before_pos <= start:
         return None, None
-    mask = df[col].to_numpy()[start:before_pos]
-    matches_pos = np.flatnonzero(mask)
-
-    if matches_pos.size == 0:
+    sub = df.iloc[start:before_pos]
+    matches_pos = np.where(sub[col].values)[0]
+    if len(matches_pos) == 0:
         return None, None
-
     pos = start + matches_pos[-1]
-    return pos, df[price_col].iat[pos]
+    return pos, df.iloc[pos][price_col]
