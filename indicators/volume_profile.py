@@ -27,16 +27,27 @@ def add_volume_profile(df: pd.DataFrame, lookback: int = 100, bins: int = 24):
     edges = np.linspace(lo, hi, bins + 1)
     vol_per_bin = np.zeros(bins)
 
-    for _, row in window.iterrows():
-        row_lo, row_hi, vol = row["low"], row["high"], row["volume"]
-        if pd.isna(row_lo) or pd.isna(row_hi) or row_hi <= row_lo or not vol:
+    # Arrays numpy en vez de window.iterrows() (evita construir un Series
+    # de pandas por fila), y bin_lo/bin_hi calculados de una vez para
+    # todas las filas con un único np.searchsorted vectorizado en vez de
+    # uno por fila. La acumulación en vol_per_bin se mantiene en un
+    # bucle secuencial porque cada vela puede repartirse entre varios
+    # bins solapados: es la parte que de verdad necesita procesarse
+    # vela a vela, en el mismo orden que antes (mismo resultado exacto).
+    lows = window["low"].to_numpy()
+    highs = window["high"].to_numpy()
+    vols = window["volume"].to_numpy()
+
+    valid = ~(pd.isna(lows) | pd.isna(highs)) & (highs > lows) & (vols != 0)
+    bin_lo_arr = np.clip(np.searchsorted(edges, lows, side="right") - 1, 0, bins - 1)
+    bin_hi_arr = np.clip(np.searchsorted(edges, highs, side="right") - 1, 0, bins - 1)
+
+    for i in range(len(lows)):
+        if not valid[i]:
             continue
-        bin_lo = int(np.searchsorted(edges, row_lo, side="right") - 1)
-        bin_hi = int(np.searchsorted(edges, row_hi, side="right") - 1)
-        bin_lo = max(0, min(bin_lo, bins - 1))
-        bin_hi = max(0, min(bin_hi, bins - 1))
+        bin_lo, bin_hi = bin_lo_arr[i], bin_hi_arr[i]
         span = bin_hi - bin_lo + 1
-        vol_per_bin[bin_lo:bin_hi + 1] += vol / span
+        vol_per_bin[bin_lo:bin_hi + 1] += vols[i] / span
 
     total_vol = vol_per_bin.sum()
     poc_bin = int(np.argmax(vol_per_bin))
