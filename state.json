@@ -1,45 +1,13 @@
 {
-  "positions": {
-    "ICP/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 2.101,
-      "entry_candle": "2026-08-04T06:50:00+00:00",
-      "sl": 2.0965000000000003,
-      "tp1": 2.1054999999999997,
-      "tp2": 2.11,
-      "tp3": 2.1144999999999996,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 76,
-      "prob": 0.72,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "htf_trend": "NEUTRAL",
-      "htf_adx": 14.6,
-      "htf_penalized": false,
-      "used_structural_sl": false,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "BCH/USDT:USDT": "2026-08-02T04:56:35.514187+00:00",
     "NEAR/USDT:USDT": "2026-08-02T05:21:35.088163+00:00",
     "AVAX/USDT:USDT": "2026-08-02T08:53:32.366793+00:00",
     "ETH/USDT:USDT": "2026-08-02T15:41:32.040165+00:00",
     "XRP/USDT:USDT": "2026-08-02T15:57:34.278749+00:00",
-    "XMR/USDT:USDT": "2026-08-04T10:37:28.794035+00:00"
+    "XMR/USDT:USDT": "2026-08-04T10:37:28.794035+00:00",
+    "ICP/USDT:USDT": "2026-08-04T11:11:29.987714+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-04",
@@ -51,7 +19,8 @@
     false,
     false,
     false,
-    true
+    true,
+    false
   ],
   "dynamic_min_score": 75,
   "stats": {
@@ -60,15 +29,15 @@
     "red_signals": 0,
     "long_signals": 5,
     "short_signals": 2,
-    "sl_hits": 4,
+    "sl_hits": 5,
     "tp1_hits": 3,
     "tp2_hits": 2,
     "tp3_hits": 2,
     "flips": 0,
     "wins": 3,
-    "losses": 3,
+    "losses": 4,
     "be_saves": 1,
-    "r_sum": 1.3333333333333335
+    "r_sum": 0.3333333333333335
   },
   "last_daily_summary_date": "2026-08-04",
   "trade_log": [
@@ -209,6 +178,29 @@
       "close_reason": "tp3",
       "entry_candle": "2026-08-04T05:05:00+00:00",
       "closed_at": "2026-08-04T06:37:28.794035+00:00"
+    },
+    {
+      "symbol": "ICP/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 76,
+      "prob": 0.72,
+      "htf_trend": "NEUTRAL",
+      "htf_penalized": false,
+      "used_structural_sl": false,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 2.101,
+      "exit": 2.095,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-08-04T06:50:00+00:00",
+      "closed_at": "2026-08-04T07:11:29.987714+00:00"
     }
   ],
   "startup_notified": true,
