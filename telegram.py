@@ -10,14 +10,18 @@ import requests
 
 import config
 from strategies import STRATEGY_NAMES
+from core.logger import get_logger
+from core.utils import display_symbol, md_escape, pct_from_entry
+
+logger = get_logger(__name__)
 
 
 def send_telegram(message: str):
     """Envía un mensaje de texto por Telegram (Markdown legacy), con
     reintento en texto plano si falla el parseo de Markdown."""
     if "PON_AQUI" in config.TELEGRAM_TOKEN or "PON_AQUI" in config.TELEGRAM_CHAT_ID:
-        print("[AVISO] Configura TELEGRAM_TOKEN y TELEGRAM_CHAT_ID en config.py")
-        print(message)
+        logger.warning("Configura TELEGRAM_TOKEN y TELEGRAM_CHAT_ID en config.py")
+        logger.info(message)
         return
     url = f"https://api.telegram.org/bot{config.TELEGRAM_TOKEN}/sendMessage"
     try:
@@ -27,7 +31,7 @@ def send_telegram(message: str):
             "parse_mode": "Markdown"
         }, timeout=10)
         if resp.status_code != 200:
-            print(f"[ERROR Telegram] {resp.status_code}: {resp.text}")
+            logger.error(f"[Telegram] {resp.status_code}: {resp.text}")
             # Red de seguridad: si el error es de parseo de Markdown (p.ej.
             # un carácter especial que se nos escapó), reintenta en texto
             # plano para que el aviso llegue igualmente en vez de perderse.
@@ -36,16 +40,16 @@ def send_telegram(message: str):
                 "text": message,
             }, timeout=10)
             if resp2.status_code != 200:
-                print(f"[ERROR Telegram, reintento plano] {resp2.status_code}: {resp2.text}")
+                logger.error(f"[Telegram, reintento plano] {resp2.status_code}: {resp2.text}")
     except Exception as e:
-        print(f"[ERROR Telegram] {e}")
+        logger.error(f"[Telegram] {e}")
 
 
 def send_telegram_photo(image_path: str, caption: str = ""):
     """Manda una foto (el gráfico de la señal) con el texto como caption."""
     if "PON_AQUI" in config.TELEGRAM_TOKEN or "PON_AQUI" in config.TELEGRAM_CHAT_ID:
-        print("[AVISO] Configura TELEGRAM_TOKEN y TELEGRAM_CHAT_ID en config.py")
-        print(caption)
+        logger.warning("Configura TELEGRAM_TOKEN y TELEGRAM_CHAT_ID en config.py")
+        logger.info(caption)
         return
     url = f"https://api.telegram.org/bot{config.TELEGRAM_TOKEN}/sendPhoto"
     try:
@@ -56,7 +60,7 @@ def send_telegram_photo(image_path: str, caption: str = ""):
                 "parse_mode": "Markdown",
             }, files={"photo": photo}, timeout=20)
         if resp.status_code != 200:
-            print(f"[ERROR Telegram photo] {resp.status_code}: {resp.text}")
+            logger.error(f"[Telegram photo] {resp.status_code}: {resp.text}")
             # Red de seguridad: reintenta la misma foto sin parse_mode si
             # el fallo fue por el formato del caption, para no perder el
             # aviso de apertura en silencio.
@@ -66,9 +70,9 @@ def send_telegram_photo(image_path: str, caption: str = ""):
                     "caption": caption,
                 }, files={"photo": photo}, timeout=20)
             if resp2.status_code != 200:
-                print(f"[ERROR Telegram photo, reintento plano] {resp2.status_code}: {resp2.text}")
+                logger.error(f"[Telegram photo, reintento plano] {resp2.status_code}: {resp2.text}")
     except Exception as e:
-        print(f"[ERROR Telegram photo] {e}")
+        logger.error(f"[Telegram photo] {e}")
 
 
 def send_startup_message():
@@ -91,36 +95,6 @@ def send_startup_message():
         f"{f' (penaliza -{config.CONFIRM_SCORE_PENALTY} si ADX≥{config.CONFIRM_ADX_MIN}, bloquea si ADX≥{config.CONFIRM_BLOCK_ADX_MIN})' if config.CONFIRM_ENABLED else ''}"
     )
     send_telegram(msg)
-
-
-def display_symbol(symbol: str) -> str:
-    """Convierte 'BTC/USDT:USDT' en 'BTCUSDT' para mostrar en mensajes."""
-    return symbol.split(":")[0].replace("/", "")
-
-
-def md_escape(text: str) -> str:
-    """
-    Escapa los caracteres especiales del Markdown "legacy" de Telegram
-    (_ * ` [ ). Es imprescindible para los nombres de estrategia
-    (SMC_REVERSAL, TREND_PULLBACK, RSI_DIVERGENCE, LIQUIDITY_GRAB...): al
-    llevar un número impar de "_", Telegram no puede emparejar la cursiva
-    y devuelve un error 400 "can't parse entities" — y como send_telegram
-    solo registra el error sin lanzar excepción, el mensaje se pierde en
-    silencio (nunca llega, aunque el bot siga funcionando con normalidad).
-    """
-    for ch in ("_", "*", "`", "["):
-        text = text.replace(ch, f"\\{ch}")
-    return text
-
-
-def pct_from_entry(entry: float, level: float) -> str:
-    """Formatea el porcentaje de un nivel (SL/TP) respecto al precio de
-    entrada, listo para insertar en un mensaje de Telegram."""
-    if not entry:
-        return ""
-    pct = (level - entry) / entry * 100.0
-    sign = "+" if pct >= 0 else ""
-    return f" ({sign}{pct:.2f}%)"
 
 
 def context_line(pos: dict) -> str:

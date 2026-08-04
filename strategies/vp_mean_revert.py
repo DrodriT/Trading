@@ -6,6 +6,8 @@ Extraída de strategy.py sin cambios de cálculo.
 """
 import pandas as pd
 
+from core.utils import is_atr_valid
+
 from indicators import add_volume_profile
 
 
@@ -16,7 +18,7 @@ def detect_vp_mean_revert(df, cfg):
         return None
     last = df.iloc[-1]
     atr = last["ATR"]
-    if pd.isna(atr) or atr == 0:
+    if not is_atr_valid(atr):
         return None
 
     vp = add_volume_profile(df, cfg.VP_LOOKBACK, cfg.VP_BINS)

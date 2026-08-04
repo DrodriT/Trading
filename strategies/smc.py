@@ -7,6 +7,8 @@ tupla (direction, score) que se usaba antes.
 """
 import pandas as pd
 
+from core.utils import is_atr_valid, safe_vol_ratio
+
 from indicators import last_confirmed_swing
 
 
@@ -16,7 +18,7 @@ def detect_smc_reversal(df, cfg):
     last = df.iloc[-1]
     last_pos = len(df) - 1
     atr = last["ATR"]
-    if pd.isna(atr) or atr == 0:
+    if not is_atr_valid(atr):
         return None
 
     pos_low, swing_low_price = last_confirmed_swing(df, "low", last_pos, cfg.SMC_LOOKBACK)
@@ -38,7 +40,7 @@ def detect_smc_reversal(df, cfg):
 
         choch_score = cfg.SMC_CHOCH_WEIGHT
 
-        vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
+        vol_ratio = safe_vol_ratio(last["VOL_RATIO"])
         volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT
 
         score = min(sweep_score + rejection_score + body_score + choch_score + volume_score, 100.0)
@@ -75,7 +77,7 @@ def detect_smc_reversal(df, cfg):
 
         choch_score = cfg.SMC_CHOCH_WEIGHT
 
-        vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
+        vol_ratio = safe_vol_ratio(last["VOL_RATIO"])
         volume_score = min(max(vol_ratio - 1.0, 0.0), 1.0) * cfg.SMC_VOLUME_WEIGHT
 
         score = min(sweep_score + rejection_score + body_score + choch_score + volume_score, 100.0)

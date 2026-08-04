@@ -5,6 +5,8 @@ Extraída de strategy.py sin cambios de cálculo.
 """
 import pandas as pd
 
+from core.utils import is_atr_valid
+
 
 def detect_liquidity_grab(df, cfg):
     """Mecha que barre el máximo/mínimo de la ventana reciente (LG_LOOKBACK)
@@ -13,7 +15,7 @@ def detect_liquidity_grab(df, cfg):
         return None
     last = df.iloc[-1]
     atr = last["ATR"]
-    if pd.isna(atr) or atr == 0:
+    if not is_atr_valid(atr):
         return None
 
     window = df.iloc[-(cfg.LG_LOOKBACK + 1):-1]

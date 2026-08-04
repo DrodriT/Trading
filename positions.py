@@ -17,11 +17,14 @@ from market_state import compute_htf_context, apply_htf_confirmation
 from risk import build_risk_levels, cap_tp_at_r, suggest_leverage
 from charting import generate_signal_chart
 from telegram import send_telegram, send_telegram_photo, display_symbol, pct_from_entry, md_escape
+from core.logger import get_logger
 from state import (
     get_stats, register_result, set_cooldown, can_open_new_trade,
     red_signals_used_today, register_red_signal,
     get_last_processed_candle, set_last_processed_candle,
 )
+
+logger = get_logger(__name__)
 
 
 # ══════════════════════════════════════════════════════════
@@ -182,7 +185,7 @@ def check_symbol(exchange, symbol, state, now):
         except Exception as e:
             # Si falla la descarga/cálculo de 15m, seguimos con la señal
             # de 5m tal cual: un fallo de red no debe bloquear el trading.
-            print(f"[AVISO] No se pudo confirmar en {config.CONFIRM_TIMEFRAME} para {symbol}: {e}")
+            logger.warning(f"No se pudo confirmar en {config.CONFIRM_TIMEFRAME} para {symbol}: {e}")
 
     quality = None
     if signal:
@@ -272,9 +275,9 @@ def check_symbol(exchange, symbol, state, now):
             )
             send_telegram_photo(chart_path, msg)
         except Exception as e:
-            print(f"[ERROR gráfico] {e}")
+            logger.error(f"[gráfico] {e}")
             send_telegram(msg)
-        print(msg.replace("*", "").replace("`", ""))
+        logger.info(msg.replace("*", "").replace("`", ""))
 
     # ── 4. Comprobar hits de SL/TP en timeframe de seguimiento (1m) ──
     if pos:

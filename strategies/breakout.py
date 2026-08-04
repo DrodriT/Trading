@@ -5,6 +5,8 @@ Extraída de strategy.py sin cambios de cálculo.
 """
 import pandas as pd
 
+from core.utils import is_atr_valid, safe_vol_ratio
+
 
 def detect_breakout(df, cfg):
     """Cierre fuera del rango de las últimas BREAKOUT_LOOKBACK velas, con
@@ -13,13 +15,13 @@ def detect_breakout(df, cfg):
         return None
     last = df.iloc[-1]
     atr = last["ATR"]
-    if pd.isna(atr) or atr == 0:
+    if not is_atr_valid(atr):
         return None
 
     window = df.iloc[-(cfg.BREAKOUT_LOOKBACK + 1):-1]
     range_high = window["high"].max()
     range_low = window["low"].min()
-    vol_ratio = last["VOL_RATIO"] if pd.notna(last["VOL_RATIO"]) else 1.0
+    vol_ratio = safe_vol_ratio(last["VOL_RATIO"])
 
     if last["close"] > range_high and vol_ratio >= cfg.BREAKOUT_VOL_THRESHOLD:
         break_dist = last["close"] - range_high

@@ -38,6 +38,9 @@ from exchange import create_exchange
 from state import load_state, save_state, update_dynamic_threshold
 from positions import check_symbol, maybe_send_daily_summary
 from telegram import send_startup_message
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def run_once():
@@ -51,7 +54,7 @@ def run_once():
         try:
             check_symbol(exchange, symbol, state, now)
         except Exception as e:
-            print(f"[ERROR] {symbol}: {e}")
+            logger.error(f"{symbol}: {e}")
 
     maybe_send_daily_summary(state)
     save_state(state)
@@ -72,8 +75,8 @@ def notify_startup_once():
 
 
 def main():
-    print(f"[{config.STRATEGY_LABEL}] Bot iniciado {datetime.now(timezone.utc).isoformat()} | "
-          f"Símbolos: {config.SYMBOLS} | Timeframe: {config.TIMEFRAME}")
+    logger.info(f"[{config.STRATEGY_LABEL}] Bot iniciado {datetime.now(timezone.utc).isoformat()} | "
+                f"Símbolos: {config.SYMBOLS} | Timeframe: {config.TIMEFRAME}")
     notify_startup_once()
 
     if "--once" in sys.argv:
