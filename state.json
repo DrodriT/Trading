@@ -1,44 +1,12 @@
 {
-  "positions": {
-    "XMR/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 362.1,
-      "entry_candle": "2026-08-04T05:05:00+00:00",
-      "sl": 362.1,
-      "tp1": 362.7439285714286,
-      "tp2": 363.3878571428572,
-      "tp3": 364.0317857142858,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 80,
-      "prob": 0.74,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "htf_trend": "NEUTRAL",
-      "htf_adx": 10.6,
-      "htf_penalized": false,
-      "used_structural_sl": false,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "BCH/USDT:USDT": "2026-08-02T04:56:35.514187+00:00",
     "NEAR/USDT:USDT": "2026-08-02T05:21:35.088163+00:00",
     "AVAX/USDT:USDT": "2026-08-02T08:53:32.366793+00:00",
     "ETH/USDT:USDT": "2026-08-02T15:41:32.040165+00:00",
-    "XRP/USDT:USDT": "2026-08-02T15:57:34.278749+00:00"
+    "XRP/USDT:USDT": "2026-08-02T15:57:34.278749+00:00",
+    "XMR/USDT:USDT": "2026-08-04T10:37:28.794035+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-04",
@@ -49,7 +17,8 @@
     true,
     false,
     false,
-    false
+    false,
+    true
   ],
   "dynamic_min_score": 75,
   "stats": {
@@ -61,12 +30,12 @@
     "sl_hits": 4,
     "tp1_hits": 3,
     "tp2_hits": 2,
-    "tp3_hits": 1,
+    "tp3_hits": 2,
     "flips": 0,
-    "wins": 2,
+    "wins": 3,
     "losses": 3,
     "be_saves": 1,
-    "r_sum": -0.6666666666666665
+    "r_sum": 1.3333333333333335
   },
   "last_daily_summary_date": "2026-08-04",
   "trade_log": [
@@ -184,6 +153,29 @@
       "close_reason": "sl",
       "entry_candle": "2026-08-02T09:30:00+00:00",
       "closed_at": "2026-08-02T11:57:34.278749+00:00"
+    },
+    {
+      "symbol": "XMR/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 80,
+      "prob": 0.74,
+      "htf_trend": "NEUTRAL",
+      "htf_penalized": false,
+      "used_structural_sl": false,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 362.1,
+      "exit": 363.93,
+      "r_result": 2.0,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-08-04T05:05:00+00:00",
+      "closed_at": "2026-08-04T06:37:28.794035+00:00"
     }
   ],
   "startup_notified": true,
