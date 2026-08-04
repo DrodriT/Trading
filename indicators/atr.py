@@ -1,3 +1,23 @@
+"""
+===============================================================================
+Average True Range (ATR)
+===============================================================================
+
+Descripción:
+    Calcula el Average True Range (ATR), indicador desarrollado por
+    J. Welles Wilder para medir la volatilidad del mercado.
+
+    El ATR no indica dirección del precio, únicamente la magnitud
+    del movimiento.
+
+Salida:
+    ATR            -> Volatilidad absoluta.
+    ATR_pct        -> ATR expresado como porcentaje del precio.
+    ATR_slope      -> Pendiente del ATR (cambio de volatilidad).
+
+===============================================================================
+"""
+
 import numpy as np
 import pandas as pd
 
@@ -7,29 +27,30 @@ def add_atr(
     period: int = 14,
     prefix: str = "ATR"
 ) -> pd.DataFrame:
-    
     """
-    Average True Range (Wilder)
-    Devuelve:
-        ATR
-        ATR_pct
-        ATR_slope
+    Añade las columnas del ATR al DataFrame.
     """
 
-    high = df["high"]
-    low = df["low"]
-    close = df["close"]
+    # =====================================================================
+    # True Range (TR)
+    # =====================================================================
 
-    prev_close = close.shift(1)
+    # Cierre de la vela anterior
+    prev_close = df["close"].shift(1)
 
+    # True Range
     tr = pd.concat(
         [
-            high - low,
-            (high - prev_close).abs(),
-            (low - prev_close).abs(),
+            df["high"] - df["low"],
+            (df["high"] - prev_close).abs(),
+            (df["low"] - prev_close).abs(),
         ],
         axis=1,
     ).max(axis=1)
+
+    # =====================================================================
+    # Average True Range (Wilder)
+    # =====================================================================
 
     atr = tr.ewm(
         alpha=1 / period,
@@ -37,12 +58,22 @@ def add_atr(
         min_periods=period,
     ).mean()
 
+    # =====================================================================
+    # Variables auxiliares
+    # =====================================================================
+
+    # ATR en porcentaje respecto al precio
     atr_pct = (
         atr /
-        close.replace(0, np.nan)
+        df["close"].replace(0, np.nan)
     ) * 100
 
+    # Pendiente del ATR
     atr_slope = atr.diff()
+
+    # =====================================================================
+    # Salida
+    # =====================================================================
 
     df[prefix] = atr
     df[f"{prefix}_pct"] = atr_pct
