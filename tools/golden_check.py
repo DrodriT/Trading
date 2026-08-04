@@ -31,7 +31,7 @@ import pandas as pd
 
 # Permite ejecutar "python tools/golden_check.py" desde la raíz del
 # proyecto sin tener que instalar nada como paquete: añade la carpeta
-# padre (donde viven config.py / strategy.py / indicators_rodri.py)
+# padre (donde viven config.py / strategy.py / el paquete indicators/)
 # al principio del sys.path.
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(_THIS_DIR)
@@ -39,11 +39,10 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 import config  # noqa: E402
-from strategy import (  # noqa: E402
-    compute_base_indicators, run_all_strategies, compute_ensemble_signal,
-    compute_htf_context, apply_htf_confirmation, build_risk_levels,
-    cap_tp_at_r, suggest_leverage,
-)
+from strategy import compute_base_indicators  # noqa: E402
+from ensemble import run_all_strategies, compute_ensemble_signal  # noqa: E402
+from market_state import compute_htf_context, apply_htf_confirmation  # noqa: E402
+from risk import build_risk_levels, cap_tp_at_r, suggest_leverage  # noqa: E402
 
 OUTPUT_PATH = os.path.join(_THIS_DIR, "golden_output.json")
 
