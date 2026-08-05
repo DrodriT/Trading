@@ -5,7 +5,7 @@ on:
 
 # Evita que dos ejecuciones se solapen: si una corrida ya está en curso,
 # la siguiente se ENCOLA (no se cancela) en vez de arrancar en paralelo
-# y pelear por el mismo commit de state.json.
+# y pelear por el mismo commit de state_rodri.json.
 concurrency:
   group: crypto-alert-bot-rodri
   cancel-in-progress: false
@@ -30,22 +30,23 @@ jobs:
       # la imagen ghcr.io/drodrit/trading-bot-rodri ya trae Python 3.12
       # y todas las dependencias de requirements.txt preinstaladas.
 
-      - name: Ejecutar el bot (una sola pasada)
+      - name: Ejecutar bot_Rodri (una sola pasada)
+        working-directory: bot_Rodri
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           BITGET_API_KEY: ${{ secrets.BITGET_API_KEY }}
           BITGET_API_SECRET: ${{ secrets.BITGET_API_SECRET }}
           BITGET_API_PASSWORD: ${{ secrets.BITGET_API_PASSWORD }}
-        run: python main.py --once
+        run: python bot_rodri.py --once
 
-      - name: Guardar el estado actualizado (state.json)
+      - name: Guardar el estado actualizado (bot_Rodri/state_rodri.json)
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "crypto-alert-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add state.json
-          git diff --quiet --cached || git commit -m "Actualizar estado del bot [skip ci]"
+          git add bot_Rodri/state_rodri.json
+          git diff --quiet --cached || git commit -m "Actualizar estado bot_Rodri [skip ci]"
           for i in 1 2 3; do
             git pull --rebase origin main && git push && break
             echo "Push falló (intento $i), reintentando..."

@@ -1,7 +1,7 @@
 """
 Análisis de rendimiento por estrategia — Rodri v1.0
 
-Lee el trade_log de state.json y desglosa el rendimiento (nº de
+Lee el trade_log de state_rodri.json y desglosa el rendimiento (nº de
 operaciones, win rate, R medio) por cada una de las 6 estrategias, para
 saber cuáles están aportando y cuáles conviene ajustar o retirar.
 
@@ -11,8 +11,8 @@ solo la primera) — así una estrategia que casi siempre actúa "acompañada"
 también se puede evaluar.
 
 Uso:
-    python3 tools/analyze.py                  # usa state.json en el directorio actual
-    python3 tools/analyze.py otro_estado.json # o un archivo concreto
+    python3 analyze_rodri.py                  # usa state_rodri.json en el directorio actual
+    python3 analyze_rodri.py otro_estado.json # o un archivo concreto
 """
 import json
 import sys
@@ -56,7 +56,7 @@ def fmt_row(name, d):
 
 
 def main():
-    path = sys.argv[1] if len(sys.argv) > 1 else "state.json"
+    path = sys.argv[1] if len(sys.argv) > 1 else "state_rodri.json"
     trade_log = load_trade_log(path)
 
     if not trade_log:

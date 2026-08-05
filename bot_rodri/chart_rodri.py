@@ -18,7 +18,9 @@ matplotlib.use("Agg")  # sin display, solo generar PNG
 import mplfinance as mpf
 import pandas as pd
 
-from core.utils import display_symbol
+
+def display_symbol(symbol: str) -> str:
+    return symbol.split(":")[0].replace("/", "")
 
 
 def generate_signal_chart(df: pd.DataFrame, symbol: str, direction: str,
