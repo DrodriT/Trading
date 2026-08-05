@@ -1,41 +1,15 @@
 {
-  "positions": {
-    "XLM/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 0.16635,
-      "entry_candle": "2026-08-05T07:10:00+00:00",
-      "sl": 0.1666725,
-      "tp1": 0.1660275,
-      "tp2": 0.16580175,
-      "tp3": 0.16580175,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 50,
-      "prob": 0.57,
-      "strategies": [
-        "RSI_DIVERGENCE"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": true,
-      "size_factor": 0.3
-    }
-  },
+  "positions": {},
   "cooldowns": {
-    "BCH/USDT:USDT": "2026-08-05T11:16:41.810798+00:00"
+    "BCH/USDT:USDT": "2026-08-05T11:16:41.810798+00:00",
+    "XLM/USDT:USDT": "2026-08-05T11:41:29.419088+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-05",
     "count": 2
   },
   "recent_results": [
+    false,
     false
   ],
   "dynamic_min_score": 60,
@@ -58,6 +32,25 @@
       "close_reason": "sl",
       "entry_candle": "2026-08-05T07:10:00+00:00",
       "closed_at": "2026-08-05T07:16:41.810798+00:00"
+    },
+    {
+      "symbol": "XLM/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "RSI_DIVERGENCE"
+      ],
+      "confluence": 1,
+      "score": 50,
+      "prob": 0.57,
+      "is_red": true,
+      "leverage": 20,
+      "entry": 0.16635,
+      "exit": 0.16671,
+      "r_result": -0.3,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-08-05T07:10:00+00:00",
+      "closed_at": "2026-08-05T07:41:29.419088+00:00"
     }
   ],
   "stats": {
@@ -66,15 +59,15 @@
     "red_signals": 2,
     "long_signals": 1,
     "short_signals": 1,
-    "sl_hits": 1,
+    "sl_hits": 2,
     "tp1_hits": 0,
     "tp2_hits": 0,
     "tp3_hits": 0,
     "flips": 0,
     "wins": 0,
-    "losses": 1,
+    "losses": 2,
     "be_saves": 0,
-    "r_sum": -0.3
+    "r_sum": -0.6
   },
   "last_daily_summary_date": "2026-08-05",
   "startup_notified": true,
