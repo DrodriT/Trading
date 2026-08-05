@@ -14,7 +14,7 @@
     false,
     false
   ],
-  "dynamic_min_score": 70,
+  "dynamic_min_score": 75,
   "trade_log": [
     {
       "symbol": "BCH/USDT:USDT",
