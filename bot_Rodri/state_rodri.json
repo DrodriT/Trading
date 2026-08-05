@@ -1,41 +1,15 @@
 {
-  "positions": {
-    "BTC/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 64293.1,
-      "entry_candle": "2026-08-05T14:40:00+00:00",
-      "sl": 64293.1,
-      "tp1": 64537.803571428565,
-      "tp2": 64709.09607142857,
-      "tp3": 64709.09607142857,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 52,
-      "prob": 0.59,
-      "strategies": [
-        "RSI_DIVERGENCE"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": true,
-      "size_factor": 0.3
-    }
-  },
+  "positions": {},
   "cooldowns": {
-    "ETH/USDT:USDT": "2026-08-05T20:22:38.572133+00:00"
+    "ETH/USDT:USDT": "2026-08-05T20:22:38.572133+00:00",
+    "BTC/USDT:USDT": "2026-08-05T20:23:41.452781+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-05",
     "count": 2
   },
   "recent_results": [
+    true,
     true
   ],
   "dynamic_min_score": 75,
@@ -58,6 +32,25 @@
       "close_reason": "tp3",
       "entry_candle": "2026-08-05T14:40:00+00:00",
       "closed_at": "2026-08-05T16:22:38.572133+00:00"
+    },
+    {
+      "symbol": "BTC/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "RSI_DIVERGENCE"
+      ],
+      "confluence": 1,
+      "score": 52,
+      "prob": 0.59,
+      "is_red": true,
+      "leverage": 20,
+      "entry": 64293.1,
+      "exit": 64663.3,
+      "r_result": 0.44,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-08-05T14:40:00+00:00",
+      "closed_at": "2026-08-05T16:23:41.452781+00:00"
     }
   ],
   "stats": {
@@ -68,13 +61,13 @@
     "short_signals": 0,
     "sl_hits": 0,
     "tp1_hits": 2,
-    "tp2_hits": 1,
-    "tp3_hits": 1,
+    "tp2_hits": 2,
+    "tp3_hits": 2,
     "flips": 0,
-    "wins": 1,
+    "wins": 2,
     "losses": 0,
     "be_saves": 0,
-    "r_sum": 0.43999999999999995
+    "r_sum": 0.8799999999999999
   },
   "last_daily_summary_date": "2026-08-05",
   "startup_notified": true,
