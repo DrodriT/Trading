@@ -443,12 +443,12 @@ def check_symbol(exchange, symbol, state, now):
         # --- COMPROBACIÓN MACRO 15M ---
         macro_trend = check_higher_timeframe_trend(exchange, symbol)
         macro_aligned = (macro_trend == "NEUTRAL") or (macro_trend == signal["direction"])
-        # Si la tendencia macro es distinta, preparamos la etiqueta de aviso
+       # Si la tendencia macro es distinta, preparamos la etiqueta de aviso
         macro_warning = ""
         if not macro_aligned:
-            macro_warning = f"\n⚠️ *Aviso Macro:* {macro_trend} (no coincide)"
+            macro_warning = f"\n⚠️ *Aviso Macro:* Tendencia en {config.HIGHER_TIMEFRAME} es {macro_trend} (no coincide)"
         # ------------------------------
-       
+
         new_pos = {
             "dir": signal["direction"],
             "entry": last_price,
