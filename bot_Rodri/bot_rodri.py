@@ -86,6 +86,19 @@ def get_stats(state):
 # Telegram / datos de mercado
 # ══════════════════════════════════════════════════════════
 
+def fmt_strategies(strategies) -> str:
+    """
+    Nombres de estrategia SIN guiones bajos para usar en textos con
+    parse_mode="Markdown". En el Markdown "legacy" de Telegram, '_' abre y
+    cierra cursiva: si el mensaje contiene un número impar de '_' (p. ej.
+    una señal roja con una sola estrategia como "SMC_REVERSAL"), Telegram
+    devuelve 400 ("can't find end of the entity") y el mensaje no llega.
+    Ese fallo no lanza excepción en send_telegram/send_telegram_photo
+    (solo se imprime), así que se pierde en silencio si no se sanea antes.
+    """
+    return "+".join(s.replace("_", " ") for s in strategies)
+
+
 def send_telegram(message: str):
     if "PON_AQUI" in config.TELEGRAM_TOKEN or "PON_AQUI" in config.TELEGRAM_CHAT_ID:
         print("[AVISO] Configura TELEGRAM_TOKEN y TELEGRAM_CHAT_ID en config.py")
@@ -100,6 +113,15 @@ def send_telegram(message: str):
         }, timeout=10)
         if resp.status_code != 200:
             print(f"[ERROR Telegram] {resp.status_code}: {resp.text}")
+            # Red de seguridad: si el fallo es de parseo de Markdown (p.ej.
+            # un '_' suelto que no se saneó), reintenta en texto plano para
+            # que el mensaje no se pierda del todo.
+            resp2 = requests.post(url, data={
+                "chat_id": config.TELEGRAM_CHAT_ID,
+                "text": message,
+            }, timeout=10)
+            if resp2.status_code != 200:
+                print(f"[ERROR Telegram fallback texto plano] {resp2.status_code}: {resp2.text}")
     except Exception as e:
         print(f"[ERROR Telegram] {e}")
 
@@ -120,8 +142,21 @@ def send_telegram_photo(image_path: str, caption: str = ""):
             }, files={"photo": photo}, timeout=20)
         if resp.status_code != 200:
             print(f"[ERROR Telegram photo] {resp.status_code}: {resp.text}")
+            # Reintenta la foto sin parse_mode (caption en texto plano):
+            # si el fallo era por Markdown mal formado, la foto llega igual.
+            with open(image_path, "rb") as photo:
+                resp2 = requests.post(url, data={
+                    "chat_id": config.TELEGRAM_CHAT_ID,
+                    "caption": caption,
+                }, files={"photo": photo}, timeout=20)
+            if resp2.status_code != 200:
+                print(f"[ERROR Telegram photo fallback] {resp2.status_code}: {resp2.text}")
+                # Último recurso: manda el texto solo, sin imagen, para no
+                # perder la alerta.
+                send_telegram(caption)
     except Exception as e:
         print(f"[ERROR Telegram photo] {e}")
+        send_telegram(caption)
 
 
 def send_startup_message():
@@ -129,7 +164,7 @@ def send_startup_message():
     threshold_mode = "DYNAMIC" if config.USE_DYNAMIC_THRESHOLD else "FIXED"
     msg = (
         f"🤖 Bot \"{config.STRATEGY_LABEL}\" iniciado.\n"
-        f"Activos: {len(config.SYMBOLS)} | Estrategias: {', '.join(STRATEGY_NAMES)}\n"
+        f"Activos: {len(config.SYMBOLS)} | Estrategias: {', '.join(s.replace('_', ' ') for s in STRATEGY_NAMES)}\n"
         f"Exchange: {config.EXCHANGE_ID} ({config.MARKET_TYPE})\n"
         f"Threshold mode: {threshold_mode}\n"
         f"Escaneo: {config.TIMEFRAME} | Seguimiento: {config.MONITOR_TIMEFRAME}\n"
@@ -165,7 +200,7 @@ def fetch_ohlcv(exchange, symbol, timeframe, limit):
 def context_line(pos: dict) -> str:
     tag = f" | ⚠️ ROJA (x{config.RED_SIZE_FACTOR})" if pos.get("is_red") else ""
     return (f"Score: *{pos['score']}* | Prob: {pos['prob'] * 100:.0f}% | "
-            f"{'+'.join(pos['strategies'])} | Lev: {pos['leverage']}x{tag}")
+            f"{fmt_strategies(pos['strategies'])} | Lev: {pos['leverage']}x{tag}")
 
 
 # ══════════════════════════════════════════════════════════
@@ -412,7 +447,7 @@ def check_symbol(exchange, symbol, state, now):
 
         msg = (
             f"{emoji} *{sym} | {dir_label}*{red_tag}\n"
-            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {'+'.join(pos['strategies'])}\n\n"
+            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {fmt_strategies(pos['strategies'])}\n\n"
             f"💰 Entrada: `{pos['entry']:.4f}`\n"
             f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n"
             f"⚡ Apalancamiento sugerido: {leverage}x\n\n"
