@@ -8,8 +8,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "bot_Rodri/requirements.txt"
-      - "bot_Rodri/Dockerfile"
+      - "requirements.txt"
+      - "Dockerfile"
       - ".github/workflows/build_bot_image.yml"
   workflow_dispatch: {}
 
@@ -35,6 +35,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: .bot_Rodri/Dockerfile
+          file: .Dockerfile
           push: true
           tags: ghcr.io/drodrit/trading-bot-rodri:latest
