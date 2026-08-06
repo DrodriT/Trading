@@ -1,43 +1,17 @@
 {
-  "positions": {
-    "XRP/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 1.0615,
-      "entry_candle": "2026-08-06T00:00:00+00:00",
-      "sl": 1.0615,
-      "tp1": 1.0629785714285716,
-      "tp2": 1.0640135714285717,
-      "tp3": 1.0640135714285717,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": true,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 70,
-      "prob": 0.69,
-      "strategies": [
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": true,
-      "size_factor": 0.3
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "ETH/USDT:USDT": "2026-08-05T20:22:38.572133+00:00",
     "BTC/USDT:USDT": "2026-08-05T20:23:41.452781+00:00",
-    "BCH/USDT:USDT": "2026-08-06T04:06:37.007299+00:00"
+    "BCH/USDT:USDT": "2026-08-06T04:06:37.007299+00:00",
+    "XRP/USDT:USDT": "2026-08-06T04:44:33.803270+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-06",
     "count": 2
   },
   "recent_results": [
+    true,
     true,
     true,
     true
@@ -101,6 +75,25 @@
       "close_reason": "tp3",
       "entry_candle": "2026-08-06T00:00:00+00:00",
       "closed_at": "2026-08-06T00:06:37.007299+00:00"
+    },
+    {
+      "symbol": "XRP/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 1,
+      "score": 70,
+      "prob": 0.69,
+      "is_red": true,
+      "leverage": 20,
+      "entry": 1.0615,
+      "exit": 1.0612,
+      "r_result": 0.1,
+      "is_win": true,
+      "close_reason": "sl_be",
+      "entry_candle": "2026-08-06T00:00:00+00:00",
+      "closed_at": "2026-08-06T00:44:33.803270+00:00"
     }
   ],
   "stats": {
@@ -109,15 +102,15 @@
     "red_signals": 4,
     "long_signals": 3,
     "short_signals": 1,
-    "sl_hits": 0,
+    "sl_hits": 1,
     "tp1_hits": 4,
     "tp2_hits": 3,
     "tp3_hits": 3,
     "flips": 0,
-    "wins": 3,
+    "wins": 4,
     "losses": 0,
-    "be_saves": 0,
-    "r_sum": 1.3199999999999998
+    "be_saves": 1,
+    "r_sum": 1.42
   },
   "last_daily_summary_date": "2026-08-06",
   "startup_notified": true,
