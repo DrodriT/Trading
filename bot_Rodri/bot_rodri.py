@@ -81,6 +81,29 @@ def get_stats(state):
         stats.setdefault(k, v)
     return stats
 
+def check_higher_timeframe_trend(exchange, symbol):
+    """
+    Obtiene velas de 15m y evalúa si el precio está por encima/debajo de la EMA 200.
+    Retorna: 'ALCISTA', 'BAJISTA' o 'NEUTRAL'
+    """
+    try:
+        limit = config.MACRO_EMA_PERIOD + 20
+        df_15m = fetch_ohlcv(exchange, symbol, config.HIGHER_TIMEFRAME, limit)
+        
+        # Calcular EMA 200 en 15m
+        df_15m["ema_macro"] = df_15m["close"].ewm(span=config.MACRO_EMA_PERIOD, adjust=False).mean()
+        
+        last_close = df_15m.iloc[-1]["close"]
+        last_ema = df_15m.iloc[-1]["ema_macro"]
+        
+        if last_close > last_ema:
+            return "ALCISTA"
+        elif last_close < last_ema:
+            return "BAJISTA"
+    except Exception as e:
+        print(f"[ERROR Filtro Macro 15m] {symbol}: {e}")
+    
+    return "NEUTRAL"
 
 # ══════════════════════════════════════════════════════════
 # Telegram / datos de mercado
@@ -417,6 +440,15 @@ def check_symbol(exchange, symbol, state, now):
 
         leverage = suggest_leverage(df, config)
 
+        # --- COMPROBACIÓN MACRO 15M ---
+        macro_trend = check_higher_timeframe_trend(exchange, symbol)
+        macro_aligned = (macro_trend == "NEUTRAL") or (macro_trend == signal["direction"])
+        # Si la tendencia macro es distinta, preparamos la etiqueta de aviso
+        macro_warning = ""
+        if not macro_aligned:
+            macro_warning = f"\n⚠️ *Aviso Macro:* {macro_trend} (no coincide)"
+        # ------------------------------
+       
         new_pos = {
             "dir": signal["direction"],
             "entry": last_price,
@@ -431,6 +463,8 @@ def check_symbol(exchange, symbol, state, now):
             "leverage": leverage,
             "is_red": is_red,
             "size_factor": config.RED_SIZE_FACTOR if is_red else 1.0,
+            "macro_trend": macro_trend,
+            "macro_aligned": macro_aligned,
         }
         positions[symbol] = new_pos
         pos = new_pos
@@ -447,7 +481,8 @@ def check_symbol(exchange, symbol, state, now):
 
         msg = (
             f"{emoji} *{sym} | {dir_label}*{red_tag}\n"
-            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {fmt_strategies(pos['strategies'])}\n\n"
+            f"Score {pos['score']} | Prob {pos['prob'] * 100:.0f}% | {fmt_strategies(pos['strategies'])}\n"
+            f"{macro_warning}\n\n"
             f"💰 Entrada: `{pos['entry']:.4f}`\n"
             f"🔴 Stop Loss: `{pos['sl']:.4f}`{sl_pct}\n"
             f"⚡ Apalancamiento sugerido: {leverage}x\n\n"

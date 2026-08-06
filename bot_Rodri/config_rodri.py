@@ -39,7 +39,11 @@ SYMBOLS = [
 
 # --- Timeframes ---
 TIMEFRAME = "5m"           # escaneo de señales (detección del ensemble)
+HIGHER_TIMEFRAME = "15m"   # Filtro macro de tendencia (confirmación)
 MONITOR_TIMEFRAME = "1m"   # seguimiento de SL/TP de posiciones abiertas
+
+# --- Filtro Macro ---
+MACRO_EMA_PERIOD = 200     # Periodo de la EMA para tendencia macro (15m)
 
 # --- Indicadores base compartidos ---
 ATR_LEN = 14
