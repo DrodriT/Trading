@@ -26,45 +26,19 @@
       "leverage": 20,
       "is_red": true,
       "size_factor": 0.3
-    },
-    "BCH/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 214.34,
-      "entry_candle": "2026-08-06T00:00:00+00:00",
-      "sl": 214.78035714285716,
-      "tp1": 213.89964285714285,
-      "tp2": 213.59139285714286,
-      "tp3": 213.59139285714286,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 31,
-      "prob": 0.47,
-      "strategies": [
-        "SMC_REVERSAL",
-        "TREND_PULLBACK"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": true,
-      "size_factor": 0.3
     }
   },
   "cooldowns": {
     "ETH/USDT:USDT": "2026-08-05T20:22:38.572133+00:00",
-    "BTC/USDT:USDT": "2026-08-05T20:23:41.452781+00:00"
+    "BTC/USDT:USDT": "2026-08-05T20:23:41.452781+00:00",
+    "BCH/USDT:USDT": "2026-08-06T04:06:37.007299+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-06",
     "count": 2
   },
   "recent_results": [
+    true,
     true,
     true
   ],
@@ -107,6 +81,26 @@
       "close_reason": "tp3",
       "entry_candle": "2026-08-05T14:40:00+00:00",
       "closed_at": "2026-08-05T16:23:41.452781+00:00"
+    },
+    {
+      "symbol": "BCH/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "SMC_REVERSAL",
+        "TREND_PULLBACK"
+      ],
+      "confluence": 2,
+      "score": 31,
+      "prob": 0.47,
+      "is_red": true,
+      "leverage": 20,
+      "entry": 214.34,
+      "exit": 213.42,
+      "r_result": 0.44,
+      "is_win": true,
+      "close_reason": "tp3",
+      "entry_candle": "2026-08-06T00:00:00+00:00",
+      "closed_at": "2026-08-06T00:06:37.007299+00:00"
     }
   ],
   "stats": {
@@ -116,14 +110,14 @@
     "long_signals": 3,
     "short_signals": 1,
     "sl_hits": 0,
-    "tp1_hits": 2,
-    "tp2_hits": 2,
-    "tp3_hits": 2,
+    "tp1_hits": 3,
+    "tp2_hits": 3,
+    "tp3_hits": 3,
     "flips": 0,
-    "wins": 2,
+    "wins": 3,
     "losses": 0,
     "be_saves": 0,
-    "r_sum": 0.8799999999999999
+    "r_sum": 1.3199999999999998
   },
   "last_daily_summary_date": "2026-08-06",
   "startup_notified": true,
