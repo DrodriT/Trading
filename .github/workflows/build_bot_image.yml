@@ -8,7 +8,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "requirements.txt"
+      - "bot_rodri/requirements.txt"
       - "Dockerfile"
       - ".github/workflows/build_bot_image.yml"
   workflow_dispatch: {}
