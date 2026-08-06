@@ -1,72 +1,11 @@
 {
-  "positions": {
-    "ADA/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 0.2012,
-      "entry_candle": "2026-08-06T23:00:00+00:00",
-      "sl": 0.19997857142857142,
-      "tp1": 0.20242142857142856,
-      "tp2": 0.20364285714285713,
-      "tp3": 0.2048642857142857,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 54,
-      "prob": 0.6,
-      "strategies": [
-        "VP_MEAN_REVERT",
-        "LIQUIDITY_GRAB"
-      ],
-      "confluence": 2,
-      "leverage": 19,
-      "is_red": false,
-      "size_factor": 1.0,
-      "macro_trend": "ALCISTA",
-      "macro_aligned": true
-    },
-    "SUI/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 0.6724,
-      "entry_candle": "2026-08-06T23:15:00+00:00",
-      "sl": 0.6712857142857143,
-      "tp1": 0.6735142857142857,
-      "tp2": 0.6746285714285715,
-      "tp3": 0.6757428571428572,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 60,
-      "prob": 0.63,
-      "strategies": [
-        "VP_MEAN_REVERT",
-        "LIQUIDITY_GRAB"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0,
-      "macro_trend": "BAJISTA",
-      "macro_aligned": false
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "ETH/USDT:USDT": "2026-08-06T17:10:47.024520+00:00",
     "BTC/USDT:USDT": "2026-08-07T03:15:56.744598+00:00",
     "BCH/USDT:USDT": "2026-08-07T02:45:46.888558+00:00",
     "XRP/USDT:USDT": "2026-08-06T18:15:47.582502+00:00",
-    "SUI/USDT:USDT": "2026-08-06T06:15:51.346302+00:00",
+    "SUI/USDT:USDT": "2026-08-07T03:22:35.570649+00:00",
     "SOL/USDT:USDT": "2026-08-06T06:16:41.547045+00:00",
     "INJ/USDT:USDT": "2026-08-06T07:02:40.349491+00:00",
     "DOGE/USDT:USDT": "2026-08-06T17:02:44.356483+00:00",
@@ -75,7 +14,8 @@
     "HBAR/USDT:USDT": "2026-08-06T14:19:29.607011+00:00",
     "ICP/USDT:USDT": "2026-08-06T14:43:31.551780+00:00",
     "LTC/USDT:USDT": "2026-08-06T18:43:31.242980+00:00",
-    "AAVE/USDT:USDT": "2026-08-06T19:03:38.701081+00:00"
+    "AAVE/USDT:USDT": "2026-08-06T19:03:38.701081+00:00",
+    "ADA/USDT:USDT": "2026-08-07T03:22:35.570649+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-06",
@@ -83,15 +23,15 @@
   },
   "recent_results": [
     false,
-    false,
-    false,
     true,
     true,
     true,
     false,
     false,
     true,
-    true
+    true,
+    false,
+    false
   ],
   "dynamic_min_score": 50,
   "trade_log": [
@@ -554,6 +494,46 @@
       "close_reason": "flip",
       "entry_candle": "2026-08-06T15:10:00+00:00",
       "closed_at": "2026-08-06T23:15:56.744598+00:00"
+    },
+    {
+      "symbol": "SUI/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "VP_MEAN_REVERT",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "score": 60,
+      "prob": 0.63,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 0.6724,
+      "exit": 0.671,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-08-06T23:15:00+00:00",
+      "closed_at": "2026-08-06T23:22:35.570649+00:00"
+    },
+    {
+      "symbol": "ADA/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "VP_MEAN_REVERT",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "score": 54,
+      "prob": 0.6,
+      "is_red": false,
+      "leverage": 19,
+      "entry": 0.2012,
+      "exit": 0.1996,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-08-06T23:00:00+00:00",
+      "closed_at": "2026-08-06T23:22:35.570649+00:00"
     }
   ],
   "stats": {
@@ -562,15 +542,15 @@
     "red_signals": 4,
     "long_signals": 18,
     "short_signals": 7,
-    "sl_hits": 14,
+    "sl_hits": 16,
     "tp1_hits": 15,
     "tp2_hits": 9,
     "tp3_hits": 6,
     "flips": 3,
     "wins": 15,
-    "losses": 8,
+    "losses": 10,
     "be_saves": 6,
-    "r_sum": 4.086666666666666
+    "r_sum": 2.086666666666666
   },
   "last_daily_summary_date": "2026-08-06",
   "startup_notified": true,
