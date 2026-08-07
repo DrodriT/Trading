@@ -1,35 +1,5 @@
 {
-  "positions": {
-    "AVAX/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 6.418,
-      "entry_candle": "2026-08-07T00:10:00+00:00",
-      "sl": 6.402464285714286,
-      "tp1": 6.433535714285714,
-      "tp2": 6.4444107142857145,
-      "tp3": 6.4444107142857145,
-      "tp_rr": [
-        1.0,
-        1.7,
-        1.7
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 70,
-      "prob": 0.69,
-      "strategies": [
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 1,
-      "leverage": 20,
-      "is_red": true,
-      "size_factor": 0.3,
-      "macro_trend": "BAJISTA",
-      "macro_aligned": false
-    }
-  },
+  "positions": {},
   "cooldowns": {
     "ETH/USDT:USDT": "2026-08-07T03:38:31.364760+00:00",
     "BTC/USDT:USDT": "2026-08-07T03:15:56.744598+00:00",
@@ -45,14 +15,14 @@
     "ICP/USDT:USDT": "2026-08-06T14:43:31.551780+00:00",
     "LTC/USDT:USDT": "2026-08-06T18:43:31.242980+00:00",
     "AAVE/USDT:USDT": "2026-08-06T19:03:38.701081+00:00",
-    "ADA/USDT:USDT": "2026-08-07T03:22:35.570649+00:00"
+    "ADA/USDT:USDT": "2026-08-07T03:22:35.570649+00:00",
+    "AVAX/USDT:USDT": "2026-08-07T04:22:31.878780+00:00"
   },
   "red_signals_today": {
     "date": "2026-08-07",
     "count": 2
   },
   "recent_results": [
-    true,
     false,
     false,
     true,
@@ -61,7 +31,8 @@
     false,
     false,
     false,
-    true
+    true,
+    false
   ],
   "dynamic_min_score": 75,
   "trade_log": [
@@ -624,6 +595,25 @@
       "close_reason": "sl_be",
       "entry_candle": "2026-08-06T23:35:00+00:00",
       "closed_at": "2026-08-07T00:20:52.979513+00:00"
+    },
+    {
+      "symbol": "AVAX/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 1,
+      "score": 70,
+      "prob": 0.69,
+      "is_red": true,
+      "leverage": 20,
+      "entry": 6.418,
+      "exit": 6.406,
+      "r_result": -0.3,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-08-07T00:10:00+00:00",
+      "closed_at": "2026-08-07T00:22:31.878780+00:00"
     }
   ],
   "stats": {
@@ -632,15 +622,15 @@
     "red_signals": 6,
     "long_signals": 22,
     "short_signals": 7,
-    "sl_hits": 19,
+    "sl_hits": 20,
     "tp1_hits": 16,
     "tp2_hits": 10,
     "tp3_hits": 6,
     "flips": 3,
     "wins": 16,
-    "losses": 12,
+    "losses": 13,
     "be_saves": 7,
-    "r_sum": 1.786666666666666
+    "r_sum": 1.486666666666666
   },
   "last_daily_summary_date": "2026-08-07",
   "startup_notified": true,
