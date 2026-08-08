@@ -29,6 +29,36 @@
       "size_factor": 1.0,
       "macro_trend": "ALCISTA",
       "macro_aligned": false
+    },
+    "BCH/USDT:USDT": {
+      "dir": "ALCISTA",
+      "entry": 215.85,
+      "entry_candle": "2026-08-08T03:00:00+00:00",
+      "sl": 215.57464285714286,
+      "tp1": 216.12535714285713,
+      "tp2": 216.4007142857143,
+      "tp3": 216.67607142857142,
+      "tp_rr": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "tp1_reached": false,
+      "tp2_reached": false,
+      "tp3_reached": false,
+      "be_active": false,
+      "score": 53,
+      "prob": 0.59,
+      "strategies": [
+        "SMC_REVERSAL",
+        "TREND_PULLBACK"
+      ],
+      "confluence": 2,
+      "leverage": 20,
+      "is_red": false,
+      "size_factor": 1.0,
+      "macro_trend": "ALCISTA",
+      "macro_aligned": true
     }
   },
   "cooldowns": {
@@ -1269,10 +1299,10 @@
     }
   ],
   "stats": {
-    "total_signals": 61,
-    "normal_signals": 53,
+    "total_signals": 62,
+    "normal_signals": 54,
     "red_signals": 8,
-    "long_signals": 39,
+    "long_signals": 40,
     "short_signals": 22,
     "sl_hits": 44,
     "tp1_hits": 33,
