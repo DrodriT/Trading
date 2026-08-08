@@ -1,5 +1,36 @@
 {
-  "positions": {},
+  "positions": {
+    "XMR/USDT:USDT": {
+      "dir": "BAJISTA",
+      "entry": 383.16,
+      "entry_candle": "2026-08-08T14:00:00+00:00",
+      "sl": 384.15107142857147,
+      "tp1": 382.1689285714286,
+      "tp2": 381.17785714285714,
+      "tp3": 380.18678571428575,
+      "tp_rr": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "tp1_reached": false,
+      "tp2_reached": false,
+      "tp3_reached": false,
+      "be_active": false,
+      "score": 57,
+      "prob": 0.61,
+      "strategies": [
+        "VP_MEAN_REVERT",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "leverage": 20,
+      "is_red": false,
+      "size_factor": 1.0,
+      "macro_trend": "ALCISTA",
+      "macro_aligned": false
+    }
+  },
   "cooldowns": {
     "ETH/USDT:USDT": "2026-08-08T13:39:30.137161+00:00",
     "BTC/USDT:USDT": "2026-08-08T13:35:36.893755+00:00",
@@ -1500,11 +1531,11 @@
     }
   ],
   "stats": {
-    "total_signals": 73,
-    "normal_signals": 65,
+    "total_signals": 74,
+    "normal_signals": 66,
     "red_signals": 8,
     "long_signals": 46,
-    "short_signals": 27,
+    "short_signals": 28,
     "sl_hits": 54,
     "tp1_hits": 41,
     "tp2_hits": 25,
