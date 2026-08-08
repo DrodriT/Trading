@@ -67,7 +67,7 @@
     false,
     false
   ],
-  "dynamic_min_score": 50,
+  "dynamic_min_score": 55,
   "trade_log": [
     {
       "symbol": "ETH/USDT:USDT",
