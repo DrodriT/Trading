@@ -29,6 +29,36 @@
       "size_factor": 1.0,
       "macro_trend": "ALCISTA",
       "macro_aligned": false
+    },
+    "XLM/USDT:USDT": {
+      "dir": "ALCISTA",
+      "entry": 0.16261,
+      "entry_candle": "2026-08-09T11:00:00+00:00",
+      "sl": 0.16243214285714286,
+      "tp1": 0.16278785714285715,
+      "tp2": 0.1629657142857143,
+      "tp3": 0.16314357142857144,
+      "tp_rr": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "tp1_reached": false,
+      "tp2_reached": false,
+      "tp3_reached": false,
+      "be_active": false,
+      "score": 76,
+      "prob": 0.72,
+      "strategies": [
+        "SMC_REVERSAL",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "leverage": 20,
+      "is_red": false,
+      "size_factor": 1.0,
+      "macro_trend": "BAJISTA",
+      "macro_aligned": false
     }
   },
   "cooldowns": {
@@ -1809,10 +1839,10 @@
     }
   ],
   "stats": {
-    "total_signals": 88,
-    "normal_signals": 78,
+    "total_signals": 89,
+    "normal_signals": 79,
     "red_signals": 10,
-    "long_signals": 53,
+    "long_signals": 54,
     "short_signals": 35,
     "sl_hits": 66,
     "tp1_hits": 47,
