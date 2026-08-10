@@ -29,36 +29,6 @@
       "size_factor": 1.0,
       "macro_trend": "BAJISTA",
       "macro_aligned": false
-    },
-    "INJ/USDT:USDT": {
-      "dir": "ALCISTA",
-      "entry": 4.31,
-      "entry_candle": "2026-08-10T01:15:00+00:00",
-      "sl": 4.294142857142857,
-      "tp1": 4.325857142857142,
-      "tp2": 4.341714285714285,
-      "tp3": 4.357571428571428,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 57,
-      "prob": 0.61,
-      "strategies": [
-        "SMC_REVERSAL",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0,
-      "macro_trend": "BAJISTA",
-      "macro_aligned": false
     }
   },
   "cooldowns": {
@@ -68,7 +38,7 @@
     "XRP/USDT:USDT": "2026-08-10T04:37:25.559732+00:00",
     "SUI/USDT:USDT": "2026-08-09T18:57:26.599487+00:00",
     "SOL/USDT:USDT": "2026-08-10T04:24:31.581660+00:00",
-    "INJ/USDT:USDT": "2026-08-09T14:20:47.301670+00:00",
+    "INJ/USDT:USDT": "2026-08-10T05:41:29.980186+00:00",
     "DOGE/USDT:USDT": "2026-08-09T22:23:25.932870+00:00",
     "XMR/USDT:USDT": "2026-08-09T18:05:38.624581+00:00",
     "XLM/USDT:USDT": "2026-08-10T03:36:35.516432+00:00",
@@ -87,7 +57,6 @@
   },
   "recent_results": [
     true,
-    true,
     false,
     true,
     true,
@@ -95,6 +64,7 @@
     true,
     false,
     true,
+    false,
     false
   ],
   "dynamic_min_score": 50,
@@ -2094,6 +2064,26 @@
       "close_reason": "sl",
       "entry_candle": "2026-08-10T00:25:00+00:00",
       "closed_at": "2026-08-10T00:37:25.559732+00:00"
+    },
+    {
+      "symbol": "INJ/USDT:USDT",
+      "dir": "ALCISTA",
+      "strategies": [
+        "SMC_REVERSAL",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 57,
+      "prob": 0.61,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 4.31,
+      "exit": 4.295,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-08-10T01:15:00+00:00",
+      "closed_at": "2026-08-10T01:41:29.980186+00:00"
     }
   ],
   "stats": {
@@ -2102,15 +2092,15 @@
     "red_signals": 12,
     "long_signals": 62,
     "short_signals": 40,
-    "sl_hits": 74,
+    "sl_hits": 75,
     "tp1_hits": 55,
     "tp2_hits": 35,
     "tp3_hits": 21,
     "flips": 5,
     "wins": 54,
-    "losses": 46,
+    "losses": 47,
     "be_saves": 28,
-    "r_sum": 10.239999999999995
+    "r_sum": 9.239999999999995
   },
   "last_daily_summary_date": "2026-08-10",
   "startup_notified": true,
