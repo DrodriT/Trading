@@ -1,35 +1,5 @@
 {
   "positions": {
-    "AVAX/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 6.516,
-      "entry_candle": "2026-08-10T06:35:00+00:00",
-      "sl": 6.539464285714286,
-      "tp1": 6.492535714285714,
-      "tp2": 6.469071428571429,
-      "tp3": 6.445607142857143,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": false,
-      "tp2_reached": false,
-      "tp3_reached": false,
-      "be_active": false,
-      "score": 78,
-      "prob": 0.73,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0,
-      "macro_trend": "ALCISTA",
-      "macro_aligned": false
-    },
     "BTC/USDT:USDT": {
       "dir": "BAJISTA",
       "entry": 65300.0,
@@ -78,7 +48,7 @@
     "LTC/USDT:USDT": "2026-08-10T06:18:42.299203+00:00",
     "AAVE/USDT:USDT": "2026-08-09T11:28:40.501378+00:00",
     "ADA/USDT:USDT": "2026-08-10T10:31:30.030317+00:00",
-    "AVAX/USDT:USDT": "2026-08-07T18:52:31.238710+00:00",
+    "AVAX/USDT:USDT": "2026-08-10T11:38:45.421147+00:00",
     "NEAR/USDT:USDT": "2026-08-10T09:53:28.449701+00:00",
     "OP/USDT:USDT": "2026-08-08T08:28:43.351555+00:00"
   },
@@ -88,13 +58,13 @@
   },
   "recent_results": [
     false,
-    false,
     true,
     false,
     true,
     false,
     false,
     true,
+    false,
     false,
     false
   ],
@@ -2275,6 +2245,26 @@
       "close_reason": "sl",
       "entry_candle": "2026-08-10T06:15:00+00:00",
       "closed_at": "2026-08-10T07:09:31.016808+00:00"
+    },
+    {
+      "symbol": "AVAX/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 78,
+      "prob": 0.73,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 6.516,
+      "exit": 6.538,
+      "r_result": -1.0,
+      "is_win": false,
+      "close_reason": "sl",
+      "entry_candle": "2026-08-10T06:35:00+00:00",
+      "closed_at": "2026-08-10T07:38:45.421147+00:00"
     }
   ],
   "stats": {
@@ -2283,15 +2273,15 @@
     "red_signals": 12,
     "long_signals": 62,
     "short_signals": 49,
-    "sl_hits": 83,
+    "sl_hits": 84,
     "tp1_hits": 57,
     "tp2_hits": 37,
     "tp3_hits": 21,
     "flips": 5,
     "wins": 57,
-    "losses": 52,
+    "losses": 53,
     "be_saves": 31,
-    "r_sum": 6.573333333333329
+    "r_sum": 5.573333333333329
   },
   "last_daily_summary_date": "2026-08-10",
   "startup_notified": true,
