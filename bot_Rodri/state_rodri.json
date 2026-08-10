@@ -29,6 +29,36 @@
       "size_factor": 1.0,
       "macro_trend": "BAJISTA",
       "macro_aligned": false
+    },
+    "AVAX/USDT:USDT": {
+      "dir": "ALCISTA",
+      "entry": 6.467,
+      "entry_candle": "2026-08-10T16:00:00+00:00",
+      "sl": 6.436357142857142,
+      "tp1": 6.497642857142857,
+      "tp2": 6.5282857142857145,
+      "tp3": 6.558928571428572,
+      "tp_rr": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "tp1_reached": false,
+      "tp2_reached": false,
+      "tp3_reached": false,
+      "be_active": false,
+      "score": 76,
+      "prob": 0.72,
+      "strategies": [
+        "VP_MEAN_REVERT",
+        "LIQUIDITY_GRAB"
+      ],
+      "confluence": 2,
+      "leverage": 20,
+      "is_red": false,
+      "size_factor": 1.0,
+      "macro_trend": "BAJISTA",
+      "macro_aligned": false
     }
   },
   "cooldowns": {
@@ -2328,10 +2358,10 @@
     }
   ],
   "stats": {
-    "total_signals": 114,
-    "normal_signals": 102,
+    "total_signals": 115,
+    "normal_signals": 103,
     "red_signals": 12,
-    "long_signals": 65,
+    "long_signals": 66,
     "short_signals": 49,
     "sl_hits": 86,
     "tp1_hits": 59,
