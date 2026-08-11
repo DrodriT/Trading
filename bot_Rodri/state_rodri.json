@@ -14,7 +14,7 @@
         3.0
       ],
       "tp1_reached": true,
-      "tp2_reached": false,
+      "tp2_reached": true,
       "tp3_reached": false,
       "be_active": true,
       "score": 69,
@@ -2563,7 +2563,7 @@
     "short_signals": 54,
     "sl_hits": 94,
     "tp1_hits": 67,
-    "tp2_hits": 40,
+    "tp2_hits": 41,
     "tp3_hits": 23,
     "flips": 6,
     "wins": 65,
