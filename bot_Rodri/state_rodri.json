@@ -1,35 +1,5 @@
 {
   "positions": {
-    "AVAX/USDT:USDT": {
-      "dir": "BAJISTA",
-      "entry": 6.536,
-      "entry_candle": "2026-08-11T02:15:00+00:00",
-      "sl": 6.536,
-      "tp1": 6.5104999999999995,
-      "tp2": 6.484999999999999,
-      "tp3": 6.4595,
-      "tp_rr": [
-        1.0,
-        2.0,
-        3.0
-      ],
-      "tp1_reached": true,
-      "tp2_reached": true,
-      "tp3_reached": false,
-      "be_active": true,
-      "score": 69,
-      "prob": 0.68,
-      "strategies": [
-        "RSI_DIVERGENCE",
-        "VP_MEAN_REVERT"
-      ],
-      "confluence": 2,
-      "leverage": 20,
-      "is_red": false,
-      "size_factor": 1.0,
-      "macro_trend": "ALCISTA",
-      "macro_aligned": false
-    },
     "ADA/USDT:USDT": {
       "dir": "ALCISTA",
       "entry": 0.1878,
@@ -77,7 +47,7 @@
     "LTC/USDT:USDT": "2026-08-10T21:45:46.585908+00:00",
     "AAVE/USDT:USDT": "2026-08-09T11:28:40.501378+00:00",
     "ADA/USDT:USDT": "2026-08-10T10:31:30.030317+00:00",
-    "AVAX/USDT:USDT": "2026-08-10T20:49:35.306090+00:00",
+    "AVAX/USDT:USDT": "2026-08-11T11:15:44.968224+00:00",
     "NEAR/USDT:USDT": "2026-08-11T10:09:31.377911+00:00",
     "OP/USDT:USDT": "2026-08-08T08:28:43.351555+00:00"
   },
@@ -86,7 +56,6 @@
     "count": 2
   },
   "recent_results": [
-    false,
     true,
     false,
     true,
@@ -94,6 +63,7 @@
     true,
     true,
     false,
+    true,
     true,
     true
   ],
@@ -2573,6 +2543,26 @@
       "close_reason": "tp3",
       "entry_candle": "2026-08-11T05:00:00+00:00",
       "closed_at": "2026-08-11T06:09:31.377911+00:00"
+    },
+    {
+      "symbol": "AVAX/USDT:USDT",
+      "dir": "BAJISTA",
+      "strategies": [
+        "RSI_DIVERGENCE",
+        "VP_MEAN_REVERT"
+      ],
+      "confluence": 2,
+      "score": 69,
+      "prob": 0.68,
+      "is_red": false,
+      "leverage": 20,
+      "entry": 6.536,
+      "exit": 6.474,
+      "r_result": 1.0,
+      "is_win": true,
+      "close_reason": "flip",
+      "entry_candle": "2026-08-11T02:15:00+00:00",
+      "closed_at": "2026-08-11T07:15:44.968224+00:00"
     }
   ],
   "stats": {
@@ -2585,30 +2575,30 @@
     "tp1_hits": 68,
     "tp2_hits": 41,
     "tp3_hits": 24,
-    "flips": 6,
-    "wins": 66,
+    "flips": 7,
+    "wins": 67,
     "losses": 58,
     "be_saves": 36,
-    "r_sum": 6.779999999999994
+    "r_sum": 7.779999999999994
   },
   "last_daily_summary_date": "2026-08-11",
   "startup_notified": true,
-  "BTC/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "ETH/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "SOL/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "XRP/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "BCH/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "SUI/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "XLM/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "INJ/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "HBAR/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "ADA/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "AVAX/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "LTC/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "AAVE/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "ICP/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "OP/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "NEAR/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "XMR/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00",
-  "DOGE/USDT:USDT_last_processed_candle": "2026-08-11T07:10:00+00:00"
+  "BTC/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "ETH/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "SOL/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "XRP/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "BCH/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "SUI/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "XLM/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "INJ/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "HBAR/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "ADA/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "AVAX/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "LTC/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "AAVE/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "ICP/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "OP/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "NEAR/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "XMR/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00",
+  "DOGE/USDT:USDT_last_processed_candle": "2026-08-11T07:15:00+00:00"
 }
