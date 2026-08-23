@@ -1,0 +1,81 @@
+name: Run Trading Bot
+
+# IMPORTANTE: este workflow NUNCA instala dependencias — hace
+# `docker pull` de la imagen que ya construyó docker-build.yml y la
+# ejecuta directamente. Eso hace que cada corrida tarde segundos en
+# vez de tener que reinstalar pandas/numpy/ccxt cada vez.
+#
+# El horario del cron debe ajustarse a tu TIMEFRAME. Ejemplos:
+#   - Velas de 15m -> cada 5 min sobra margen: "*/5 * * * *"
+#   - Velas de 1h  -> cada 10-15 min: "*/15 * * * *"
+#   - Velas de 4h  -> cada hora: "0 * * * *"
+# GitHub Actions NO garantiza precisión al minuto en el cron
+# (puede retrasarse varios minutos en horas de mucha carga), así que
+# no lo uses para timeframes muy cortos (1m/3m) si necesitas
+# precisión — para eso, cron-job.org sigue siendo más fiable (ver
+# README, sección "cron-job.org").
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+# No lanzar dos ejecuciones en paralelo: evita condiciones de carrera
+# al escribir state.json/trades.json y al hacer commit+push.
+concurrency:
+  group: run-trading-bot
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # necesario para poder commitear el estado actualizado
+  packages: read    # necesario para poder hacer `docker pull` de GHCR
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Nombre de imagen en minúsculas (requisito de Docker/GHCR)
+        run: |
+          echo "IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Login en GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Descargar la última imagen (sin build, sin pip install)
+        run: docker pull "${{ env.IMAGE }}:latest"
+
+      - name: Asegurar que existe el directorio de estado
+        run: mkdir -p state
+
+      - name: Ejecutar el bot
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/state:/app/state" \
+            -e EXCHANGE_ID="${{ vars.EXCHANGE_ID }}" \
+            -e SYMBOLS="${{ vars.SYMBOLS }}" \
+            -e TIMEFRAME="${{ vars.TIMEFRAME }}" \
+            -e LOOKBACK_BARS="${{ vars.LOOKBACK_BARS }}" \
+            -e STATE_FILE="/app/state/state.json" \
+            -e JOURNAL_FILE="/app/state/trades.json" \
+            -e TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_TOKEN }}" \
+            -e TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -e DEBUG="${{ vars.DEBUG }}" \
+            "${{ env.IMAGE }}:latest"
+
+      - name: Commit y push del estado actualizado
+        run: |
+          git config user.name "trading-bot[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/state.json state/trades.json
+          if git diff --cached --quiet; then
+            echo "Sin cambios en el estado — nada que commitear."
+          else
+            git commit -m "chore: actualizar estado del bot [skip ci]"
+            git push
+          fi
