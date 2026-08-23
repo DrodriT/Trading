@@ -15,8 +15,8 @@ name: Run Trading Bot
 # precisión — para eso, cron-job.org sigue siendo más fiable (ver
 # README, sección "cron-job.org").
 on:
-  schedule:
-    - cron: "*/15 * * * *"
+  repository_dispatch:
+    types: [run-bot]
   workflow_dispatch: {}
 
 # No lanzar dos ejecuciones en paralelo: evita condiciones de carrera
