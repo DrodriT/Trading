@@ -29,6 +29,23 @@ except ImportError:
     pass
 
 
+def _env_str(name: str, default: str) -> str:
+    """
+    Como os.getenv(name, default), pero trata también la cadena vacía
+    como "no definida" -> usa el default. Esto es importante porque
+    en GitHub Actions, si una Repository Variable no existe,
+    `${{ vars.ALGO }}` se resuelve como cadena vacía "" (no como
+    variable ausente) — así que `docker run -e ALGO=""` SOBREESCRIBE
+    silenciosamente el valor por defecto de Python con una cadena
+    vacía en lugar de dejarlo caer al default. os.getenv(name, default)
+    a secas NO protege contra esto porque la variable sí "existe"
+    (solo que vacía). Usa _env_str en vez de os.getenv directo para
+    cualquier config que pueda venir vacía desde CI/CD.
+    """
+    val = os.getenv(name)
+    return val if val not in (None, "") else default
+
+
 def _env_bool(name: str, default: bool) -> bool:
     val = os.getenv(name)
     if val is None:
@@ -63,24 +80,9 @@ def _env_list(name: str, default: list) -> list:
 #    (formato ccxt: BASE/QUOTE, tal como lo lista tu exchange)
 # ══════════════════════════════════════════════════════════
 DEFAULT_SYMBOLS = [
-    "BTC/USDT:USDT",
-    "ETH/USDT:USDT",
-    "SOL/USDT:USDT",
-    "XRP/USDT:USDT",
-    "BCH/USDT:USDT",
-    "SUI/USDT:USDT",
-    "XLM/USDT:USDT",
-    "INJ/USDT:USDT",
-    "HBAR/USDT:USDT",
-    "ADA/USDT:USDT",
-    "AVAX/USDT:USDT",
-    "LTC/USDT:USDT",
-    "AAVE/USDT:USDT",
-    "ICP/USDT:USDT",
-    "OP/USDT:USDT",
-    "NEAR/USDT:USDT",
-    "XMR/USDT:USDT",
-    "DOGE/USDT:USDT",
+    "BTC/USDT",
+    "ETH/USDT",
+    "SOL/USDT",
 ]
 
 # ══════════════════════════════════════════════════════════
@@ -89,7 +91,7 @@ DEFAULT_SYMBOLS = [
 #    reconocido por tu exchange (ccxt): 1m, 5m, 15m, 30m, 1h,
 #    2h, 4h, 6h, 8h, 12h, 1d, 1w...
 # ══════════════════════════════════════════════════════════
-DEFAULT_TIMEFRAME = "5m"
+DEFAULT_TIMEFRAME = "15m"
 
 
 # ══════════════════════════════════════════════════════════
@@ -99,14 +101,14 @@ DEFAULT_TIMEFRAME = "5m"
 @dataclass
 class InfraConfig:
     # Exchange / datos de mercado (ccxt)
-    EXCHANGE_ID: str = os.getenv("EXCHANGE_ID", "bitget")
+    EXCHANGE_ID: str = field(default_factory=lambda: _env_str("EXCHANGE_ID", "binance"))
 
     # Lista de monedas a analizar en cada ejecución. El bot corre la
     # estrategia completa para CADA símbolo de esta lista, de forma
     # independiente (cada uno con su propio estado/dedupe).
     SYMBOLS: list = field(default_factory=lambda: _env_list("SYMBOLS", DEFAULT_SYMBOLS))
 
-    TIMEFRAME: str = os.getenv("TIMEFRAME", DEFAULT_TIMEFRAME)  # timeframe base = "current TF" en Pine
+    TIMEFRAME: str = field(default_factory=lambda: _env_str("TIMEFRAME", DEFAULT_TIMEFRAME))  # timeframe base = "current TF" en Pine
 
     # Cuántas velas históricas se piden en cada ejecución.
     # Debe ser generoso: el Trail ratchet, el R² (regimeLen hasta 200),
@@ -117,20 +119,20 @@ class InfraConfig:
     LOOKBACK_BARS: int = _env_int("LOOKBACK_BARS", 1500)
 
     # Telegram
-    TELEGRAM_BOT_TOKEN: Optional[str] = os.getenv("TELEGRAM_TOKEN")
+    TELEGRAM_BOT_TOKEN: Optional[str] = os.getenv("TELEGRAM_BOT_TOKEN")
     TELEGRAM_CHAT_ID: Optional[str] = os.getenv("TELEGRAM_CHAT_ID")
 
     # Estado (dedupe de señales)
-    STATE_FILE: str = os.getenv("STATE_FILE", os.path.join(
+    STATE_FILE: str = field(default_factory=lambda: _env_str("STATE_FILE", os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "state", "state.json"
-    ))
+    )))
 
     # Diario de operaciones (para calcular % de acierto después)
-    JOURNAL_FILE: str = os.getenv("JOURNAL_FILE", os.path.join(
+    JOURNAL_FILE: str = field(default_factory=lambda: _env_str("JOURNAL_FILE", os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "state", "trades.json"
-    ))
+    )))
 
     # Debug
     DEBUG: bool = _env_bool("DEBUG", False)
@@ -158,7 +160,7 @@ class PineConfig:
     ENTRY_BAR_HOLD: int = 1  # same-bar guard
 
     # ── Main ────────────────────────────────────────────────
-    atrLenInput: int = 21
+    atrLenInput: int = 13
     baseMultInput: float = 1.618
     trailLenInput: int = 21
     useAdaptiveMultInput: bool = False

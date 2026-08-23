@@ -57,10 +57,10 @@ jobs:
         run: |
           docker run --rm \
             -v "${{ github.workspace }}/state:/app/state" \
-            -e EXCHANGE_ID="${{ vars.EXCHANGE_ID }}" \
+            -e EXCHANGE_ID="${{ vars.EXCHANGE_ID || 'binance' }}" \
             -e SYMBOLS="${{ vars.SYMBOLS }}" \
-            -e TIMEFRAME="${{ vars.TIMEFRAME }}" \
-            -e LOOKBACK_BARS="${{ vars.LOOKBACK_BARS }}" \
+            -e TIMEFRAME="${{ vars.TIMEFRAME || '5m' }}" \
+            -e LOOKBACK_BARS="${{ vars.LOOKBACK_BARS || '1500' }}" \
             -e STATE_FILE="/app/state/state.json" \
             -e JOURNAL_FILE="/app/state/trades.json" \
             -e TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_TOKEN }}" \
