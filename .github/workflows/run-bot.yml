@@ -57,7 +57,7 @@ jobs:
         run: |
           docker run --rm \
             -v "${{ github.workspace }}/state:/app/state" \
-            -e EXCHANGE_ID="${{ vars.EXCHANGE_ID || 'binance' }}" \
+            -e EXCHANGE_ID="${{ vars.EXCHANGE_ID }}" \
             -e SYMBOLS="${{ vars.SYMBOLS }}" \
             -e TIMEFRAME="${{ vars.TIMEFRAME || '5m' }}" \
             -e LOOKBACK_BARS="${{ vars.LOOKBACK_BARS || '1500' }}" \
