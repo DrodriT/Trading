@@ -98,6 +98,12 @@ DEFAULT_SYMBOLS = [
     "NEAR/USDT:USDT",
     "XMR/USDT:USDT",
     "DOGE/USDT:USDT",
+    "UNI/USDT:USDT",
+    "FIL/USDT:USDT",
+    "ATO/USDT:USDT",
+    "LINK/USDT:USDT",
+    "DOT/USDT:USDT",
+    "ETC/USDT:USDT",
 ]
 
 # ══════════════════════════════════════════════════════════
