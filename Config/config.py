@@ -108,7 +108,15 @@ DEFAULT_SYMBOLS = [
 # ══════════════════════════════════════════════════════════
 DEFAULT_TIMEFRAME = "5m"
 
-
+# ══════════════════════════════════════════════════════════
+# ⭐ EXCHANGE — edita este valor directamente aquí (recomendado), o
+#    defínelo por entorno con EXCHANGE_ID="bitget" (si defines la
+#    variable de entorno, ESA tiene prioridad sobre este default).
+#    Debe ser un id de exchange reconocido por ccxt: 'binance',
+#    'bitget', 'okx', 'bybit', etc.
+# ══════════════════════════════════════════════════════════
+DEFAULT_EXCHANGE_ID = "bitget"
+ 
 # ══════════════════════════════════════════════════════════
 # INFRAESTRUCTURA (no existe en Pine — configurable por entorno)
 # ══════════════════════════════════════════════════════════
@@ -116,7 +124,7 @@ DEFAULT_TIMEFRAME = "5m"
 @dataclass
 class InfraConfig:
     # Exchange / datos de mercado (ccxt)
-    EXCHANGE_ID: str = field(default_factory=lambda: _env_str("EXCHANGE_ID", "binance"))
+    EXCHANGE_ID: str = field(default_factory=lambda: _env_str("EXCHANGE_ID", DEFAULT_EXCHANGE_ID))
 
     # Lista de monedas a analizar en cada ejecución. El bot corre la
     # estrategia completa para CADA símbolo de esta lista, de forma
