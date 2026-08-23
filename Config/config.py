@@ -80,9 +80,24 @@ def _env_list(name: str, default: list) -> list:
 #    (formato ccxt: BASE/QUOTE, tal como lo lista tu exchange)
 # ══════════════════════════════════════════════════════════
 DEFAULT_SYMBOLS = [
-    "BTC/USDT",
-    "ETH/USDT",
-    "SOL/USDT",
+    "BTC/USDT:USDT",
+    "ETH/USDT:USDT",
+    "SOL/USDT:USDT",
+    "XRP/USDT:USDT",
+    "BCH/USDT:USDT",
+    "SUI/USDT:USDT",
+    "XLM/USDT:USDT",
+    "INJ/USDT:USDT",
+    "HBAR/USDT:USDT",
+    "ADA/USDT:USDT",
+    "AVAX/USDT:USDT",
+    "LTC/USDT:USDT",
+    "AAVE/USDT:USDT",
+    "ICP/USDT:USDT",
+    "OP/USDT:USDT",
+    "NEAR/USDT:USDT",
+    "XMR/USDT:USDT",
+    "DOGE/USDT:USDT",
 ]
 
 # ══════════════════════════════════════════════════════════
@@ -91,7 +106,7 @@ DEFAULT_SYMBOLS = [
 #    reconocido por tu exchange (ccxt): 1m, 5m, 15m, 30m, 1h,
 #    2h, 4h, 6h, 8h, 12h, 1d, 1w...
 # ══════════════════════════════════════════════════════════
-DEFAULT_TIMEFRAME = "15m"
+DEFAULT_TIMEFRAME = "5m"
 
 
 # ══════════════════════════════════════════════════════════
@@ -160,7 +175,7 @@ class PineConfig:
     ENTRY_BAR_HOLD: int = 1  # same-bar guard
 
     # ── Main ────────────────────────────────────────────────
-    atrLenInput: int = 13
+    atrLenInput: int = 21
     baseMultInput: float = 1.618
     trailLenInput: int = 21
     useAdaptiveMultInput: bool = False
