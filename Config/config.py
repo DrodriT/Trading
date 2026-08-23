@@ -161,7 +161,7 @@ class InfraConfig:
     DEBUG: bool = _env_bool("DEBUG", False)
 
     # Nombre para mostrar en el mensaje de Telegram
-    STRATEGY_NAME: str = "Synapse Trail Pro [WillyAlgoTrader]"
+    STRATEGY_NAME: str = "Synapse Trail Pro [RodriTrader]"
 
 
 INFRA = InfraConfig()

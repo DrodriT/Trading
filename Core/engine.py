@@ -66,6 +66,10 @@ def _fmt_r(r) -> str:
     return f"{sign}{r:.2f}R"
 
 
+def _footer(strategy_name: str) -> str:
+    return f"\n\n🤖 <i>{strategy_name}</i>"
+
+
 def format_alert_message(
     alert: Alert, symbol: str, timeframe: str, strategy_name: str,
     journal_trades: list | None = None,
@@ -76,14 +80,19 @@ def format_alert_message(
     el precio de entrada real y el R-múltiplo ya calculado por
     `TradeJournal` — esos datos no viajan en la propia alerta, viven
     en el registro del diario una vez aplicada.
+
+    Todos los mensajes llevan al final la firma del bot (nombre
+    configurado en `infra.STRATEGY_NAME`), para poder distinguirlos
+    si el mismo chat de Telegram recibe alertas de más de un bot.
     """
     d = alert.data
     ts = alert.timestamp
     symbol_clean = symbol.replace("/", "")
+    footer = _footer(strategy_name)
 
     if alert.type in ("buy", "sell"):
         is_long = alert.type == "buy"
-        dot = "🟢" if is_long else "🔴"
+        dot = "⬆️" if is_long else "⬇️"
         direction = "LONG" if is_long else "SHORT"
         flip_tag = " ⚡FLIP" if d.get("flip") else ""
         chop_tag = d.get("chop_flag", "")
@@ -111,19 +120,27 @@ def format_alert_message(
             f"🎯 <b>TP2:</b> {_fmt_price(tp2)}{tp2_pct} · RR {rr2:.2f}\n"
             f"🏆 <b>TP3:</b> {_fmt_price(tp3)}{tp3_pct} · RR {rr3:.2f}\n\n"
             f"⏰ {symbol} · {timeframe} · {ts}"
+            f"{footer}"
         )
 
     if alert.type == "tp1_hit":
-        return f"✅ <b>{symbol_clean} — TP1 alcanzado ({_fmt_price(d.get('price'))})</b>."
+        return (
+            f"✅ <b>{symbol_clean} — TP1 alcanzado ({_fmt_price(d.get('price'))})</b>."
+            f"{footer}"
+        )
 
     if alert.type == "tp2_hit":
         return (
             f"🔥 <b>{symbol_clean} — TP2 alcanzado. Runner hacia TP3.</b>\n"
             f"{_fmt_price(d.get('price'))}"
+            f"{footer}"
         )
 
     if alert.type == "be_activated":
-        return f"🔒 <b>{symbol_clean} — SL movido a BE ({_fmt_price(d.get('entry'))})</b>."
+        return (
+            f"🔒 <b>{symbol_clean} — SL movido a BE ({_fmt_price(d.get('entry'))})</b>."
+            f"{footer}"
+        )
 
     # ── Eventos de CIERRE: necesitan el registro del diario ──
     trade = None
@@ -137,6 +154,7 @@ def format_alert_message(
             f"💎 <b>{symbol_clean} — TP3 alcanzado. Trade cerrado.</b>\n"
             f"Entrada: {_fmt_price(entry_price)} | Cierre: {_fmt_price(d.get('price'))}\n"
             f"Resultado: ✅ GANADORA ({_fmt_r(r_multiple)})"
+            f"{footer}"
         )
 
     if alert.type == "sl_hit":
@@ -149,6 +167,7 @@ def format_alert_message(
             f"{icon} <b>{symbol_clean} — {title}</b>\n"
             f"Entrada: {_fmt_price(entry_price)} | Cierre: {_fmt_price(d.get('sl'))}\n"
             f"Resultado: {resultado} ({_fmt_r(r_multiple)})"
+            f"{footer}"
         )
 
     if alert.type == "flip":
@@ -159,13 +178,14 @@ def format_alert_message(
             f"({d.get('from_dir')}→{d.get('to_dir')}).</b>\n"
             f"Entrada: {_fmt_price(entry_price)} | Cierre: {_fmt_price(d.get('new_entry'))}\n"
             f"Resultado: {resultado} ({_fmt_r(r_multiple)})"
+            f"{footer}"
         )
 
-    return f"⚠️ Evento no reconocido: {alert.type} @ {ts}"
+    return f"⚠️ Evento no reconocido: {alert.type} @ {ts}{footer}"
 
 
 def format_tp1_be_combo(
-    tp1_alert: Alert, be_alert: Alert, symbol: str
+    tp1_alert: Alert, be_alert: Alert, symbol: str, strategy_name: str
 ) -> str:
     """
     TP1 y Break-Even se activan siempre en la MISMA vela (el BE se
@@ -180,6 +200,7 @@ def format_tp1_be_combo(
         f"✅ <b>{symbol_clean} — TP1 alcanzado "
         f"({_fmt_price(tp1_alert.data.get('price'))})</b>.\n"
         f"🔒 SL movido a BE ({_fmt_price(be_alert.data.get('entry'))})."
+        f"{_footer(strategy_name)}"
     )
 
 
@@ -208,9 +229,19 @@ class Engine:
         all_alerts: List[Alert] = []
 
         logger.info(
-            "Ejecutando %s | %d moneda(s) | timeframe=%s | lookback=%d velas",
-            infra.STRATEGY_NAME, len(infra.SYMBOLS), infra.TIMEFRAME, infra.LOOKBACK_BARS,
+            "Ejecutando %s | exchange=%s | %d moneda(s) | timeframe=%s | lookback=%d velas",
+            infra.STRATEGY_NAME, infra.EXCHANGE_ID, len(infra.SYMBOLS), infra.TIMEFRAME, infra.LOOKBACK_BARS,
         )
+
+        if infra.EXCHANGE_ID.lower() == "binance":
+            logger.warning(
+                "EXCHANGE_ID='binance' — Binance bloquea (HTTP 451) el acceso "
+                "público desde IPs de datacenter/CI, incluidas las de GitHub "
+                "Actions. Si tu intención era usar otro exchange (ej. 'bitget'), "
+                "revisa que la Repository VARIABLE 'EXCHANGE_ID' esté creada en "
+                "Settings → Secrets and variables → Actions → pestaña "
+                "'Variables' (NO en 'Secrets') con el valor correcto."
+            )
 
         for symbol in infra.SYMBOLS:
             try:
@@ -322,7 +353,7 @@ class Engine:
                 continue
 
             if kind == "tp1_be_combo":
-                message = format_tp1_be_combo(unit_alerts[0], unit_alerts[1], symbol)
+                message = format_tp1_be_combo(unit_alerts[0], unit_alerts[1], symbol, infra.STRATEGY_NAME)
             else:
                 message = format_alert_message(
                     unit_alerts[0], symbol, infra.TIMEFRAME, infra.STRATEGY_NAME,
