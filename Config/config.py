@@ -118,6 +118,17 @@ DEFAULT_TIMEFRAME = "5m"
 DEFAULT_EXCHANGE_ID = "bitget"
  
 # ══════════════════════════════════════════════════════════
+# ⭐ TELEGRAM ON/OFF — pon esto en False para desactivar el envío
+#    de mensajes a Telegram por completo (útil para pruebas, o para
+#    dejar el bot corriendo "en silencio" generando igualmente el
+#    diario de operaciones state/trades.json sin avisarte de nada).
+#    También configurable por entorno con TELEGRAM_ENABLED="false".
+#    NOTA: esto NO afecta a la estrategia, al diario de operaciones
+#    ni al dedupe de estado — solo corta el envío del mensaje final.
+# ══════════════════════════════════════════════════════════
+DEFAULT_TELEGRAM_ENABLED = False
+
+# ══════════════════════════════════════════════════════════
 # INFRAESTRUCTURA (no existe en Pine — configurable por entorno)
 # ══════════════════════════════════════════════════════════
 
@@ -125,6 +136,9 @@ DEFAULT_EXCHANGE_ID = "bitget"
 class InfraConfig:
     # Exchange / datos de mercado (ccxt)
     EXCHANGE_ID: str = field(default_factory=lambda: _env_str("EXCHANGE_ID", DEFAULT_EXCHANGE_ID))
+
+    # Interruptor general de Telegram (ver DEFAULT_TELEGRAM_ENABLED arriba)
+    TELEGRAM_ENABLED: bool = field(default_factory=lambda: _env_bool("TELEGRAM_ENABLED", DEFAULT_TELEGRAM_ENABLED))
 
     # Lista de monedas a analizar en cada ejecución. El bot corre la
     # estrategia completa para CADA símbolo de esta lista, de forma
