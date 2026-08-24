@@ -5,15 +5,14 @@ name: Run Trading Bot
 # ejecuta directamente. Eso hace que cada corrida tarde segundos en
 # vez de tener que reinstalar pandas/numpy/ccxt cada vez.
 #
-# El horario del cron debe ajustarse a tu TIMEFRAME. Ejemplos:
-#   - Velas de 15m -> cada 5 min sobra margen: "*/5 * * * *"
-#   - Velas de 1h  -> cada 10-15 min: "*/15 * * * *"
-#   - Velas de 4h  -> cada hora: "0 * * * *"
-# GitHub Actions NO garantiza precisión al minuto en el cron
-# (puede retrasarse varios minutos en horas de mucha carga), así que
-# no lo uses para timeframes muy cortos (1m/3m) si necesitas
-# precisión — para eso, cron-job.org sigue siendo más fiable (ver
-# README, sección "cron-job.org").
+# TRIGGERS: este workflow NO tiene `schedule:` (cron de GitHub
+# Actions) a propósito. Solo se dispara:
+#   1) `repository_dispatch` -> cuando cron-job.org llama a la API
+#      de GitHub (ver README, sección "cron-job.org" para la config
+#      exacta: URL, método, headers y body que hay que poner en
+#      cron-job.org).
+#   2) `workflow_dispatch` -> botón "Run workflow" manual en la
+#      pestaña Actions, útil para probar sin esperar al cron-job.
 on:
   repository_dispatch:
     types: [run-bot]
@@ -35,6 +34,14 @@ jobs:
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 = historial completo (no shallow clone).
+          # Necesario para que el `git pull --rebase` del último paso
+          # (commit del estado) funcione de forma fiable si mientras
+          # tanto hubo otro push a `main` (ej. un commit manual tuyo
+          # en GitHub) — con clonado superficial el rebase podría no
+          # encontrar un ancestro común y fallar.
+          fetch-depth: 0
 
       - name: Nombre de imagen en minúsculas (requisito de Docker/GHCR)
         run: |
@@ -57,9 +64,9 @@ jobs:
         run: |
           docker run --rm \
             -v "${{ github.workspace }}/state:/app/state" \
-            -e EXCHANGE_ID="${{ vars.EXCHANGE_ID }}" \
+            -e EXCHANGE_ID="${{ vars.EXCHANGE_ID || 'bitget' }}" \
             -e SYMBOLS="${{ vars.SYMBOLS }}" \
-            -e TIMEFRAME="${{ vars.TIMEFRAME || '5m' }}" \
+            -e TIMEFRAME="${{ vars.TIMEFRAME || '15m' }}" \
             -e LOOKBACK_BARS="${{ vars.LOOKBACK_BARS || '1500' }}" \
             -e STATE_FILE="/app/state/state.json" \
             -e JOURNAL_FILE="/app/state/trades.json" \
@@ -77,5 +84,22 @@ jobs:
             echo "Sin cambios en el estado — nada que commitear."
           else
             git commit -m "chore: actualizar estado del bot [skip ci]"
-            git push
+            # Reintenta el push hasta 5 veces: si alguien más hizo push a
+            # `main` mientras este job corría (ej. un commit manual en
+            # GitHub), `git push` se rechaza ("fetch first"). En vez de
+            # fallar el job, se trae lo remoto con rebase (seguro aquí,
+            # porque este paso solo toca state/state.json y trades.json)
+            # y se reintenta.
+            attempt=1
+            max_attempts=5
+            until git push; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "::error::No se pudo hacer push tras $max_attempts intentos."
+                exit 1
+              fi
+              echo "Push rechazado (intento $attempt/$max_attempts) — hay cambios remotos nuevos. Haciendo rebase y reintentando..."
+              git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
+              attempt=$((attempt + 1))
+              sleep 3
+            done
           fi
