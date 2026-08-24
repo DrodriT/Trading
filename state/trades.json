@@ -3127,13 +3127,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-08-24 08:20:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-24 08:40:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-08-24 08:40:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "XRP/USDT:USDT|5m|2026-08-24 08:00:00+00:00",
@@ -3292,13 +3292,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-08-24 08:20:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-24 08:40:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-08-24 08:40:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "BTC/USDT:USDT|5m|2026-08-24 08:15:00+00:00",
@@ -3325,13 +3325,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-08-24 08:25:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-24 08:40:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-08-24 08:40:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "SOL/USDT:USDT|5m|2026-08-24 08:15:00+00:00",
