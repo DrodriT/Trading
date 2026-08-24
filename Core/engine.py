@@ -233,6 +233,17 @@ class Engine:
             infra.STRATEGY_NAME, infra.EXCHANGE_ID, len(infra.SYMBOLS), infra.TIMEFRAME, infra.LOOKBACK_BARS,
         )
 
+        # ── FIX: este chequeo faltaba en esta versión del archivo.
+        # Solo avisa en el log; el corte real del envío pasa más abajo,
+        # en should_notify, dentro de _run_for_symbol().
+        if not infra.TELEGRAM_ENABLED:
+            logger.info(
+                "TELEGRAM_ENABLED=False — no se enviará ningún mensaje a "
+                "Telegram esta ejecución. La estrategia, el diario de "
+                "operaciones (trades.json) y el dedupe de estado siguen "
+                "funcionando con normalidad."
+            )
+
         if infra.EXCHANGE_ID.lower() == "binance":
             logger.warning(
                 "EXCHANGE_ID='binance' — Binance bloquea (HTTP 451) el acceso "
@@ -346,7 +357,12 @@ class Engine:
             if all(self.state_manager.already_sent(state, aid) for aid in alert_ids):
                 continue
 
-            should_notify = any(a.data.get("notify", True) for a in unit_alerts)
+            # ── FIX: faltaba "infra.TELEGRAM_ENABLED and" aquí. Sin esto,
+            # el flag global nunca se comprobaba y el bot seguía enviando
+            # mensajes aunque TELEGRAM_ENABLED estuviera en False.
+            should_notify = infra.TELEGRAM_ENABLED and any(
+                a.data.get("notify", True) for a in unit_alerts
+            )
             if not should_notify:
                 for aid in alert_ids:
                     self.state_manager.mark_sent(state, aid)
