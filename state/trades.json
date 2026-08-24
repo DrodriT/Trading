@@ -3226,13 +3226,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-08-24 08:25:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-24 08:35:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-08-24 08:35:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "DOGE/USDT:USDT|5m|2026-08-24 08:00:00+00:00",
@@ -3358,13 +3358,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-08-24 08:25:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-24 08:35:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-08-24 08:35:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "ETH/USDT:USDT|5m|2026-08-24 08:20:00+00:00",
@@ -3391,13 +3391,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-24 08:35:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-08-24 08:35:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "XLM/USDT:USDT|5m|2026-08-24 08:20:00+00:00",
@@ -3457,13 +3457,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-08-24 08:30:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-24 08:35:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-08-24 08:35:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "ETC/USDT:USDT|5m|2026-08-24 08:20:00+00:00",
