@@ -7615,13 +7615,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-26 11:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-08-26 11:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "LINK/USDT:USDT|15m|2026-08-26 10:30:00+00:00",
@@ -7681,13 +7681,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-26 11:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-08-26 11:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "OP/USDT:USDT|15m|2026-08-26 11:00:00+00:00",
@@ -7714,13 +7714,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-26 11:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-08-26 11:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "UNI/USDT:USDT|15m|2026-08-26 11:00:00+00:00",
@@ -7747,13 +7747,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-26 11:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-08-26 11:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "XMR/USDT:USDT|15m|2026-08-26 11:15:00+00:00",
