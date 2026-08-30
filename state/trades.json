@@ -14904,17 +14904,17 @@
       "tp1_hit_time": "2026-08-30 12:00:00+00:00",
       "tp2_hit": true,
       "tp2_hit_time": "2026-08-30 12:00:00+00:00",
-      "tp3_hit": false,
-      "tp3_hit_time": null,
+      "tp3_hit": true,
+      "tp3_hit_time": "2026-08-30 12:15:00+00:00",
       "be_activated": true,
       "be_time": "2026-08-30 12:00:00+00:00",
       "sl_hit": false,
       "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "closed": true,
+      "close_reason": "tp3",
+      "close_time": "2026-08-30 12:15:00+00:00",
+      "result": "win",
+      "r_multiple": 2.0
     },
     {
       "id": "ADA/USDT:USDT|15m|2026-08-30 11:15:00+00:00",
@@ -15007,13 +15007,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-30 12:15:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-08-30 12:15:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "SOL/USDT:USDT|15m|2026-08-30 12:00:00+00:00",
@@ -15040,13 +15040,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-30 12:15:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-08-30 12:15:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "XRP/USDT:USDT|15m|2026-08-30 12:00:00+00:00",
@@ -15304,13 +15304,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-08-30 12:15:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-08-30 12:15:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     }
   ]
 }
