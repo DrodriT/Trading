@@ -18499,8 +18499,8 @@
       "tp3_mult": 3.0,
       "tp1_hit": true,
       "tp1_hit_time": "2026-09-01 08:15:00+00:00",
-      "tp2_hit": false,
-      "tp2_hit_time": null,
+      "tp2_hit": true,
+      "tp2_hit_time": "2026-09-01 12:30:00+00:00",
       "tp3_hit": false,
       "tp3_hit_time": null,
       "be_activated": true,
@@ -19099,13 +19099,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-09-01 12:15:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-01 12:30:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-09-01 12:30:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "AAVE/USDT:USDT|15m|2026-09-01 10:30:00+00:00",
@@ -19198,13 +19198,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-01 12:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-09-01 12:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "XRP/USDT:USDT|15m|2026-09-01 11:30:00+00:00",
@@ -19231,13 +19231,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-01 12:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-09-01 12:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "BCH/USDT:USDT|15m|2026-09-01 11:30:00+00:00",
@@ -19264,13 +19264,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-01 12:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-09-01 12:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "SUI/USDT:USDT|15m|2026-09-01 11:30:00+00:00",
@@ -19297,13 +19297,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-01 12:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-09-01 12:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "AVAX/USDT:USDT|15m|2026-09-01 11:30:00+00:00",
@@ -19330,13 +19330,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-01 12:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-09-01 12:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "ICP/USDT:USDT|15m|2026-09-01 11:30:00+00:00",
@@ -19396,13 +19396,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-09-01 12:15:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-01 12:30:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-09-01 12:30:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "LINK/USDT:USDT|15m|2026-09-01 12:00:00+00:00",
@@ -19429,13 +19429,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-01 12:30:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-09-01 12:30:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     }
   ]
 }
