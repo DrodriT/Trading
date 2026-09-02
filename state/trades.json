@@ -20914,13 +20914,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-09-02 09:15:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-02 12:15:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-09-02 12:15:00+00:00",
+      "result": "win",
+      "r_multiple": 1.0
     },
     {
       "id": "ETH/USDT:USDT|15m|2026-09-02 08:30:00+00:00",
@@ -21310,13 +21310,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-09-02 10:30:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-02 12:15:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-09-02 12:15:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "ETC/USDT:USDT|15m|2026-09-02 09:30:00+00:00",
@@ -21409,13 +21409,13 @@
       "tp3_hit_time": null,
       "be_activated": false,
       "be_time": null,
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-02 12:15:00+00:00",
+      "closed": true,
+      "close_reason": "sl",
+      "close_time": "2026-09-02 12:15:00+00:00",
+      "result": "loss",
+      "r_multiple": -1.0
     },
     {
       "id": "FIL/USDT:USDT|15m|2026-09-02 11:00:00+00:00",
