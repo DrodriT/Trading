@@ -24346,13 +24346,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-09-04 14:45:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-04 15:15:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-09-04 15:15:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "BCH/USDT:USDT|15m|2026-09-04 12:30:00+00:00",
@@ -24577,13 +24577,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-09-04 14:30:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-04 15:15:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-09-04 15:15:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "ICP/USDT:USDT|15m|2026-09-04 12:30:00+00:00",
@@ -24841,13 +24841,13 @@
       "tp3_hit_time": null,
       "be_activated": true,
       "be_time": "2026-09-04 14:30:00+00:00",
-      "sl_hit": false,
-      "sl_hit_time": null,
-      "closed": false,
-      "close_reason": null,
-      "close_time": null,
-      "result": null,
-      "r_multiple": null
+      "sl_hit": true,
+      "sl_hit_time": "2026-09-04 15:15:00+00:00",
+      "closed": true,
+      "close_reason": "be_stop",
+      "close_time": "2026-09-04 15:15:00+00:00",
+      "result": "win",
+      "r_multiple": 0.3333
     },
     {
       "id": "DOT/USDT:USDT|15m|2026-09-04 12:30:00+00:00",
