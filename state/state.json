@@ -47,7 +47,7 @@
     "ATOM/USDT:USDT|15m": "2026-09-07 11:15:00+00:00",
     "LINK/USDT:USDT|15m": "2026-09-07 11:15:00+00:00",
     "DOT/USDT:USDT|15m": "2026-09-07 11:15:00+00:00",
-    "ETC/USDT:USDT|15m": "2026-09-07 11:15:00+00:00"
+    "ETC/USDT:USDT|15m": "2026-09-07 11:30:00+00:00"
   },
   "last_processed_timestamp": null,
   "sent_alert_ids": [
